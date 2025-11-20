@@ -1,0 +1,57 @@
+# Render.com Blueprint
+# https://render.com/docs/blueprint-spec
+
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: floodwatch-db
+    env: docker
+    plan: free
+    region: singapore
+    databases:
+      - name: floodwatch_db
+        databaseName: floodwatch_prod
+        user: postgres
+        postgresMajorVersion: 15
+        plan: free
+
+  # FastAPI Backend
+  - type: web
+    name: floodwatch-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: singapore
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: floodwatch_db
+          property: connectionString
+      - key: ADMIN_TOKEN
+        value: cd07904694237307b738f80caa2e4580af5e6575e58ded1031bb7cb3eaf4ebe2
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: TELEGRAM_BOT_TOKEN
+        value: ""
+
+  # Next.js Frontend
+  - type: web
+    name: floodwatch-web
+    env: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: ./apps/web
+    region: singapore
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://floodwatch-api.onrender.com/api
+      - key: NEXT_PUBLIC_MAPTILER_KEY
+        value: MZqd4PxUtKNEz8uaizVE
+      - key: NEXT_PUBLIC_MAP_PROVIDER
+        value: maptiler
+      - key: NODE_ENV
+        value: production
