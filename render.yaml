@@ -1,11 +1,24 @@
 services:
+  # PostgreSQL Database
+  - type: pserv
+    name: floodwatch-db
+    plan: free
+    region: singapore
+    ipAllowList: []
+
+  # FastAPI Backend
   - type: web
     name: floodwatch-api
-    env: python
+    runtime: python
+    plan: free
+    region: singapore
     buildCommand: "pip install -r apps/api/requirements.txt"
     startCommand: "cd apps/api && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: floodwatch-db
+          property: connectionString
       - key: PYTHON_VERSION
         value: "3.11"
+    autoDeploy: true
