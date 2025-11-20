@@ -256,6 +256,66 @@ async def scheduler_status(
     }
 
 
+@app.post("/admin/trigger-scraper")
+async def trigger_scraper_manually(
+    source: str = Query(..., description="Scraper source: vnexpress, tuoitre, thanhnien, vtc, baomoi, kttv, pctt, or all"),
+    token: str = Query(..., description="Admin token"),
+    _: bool = Depends(verify_admin_token)
+):
+    """
+    Manually trigger a specific scraper or all scrapers.
+
+    Useful for testing or forcing data refresh when scheduler is paused.
+    """
+    from app.services.ingestion_scheduler import (
+        run_vnexpress_scraper, run_tuoitre_scraper, run_thanhnien_scraper,
+        run_vtc_scraper, run_baomoi_scraper, run_kttv_scraper, run_pctt_scraper
+    )
+
+    scrapers = {
+        "vnexpress": run_vnexpress_scraper,
+        "tuoitre": run_tuoitre_scraper,
+        "thanhnien": run_thanhnien_scraper,
+        "vtc": run_vtc_scraper,
+        "baomoi": run_baomoi_scraper,
+        "kttv": run_kttv_scraper,
+        "pctt": run_pctt_scraper,
+    }
+
+    try:
+        if source == "all":
+            results = {}
+            for name, scraper_func in scrapers.items():
+                try:
+                    scraper_func()
+                    results[name] = "triggered"
+                except Exception as e:
+                    results[name] = f"error: {str(e)}"
+
+            return {
+                "status": "completed",
+                "message": "All scrapers triggered",
+                "results": results
+            }
+
+        elif source in scrapers:
+            scrapers[source]()
+            return {
+                "status": "success",
+                "message": f"{source} scraper triggered successfully"
+            }
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid source. Must be one of: {', '.join(scrapers.keys())} or 'all'"
+            )
+
+    except Exception as e:
+        logger.error("trigger_scraper_error", source=source, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Scraper error: {str(e)}")
+
+
 @app.get("/reports")
 async def get_reports(
     request: Request,
