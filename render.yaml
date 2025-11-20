@@ -4,7 +4,6 @@
 databases:
   - name: floodwatch-db
     databaseName: floodwatch_prod
-    user: postgres
     plan: free
     region: singapore
     postgresMajorVersion: 15
