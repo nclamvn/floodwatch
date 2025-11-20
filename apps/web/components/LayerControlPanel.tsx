@@ -4,6 +4,7 @@ import { Layers } from 'lucide-react'
 
 export interface LayerVisibility {
   reports: boolean
+  aiForecast: boolean
   heavyRain: boolean
   flood: boolean
   landslide: boolean

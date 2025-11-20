@@ -143,11 +143,11 @@ export default function NewsTicker({ reports, onReportClick }: NewsTickerProps) 
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* "HOT NEWS" Label */}
+      {/* "TIN NÓNG" Label */}
       <div className="absolute left-0 top-0 bottom-0 flex items-center bg-black/20 px-3 z-10 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-wide">Hot News</span>
+          <span className="text-xs font-bold uppercase tracking-wide">Tin nóng</span>
         </div>
       </div>
 

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Forecast Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #0f0; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        button { background: #0f0; color: #000; padding: 10px 20px; border: none; cursor: pointer; margin: 5px; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔮 AI Forecast Layer Debug Tool</h1>
+
+    <div class="section">
+        <h2>1. API Health Check</h2>
+        <button onclick="checkAPI()">Test API</button>
+        <pre id="api-result">Click button to test...</pre>
+    </div>
+
+    <div class="section">
+        <h2>2. AI Forecasts Data</h2>
+        <button onclick="checkForecasts()">Fetch Forecasts</button>
+        <pre id="forecasts-result">Click button to test...</pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Frontend Integration</h2>
+        <p>Open <a href="http://localhost:3002/map" target="_blank" style="color: #0ff;">http://localhost:3002/map</a></p>
+        <ul>
+            <li>Look for <strong>Layers icon</strong> at top-left corner (stacked layers icon)</li>
+            <li>Click it to open Layer Control Panel</li>
+            <li>Find <strong>"🔮 Dự báo AI"</strong> checkbox</li>
+            <li>Make sure it's CHECKED (enabled)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>4. What to Look For on Map</h2>
+        <ul>
+            <li><strong>Purple circular markers</strong> with 🔮 icon</li>
+            <li><strong>Confidence badge</strong> showing percentage (e.g., "88%")</li>
+            <li><strong>Dashed purple circles</strong> around markers (affected area)</li>
+            <li>Location: <strong>Hà Nội</strong> (21.0278, 105.8342) or <strong>TP.HCM</strong> (10.8231, 106.6297)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>5. Browser Console Check</h2>
+        <p>Open DevTools (F12) → Console tab</p>
+        <p>Look for:</p>
+        <ul>
+            <li class="success">✅ "🗺️ Map Config" messages</li>
+            <li class="error">❌ Any errors mentioning "AIForecast", "useAIForecasts", or "api-forecasts"</li>
+        </ul>
+    </div>
+
+    <script>
+        async function checkAPI() {
+            const result = document.getElementById('api-result');
+            result.textContent = 'Testing...';
+
+            try {
+                const response = await fetch('http://localhost:8002/health');
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+                result.className = 'success';
+            } catch (error) {
+                result.textContent = 'ERROR: ' + error.message;
+                result.className = 'error';
+            }
+        }
+
+        async function checkForecasts() {
+            const result = document.getElementById('forecasts-result');
+            result.textContent = 'Fetching...';
+
+            try {
+                const response = await fetch('http://localhost:8002/ai-forecasts?limit=10');
+                const data = await response.json();
+
+                const summary = {
+                    total: data.pagination.total,
+                    forecasts: data.data.map(f => ({
+                        id: f.id.substring(0, 8) + '...',
+                        type: f.type,
+                        severity: f.severity,
+                        confidence: (f.confidence * 100).toFixed(0) + '%',
+                        location: `${f.lat}, ${f.lon}`,
+                        summary: f.summary.substring(0, 50) + '...'
+                    }))
+                };
+
+                result.textContent = JSON.stringify(summary, null, 2);
+                result.className = 'success';
+            } catch (error) {
+                result.textContent = 'ERROR: ' + error.message;
+                result.className = 'error';
+            }
+        }
+
+        // Auto-run tests on load
+        window.onload = function() {
+            checkAPI();
+            setTimeout(checkForecasts, 1000);
+        };
+    </script>
+</body>
+</html>

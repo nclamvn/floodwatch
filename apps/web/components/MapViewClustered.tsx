@@ -10,11 +10,13 @@ import UserLocationMarker from './UserLocationMarker'
 import HazardLayer from './HazardLayer'
 import DistressLayer from './DistressLayer'
 import TrafficLayer from './TrafficLayer'
+import AIForecastLayer from './AIForecastLayer'
 import LayerControlPanel, { LayerVisibility } from './LayerControlPanel'
 import DisasterLegend from './DisasterLegend'
 import { MapControlsGroup } from './MapControlsGroup'
 import { WindyModal } from './WindyModal'
 import { useHazards } from '@/hooks/useHazards'
+import { useAIForecasts } from '@/hooks/useAIForecasts'
 
 interface Report {
   id: string
@@ -48,10 +50,12 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
   const [baseMapStyle, setBaseMapStyle] = useState<BaseMapStyleId>('streets')
   const [windyModalOpen, setWindyModalOpen] = useState(false)
   const [layerControlOpen, setLayerControlOpen] = useState(false)
+  const [aiForecastOpen, setAiForecastOpen] = useState(true)
 
   // Layer visibility state - all enabled by default
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
     reports: true,
+    aiForecast: true,
     heavyRain: true,
     flood: true,
     landslide: true,
@@ -118,6 +122,16 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       return true
     })
   }, [allHazards, layerVisibility])
+
+  // Fetch AI forecasts near user location
+  const { forecasts: aiForecasts, isLoading: forecastsLoading } = useAIForecasts({
+    lat: userLocation?.latitude,
+    lng: userLocation?.longitude,
+    radius_km: 50,
+    min_confidence: 0.6,
+    active_only: true,
+    refreshInterval: 300000, // Refresh every 5 minutes (forecasts change slower)
+  })
 
   // Update last data update timestamp when hazards change
   useEffect(() => {
@@ -340,12 +354,20 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
         onWindyClick={() => setWindyModalOpen(true)}
         onLayerControlClick={() => setLayerControlOpen(!layerControlOpen)}
         layerControlActive={layerControlOpen}
+        onAIForecastClick={() => setAiForecastOpen(!aiForecastOpen)}
+        aiForecastActive={aiForecastOpen}
       />
 
       {/* Hazard events visualization */}
       <HazardLayer
         hazards={hazards}
         visible={layerVisibility.heavyRain || layerVisibility.flood || layerVisibility.landslide || layerVisibility.damRelease || layerVisibility.storm || layerVisibility.tideSurge}
+      />
+
+      {/* AI Forecast Layer */}
+      <AIForecastLayer
+        forecasts={aiForecasts}
+        visible={aiForecastOpen}
       />
 
       {/* Emergency distress reports */}
@@ -567,8 +589,8 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
           latitude={selectedReport.lat}
           anchor="top"
           onClose={() => setSelectedReport(null)}
-          closeButton={true}
-          closeOnClick={false}
+          closeButton={false}
+          closeOnClick={true}
           className="modern-popup"
         >
           <div className="p-4 max-w-xs min-w-[280px]">

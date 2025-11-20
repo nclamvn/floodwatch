@@ -12,9 +12,11 @@ interface MapControlsGroupProps {
   onWindyClick: () => void
   onLayerControlClick: () => void
   layerControlActive?: boolean
+  onAIForecastClick: () => void
+  aiForecastActive?: boolean
 }
 
-export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onLayerControlClick, layerControlActive }: MapControlsGroupProps) {
+export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onLayerControlClick, layerControlActive, onAIForecastClick, aiForecastActive }: MapControlsGroupProps) {
   const { userLocation, isLocating, requestLocation } = useLocation()
 
   return (
@@ -73,6 +75,24 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
         title="Xem dự báo thời tiết Windy"
       >
         <Wind className="w-4 h-4" />
+      </button>
+
+      {/* AI Forecast Button - button thứ 8 (ngoài cùng bên phải) */}
+      <button
+        onClick={onAIForecastClick}
+        className={`
+          w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border
+          flex items-center justify-center
+          transition-all duration-200 hover:scale-105 active:scale-95
+          ${
+            aiForecastActive
+              ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500'
+              : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-700/50'
+          }
+        `}
+        title="Dự báo AI"
+      >
+        <span className="text-xs font-bold">AI</span>
       </button>
 
       {/* Location Info Popup - appears to the right */}

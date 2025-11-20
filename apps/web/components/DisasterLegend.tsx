@@ -40,6 +40,7 @@ export default function DisasterLegend({ lastUpdated }: DisasterLegendProps) {
     { icon: '🏗️', label: 'Xả đập', color: 'text-purple-600' },
     { icon: '🌀', label: 'Bão', color: 'text-gray-700' },
     { icon: '🌊', label: 'Triều cường', color: 'text-cyan-600' },
+    { icon: '🔮', label: 'Dự báo AI', color: 'text-purple-600' },
     { icon: '🚧', label: 'Giao thông', color: 'text-amber-600' },
     { icon: '🆘', label: 'Cứu hộ', color: 'text-red-700' },
   ]
@@ -55,10 +56,10 @@ export default function DisasterLegend({ lastUpdated }: DisasterLegendProps) {
       <div className="absolute bottom-40 right-4 z-40">
         <button
           onClick={() => setCollapsed(false)}
-          className="w-12 h-12 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md rounded-full shadow-lg border border-white/20 dark:border-neutral-700/30 flex items-center justify-center hover:bg-white dark:hover:bg-neutral-800 transition-colors"
+          className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50"
           title="Mở chú giải"
         >
-          <Info className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
+          <Info className="w-6 h-6 text-black dark:text-white" />
         </button>
       </div>
     )

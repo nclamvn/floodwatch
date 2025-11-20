@@ -300,8 +300,8 @@ export default function TrafficLayer({
           latitude={selectedDisruption.lat}
           anchor="bottom"
           onClose={() => setSelectedDisruption(null)}
-          closeButton={true}
-          closeOnClick={false}
+          closeButton={false}
+          closeOnClick={true}
           className="modern-popup"
           maxWidth="400px"
         >

@@ -131,6 +131,14 @@ body {
   border-top-color: rgb(var(--color-bg-primary));
 }
 
+/* AI Forecast Popup - Force white frame width to prevent text overflow */
+.ai-forecast-popup .maplibregl-popup-content,
+.ai-forecast-popup .mapboxgl-popup-content {
+  min-width: 340px !important;
+  max-width: 400px !important;
+  width: auto !important;
+}
+
 /* ========================================
    Map Controls Positioning (Center)
    ======================================== */

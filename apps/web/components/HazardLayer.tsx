@@ -259,8 +259,8 @@ export default function HazardLayer({ hazards, visible = true, onHazardClick }: 
           latitude={selectedHazard.lat}
           anchor="bottom"
           onClose={() => setSelectedHazard(null)}
-          closeButton={true}
-          closeOnClick={false}
+          closeButton={false}
+          closeOnClick={true}
           className="hazard-popup"
         >
           <div className="p-4 min-w-[280px]">

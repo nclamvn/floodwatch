@@ -4,7 +4,8 @@ from .models import (
     Report, RoadEvent, ApiKey, Subscription, Delivery, TelegramSubscription,
     HazardEvent, HazardType, SeverityLevel,
     DistressReport, DistressStatus, DistressUrgency,
-    TrafficDisruption, DisruptionType, DisruptionSeverity
+    TrafficDisruption, DisruptionType, DisruptionSeverity,
+    AIForecast
 )
 
 __all__ = [
@@ -12,5 +13,6 @@ __all__ = [
     "Report", "RoadEvent", "ApiKey", "Subscription", "Delivery", "TelegramSubscription",
     "HazardEvent", "HazardType", "SeverityLevel",
     "DistressReport", "DistressStatus", "DistressUrgency",
-    "TrafficDisruption", "DisruptionType", "DisruptionSeverity"
+    "TrafficDisruption", "DisruptionType", "DisruptionSeverity",
+    "AIForecast"
 ]

@@ -492,6 +492,97 @@ class DistressReport(Base):
         }
 
 
+class AIForecast(Base):
+    """
+    AI Forecast model - ML-based predictions for future hazard events
+    """
+    __tablename__ = "ai_forecasts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Forecast classification
+    type = Column(SQLEnum(HazardType, name="forecast_hazard_type", values_callable=lambda x: [e.value for e in x]), nullable=False)
+    severity = Column(SQLEnum(SeverityLevel, name="forecast_severity", values_callable=lambda x: [e.value for e in x]), nullable=False)
+    confidence = Column(Float, nullable=False)  # 0.0-1.0
+
+    # Spatial data (PostGIS)
+    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
+    affected_area = Column(Geography(geometry_type='POLYGON', srid=4326), nullable=True)
+    radius_km = Column(Float, nullable=True)
+
+    # Lat/lon for convenience
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+
+    # Timing - when the forecast is for
+    forecast_time = Column(DateTime(timezone=True), nullable=False)  # When the hazard is predicted to occur
+    valid_until = Column(DateTime(timezone=True), nullable=False)  # When this forecast expires
+
+    # AI Model metadata
+    model_name = Column(String(100), nullable=False)
+    model_version = Column(String(50), nullable=False)
+    training_data_date = Column(DateTime(timezone=True), nullable=True)
+
+    # Prediction details
+    summary = Column(Text, nullable=True)  # AI-generated summary text
+    predicted_intensity = Column(Float, nullable=True)  # Model-specific intensity measure
+    predicted_duration_hours = Column(Float, nullable=True)
+    risk_factors = Column(JSONB, nullable=True)  # List of contributing risk factors
+    data_sources = Column(JSONB, default=list, nullable=False, server_default='[]')  # Sources used by model
+    raw_output = Column(JSONB, nullable=True)  # Full model output for debugging
+
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False)
+    verified_at = Column(DateTime(timezone=True), nullable=True)  # If later confirmed by real event
+    actual_event_id = Column(UUID(as_uuid=True), nullable=True)  # Link to HazardEvent if forecast became reality
+
+    # Source
+    source = Column(String(100), nullable=False, server_default="AI_MODEL")
+    created_by = Column(UUID(as_uuid=True), nullable=True)
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('confidence >= 0.0 AND confidence <= 1.0', name='check_forecast_confidence'),
+        CheckConstraint('radius_km IS NULL OR radius_km > 0', name='check_forecast_radius'),
+        CheckConstraint('predicted_duration_hours IS NULL OR predicted_duration_hours > 0', name='check_forecast_duration'),
+    )
+
+    def __repr__(self):
+        return f"<AIForecast {self.id} [{self.type.value}] confidence={self.confidence:.2f}>"
+
+    def to_dict(self):
+        """Convert to dictionary for API response"""
+        return {
+            "id": str(self.id),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "type": self.type.value if isinstance(self.type, enum.Enum) else self.type,
+            "severity": self.severity.value if isinstance(self.severity, enum.Enum) else self.severity,
+            "confidence": self.confidence,
+            "lat": self.lat,
+            "lon": self.lon,
+            "radius_km": self.radius_km,
+            "forecast_time": self.forecast_time.isoformat() if self.forecast_time else None,
+            "valid_until": self.valid_until.isoformat() if self.valid_until else None,
+            "model_name": self.model_name,
+            "model_version": self.model_version,
+            "training_data_date": self.training_data_date.isoformat() if self.training_data_date else None,
+            "summary": self.summary,
+            "predicted_intensity": self.predicted_intensity,
+            "predicted_duration_hours": self.predicted_duration_hours,
+            "risk_factors": self.risk_factors,
+            "data_sources": self.data_sources,
+            "raw_output": self.raw_output,
+            "is_active": self.is_active,
+            "verified_at": self.verified_at.isoformat() if self.verified_at else None,
+            "actual_event_id": str(self.actual_event_id) if self.actual_event_id else None,
+            "source": self.source,
+            "created_by": str(self.created_by) if self.created_by else None
+        }
+
+
 class TrafficDisruption(Base):
     """
     Traffic Disruption model - road closures, bridge collapses, landslides

@@ -19,13 +19,14 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # Import database
-from app.database import get_db, Report, RoadEvent, ApiKey, Subscription, Delivery, HazardEvent, HazardType, SeverityLevel, DistressReport, DistressStatus, DistressUrgency, TrafficDisruption, DisruptionType, DisruptionSeverity
+from app.database import get_db, Report, RoadEvent, ApiKey, Subscription, Delivery, HazardEvent, HazardType, SeverityLevel, DistressReport, DistressStatus, DistressUrgency, TrafficDisruption, DisruptionType, DisruptionSeverity, AIForecast
 from app.services.report_repo import ReportRepository
 from app.services.road_repo import RoadEventRepository
 from app.services.apikey_repo import ApiKeyRepository
 from app.services.hazard_repo import HazardEventRepository
 from app.services.distress_repo import DistressReportRepository
 from app.services.traffic_repo import TrafficDisruptionRepository
+from app.services.ai_forecast_repo import AIForecastRepository
 
 # Import trust score calculator
 from app.services.trust_score import TrustScoreCalculator
@@ -175,6 +176,42 @@ class HazardEventUpdate(BaseModel):
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
     raw_payload: Optional[dict] = None
+
+
+class AIForecastCreate(BaseModel):
+    """Model for creating an AI forecast"""
+    type: Literal["heavy_rain", "flood", "dam_release", "landslide", "storm", "tide_surge"]
+    severity: Literal["info", "low", "medium", "high", "critical"]
+    confidence: float = Field(ge=0.0, le=1.0, description="Forecast confidence (0.0-1.0)")
+    lat: float = Field(ge=-90, le=90, description="Latitude")
+    lon: float = Field(ge=-180, le=180, description="Longitude")
+    radius_km: Optional[float] = Field(None, gt=0, le=500, description="Affected radius in km")
+    forecast_time: datetime = Field(description="When the hazard is predicted to occur (ISO 8601)")
+    valid_until: datetime = Field(description="When this forecast expires (ISO 8601)")
+    model_name: str = Field(description="Name of the ML model")
+    model_version: str = Field(description="Version of the model")
+    training_data_date: Optional[datetime] = Field(None, description="Date of training data")
+    summary: Optional[str] = Field(None, description="AI-generated summary text")
+    predicted_intensity: Optional[float] = Field(None, description="Model-specific intensity measure")
+    predicted_duration_hours: Optional[float] = Field(None, gt=0, description="Predicted duration in hours")
+    risk_factors: Optional[List[str]] = Field(None, description="List of contributing risk factors")
+    data_sources: Optional[List[str]] = Field(None, description="Data sources used by the model")
+    raw_output: Optional[dict] = Field(None, description="Full model output")
+    source: Optional[str] = Field("AI_MODEL", description="Data source identifier")
+
+
+class AIForecastUpdate(BaseModel):
+    """Model for updating an AI forecast"""
+    severity: Optional[Literal["info", "low", "medium", "high", "critical"]] = None
+    confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
+    radius_km: Optional[float] = Field(None, gt=0, le=500)
+    valid_until: Optional[datetime] = None
+    summary: Optional[str] = None
+    predicted_intensity: Optional[float] = None
+    predicted_duration_hours: Optional[float] = Field(None, gt=0)
+    risk_factors: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    raw_output: Optional[dict] = None
 
 
 # ==================== TRUST SCORE ====================
@@ -2252,6 +2289,239 @@ async def check_area_safety(
             "closest_distance_km": round(min(distress_distances), 2) if distress_distances else None
         },
         "recommendations": recommendations
+    }
+
+
+# ==================== AI FORECASTS ====================
+
+@app.get("/ai-forecasts")
+@limiter.limit("100/minute")
+async def get_ai_forecasts(
+    request: Request,
+    db: Session = Depends(get_db),
+    types: Optional[str] = Query(None, description="Comma-separated forecast types (e.g., 'flood,heavy_rain')"),
+    severity: Optional[str] = Query(None, description="Comma-separated severity levels (e.g., 'high,critical')"),
+    min_confidence: float = Query(0.6, ge=0.0, le=1.0, description="Minimum confidence threshold"),
+    active_only: bool = Query(True, description="Only return active (not expired) forecasts"),
+    lat: Optional[float] = Query(None, ge=-90, le=90, description="User latitude for spatial filter"),
+    lng: Optional[float] = Query(None, ge=-180, le=180, description="User longitude for spatial filter"),
+    radius_km: Optional[float] = Query(50, gt=0, le=200, description="Search radius in km"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    sort: str = Query("forecast_time", description="Sort field: 'forecast_time', 'confidence', 'severity', 'distance'")
+):
+    """
+    Get AI/ML forecast events with optional filters
+
+    Returns predictions from ML models with confidence scores.
+    Forecasts are distinguished from actual events by their source type.
+
+    Supports spatial filtering (find forecasts near a location), type filtering,
+    severity filtering, and confidence threshold filtering.
+    """
+    # Parse types
+    forecast_types = types.split(',') if types else None
+
+    # Parse severity levels
+    severity_levels = severity.split(',') if severity else None
+
+    # Get forecasts from repository
+    forecasts, total, distances = AIForecastRepository.get_all(
+        db=db,
+        forecast_types=forecast_types,
+        severity=severity_levels,
+        min_confidence=min_confidence,
+        active_only=active_only,
+        lat=lat,
+        lng=lng,
+        radius_km=radius_km if (lat and lng) else None,
+        limit=limit,
+        offset=offset,
+        sort_by=sort
+    )
+
+    # Convert to dict and add distance if spatial query
+    data = []
+    for i, forecast in enumerate(forecasts):
+        forecast_dict = forecast.to_dict()
+        if lat and lng and i < len(distances):
+            forecast_dict['distance_km'] = round(distances[i], 2)
+        data.append(forecast_dict)
+
+    return {
+        "data": data,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "total_pages": (total + limit - 1) // limit
+        },
+        "meta": {
+            "min_confidence": min_confidence,
+            "active_only": active_only,
+            "forecast_horizon_hours": 48
+        }
+    }
+
+
+@app.post("/ai-forecasts")
+@limiter.limit("20/minute")
+async def create_ai_forecast(
+    request: Request,
+    forecast_data: AIForecastCreate,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(require_api_key)
+):
+    """
+    Create a new AI forecast (ML model endpoint)
+
+    This endpoint is for creating AI/ML forecasts. Requires API key with 'write:forecasts' scope.
+
+    The forecast should include:
+    - Hazard type and severity
+    - Confidence score (0.0-1.0)
+    - Location (lat/lon and optional radius)
+    - Time range (forecast_time and valid_until)
+    - Model metadata (name, version)
+    - Optional summary text and data sources
+    """
+    # Convert Pydantic model to dict
+    data = forecast_data.dict()
+
+    # Create forecast
+    forecast = AIForecastRepository.create(db, data)
+
+    logger.info(
+        "ai_forecast_created",
+        forecast_id=str(forecast.id),
+        type=forecast.type.value,
+        severity=forecast.severity.value,
+        confidence=forecast.confidence,
+        model=f"{forecast.model_name} v{forecast.model_version}"
+    )
+
+    return {
+        "data": forecast.to_dict(),
+        "meta": {
+            "message": "AI forecast created successfully"
+        }
+    }
+
+
+@app.patch("/ai-forecasts/{forecast_id}")
+@limiter.limit("20/minute")
+async def update_ai_forecast(
+    request: Request,
+    forecast_id: str,
+    update_data: AIForecastUpdate,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(require_api_key)
+):
+    """
+    Update an AI forecast
+
+    Allows updating confidence, severity, validity period, and summary text.
+    Requires API key.
+    """
+    from uuid import UUID
+    try:
+        forecast_uuid = UUID(forecast_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid forecast ID format")
+
+    # Get update data (exclude None values)
+    data = {k: v for k, v in update_data.dict().items() if v is not None}
+
+    if not data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    # Update forecast
+    forecast = AIForecastRepository.update(db, forecast_uuid, data)
+
+    if not forecast:
+        raise HTTPException(status_code=404, detail=f"AI forecast not found: {forecast_id}")
+
+    logger.info("ai_forecast_updated", forecast_id=forecast_id, updates=list(data.keys()))
+
+    return {
+        "data": forecast.to_dict(),
+        "meta": {
+            "message": "AI forecast updated successfully"
+        }
+    }
+
+
+@app.post("/ai-forecasts/{forecast_id}/verify")
+@limiter.limit("20/minute")
+async def verify_ai_forecast(
+    request: Request,
+    forecast_id: str,
+    actual_event_id: Optional[str] = Query(None, description="ID of the actual event that occurred"),
+    db: Session = Depends(get_db),
+    api_key: str = Depends(require_api_key)
+):
+    """
+    Mark an AI forecast as verified by a real event
+
+    This endpoint is used to track forecast accuracy. If the predicted event
+    actually occurred, link it to the actual HazardEvent ID.
+    """
+    from uuid import UUID
+    try:
+        forecast_uuid = UUID(forecast_id)
+        event_uuid = UUID(actual_event_id) if actual_event_id else None
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    forecast = AIForecastRepository.mark_verified(db, forecast_uuid, event_uuid)
+
+    if not forecast:
+        raise HTTPException(status_code=404, detail=f"AI forecast not found: {forecast_id}")
+
+    logger.info(
+        "ai_forecast_verified",
+        forecast_id=forecast_id,
+        actual_event_id=actual_event_id,
+        success=actual_event_id is not None
+    )
+
+    return {
+        "data": forecast.to_dict(),
+        "meta": {
+            "message": "AI forecast verification recorded",
+            "verified": actual_event_id is not None
+        }
+    }
+
+
+@app.get("/ai-forecasts/stats/accuracy")
+@limiter.limit("60/minute")
+async def get_ai_forecast_accuracy_stats(
+    request: Request,
+    db: Session = Depends(get_db),
+    from_date: Optional[str] = Query(None, description="Start date for stats (ISO 8601)")
+):
+    """
+    Get accuracy statistics for AI forecasts
+
+    Returns metrics like total verified forecasts, accuracy rate,
+    and false positive rate.
+    """
+    from_datetime = None
+    if from_date:
+        try:
+            from_datetime = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use ISO 8601.")
+
+    stats = AIForecastRepository.get_forecast_accuracy_stats(db, from_datetime)
+
+    return {
+        "data": stats,
+        "meta": {
+            "from_date": from_date,
+            "description": "Accuracy metrics for verified AI forecasts"
+        }
     }
 
 

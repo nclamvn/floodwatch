@@ -306,17 +306,17 @@ export default function MapPage() {
               className="min-w-[160px]"
             />
           </div>
-
-          {/* Mobile: List toggle button */}
-          <button
-            onClick={() => setSheetOpen(!sheetOpen)}
-            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full text-sm font-semibold flex items-center gap-2 shadow-soft-md hover:shadow-soft-lg transition-all sm:hidden"
-          >
-            <span className="text-base">📋</span>
-            <span>{reports.length}</span>
-          </button>
         </div>
       </header>
+
+      {/* Mobile: List toggle button - Fixed at bottom right */}
+      <button
+        onClick={() => setSheetOpen(!sheetOpen)}
+        className="fixed bottom-20 right-4 z-30 px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg transition-all sm:hidden"
+      >
+        <span className="text-base">📋</span>
+        <span>{reports.length}</span>
+      </button>
 
       {/* Gradient overlay for readability */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 h-16 sm:h-20 bg-gradient-to-b from-black/10 to-transparent" />
