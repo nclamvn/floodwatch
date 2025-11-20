@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code from apps/api
 COPY apps/api/app ./app
+COPY apps/api/scripts ./scripts
 COPY apps/api/migrations ./migrations
 COPY apps/api/alembic.ini .
 
