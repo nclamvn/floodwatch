@@ -1,53 +1,11 @@
-# Render.com Blueprint
-# https://render.com/docs/blueprint-spec
-
-databases:
-  - name: floodwatch-db
-    databaseName: floodwatch_prod
-    plan: free
-    region: singapore
-    postgresMajorVersion: 15
-
 services:
-  # FastAPI Backend
   - type: web
     name: floodwatch-api
-    env: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
-    region: singapore
-    plan: free
-    healthCheckPath: /health
+    env: python
+    buildCommand: "pip install -r apps/api/requirements.txt"
+    startCommand: "cd apps/api && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: floodwatch-db
-          property: connectionString
-      - key: ADMIN_TOKEN
-        value: cd07904694237307b738f80caa2e4580af5e6575e58ded1031bb7cb3eaf4ebe2
-      - key: ENVIRONMENT
-        value: production
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      - key: TELEGRAM_BOT_TOKEN
-        value: ""
-      - key: CORS_ORIGINS
-        value: https://thongtinmualu.live,https://www.thongtinmualu.live,https://floodwatch-web.onrender.com
-
-  # Next.js Frontend
-  - type: web
-    name: floodwatch-web
-    env: docker
-    dockerfilePath: ./apps/web/Dockerfile
-    dockerContext: ./apps/web
-    region: singapore
-    plan: free
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        value: https://api.thongtinmualu.live
-      - key: NEXT_PUBLIC_MAPTILER_KEY
-        value: MZqd4PxUtKNEz8uaizVE
-      - key: NEXT_PUBLIC_MAP_PROVIDER
-        value: maptiler
-      - key: NODE_ENV
-        value: production
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11"
