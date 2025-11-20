@@ -1,0 +1,49 @@
+{
+  "provinces": [
+    {
+      "name": "Quảng Bình",
+      "aliases": ["Quảng Bình", "Quang Binh", "Đồng Hới", "Dong Hoi"],
+      "center": [17.4680, 106.6232]
+    },
+    {
+      "name": "Quảng Trị",
+      "aliases": ["Quảng Trị", "Quang Tri", "Đông Hà", "Dong Ha"],
+      "center": [16.7463, 106.9594]
+    },
+    {
+      "name": "Thừa Thiên Huế",
+      "aliases": ["Thừa Thiên Huế", "Thua Thien Hue", "Huế", "Hue", "TT Huế"],
+      "center": [16.4637, 107.5909]
+    },
+    {
+      "name": "Đà Nẵng",
+      "aliases": ["Đà Nẵng", "Da Nang", "Danang"],
+      "center": [16.0544, 108.2022]
+    },
+    {
+      "name": "Quảng Nam",
+      "aliases": ["Quảng Nam", "Quang Nam", "Tam Kỳ", "Tam Ky", "Hội An", "Hoi An"],
+      "center": [15.5769, 108.4799]
+    },
+    {
+      "name": "Quảng Ngãi",
+      "aliases": ["Quảng Ngãi", "Quang Ngai"],
+      "center": [15.1214, 108.8044]
+    },
+    {
+      "name": "Bình Định",
+      "aliases": ["Bình Định", "Binh Dinh", "Quy Nhơn", "Quy Nhon"],
+      "center": [14.1665, 109.0019]
+    },
+    {
+      "name": "Phú Yên",
+      "aliases": ["Phú Yên", "Phu Yen", "Tuy Hòa", "Tuy Hoa"],
+      "center": [13.0881, 109.0929]
+    },
+    {
+      "name": "Khánh Hòa",
+      "aliases": ["Khánh Hòa", "Khanh Hoa", "Nha Trang"],
+      "center": [12.2388, 109.1967]
+    }
+  ]
+}

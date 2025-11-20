@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Cảnh báo mưa lớn Quảng Nam",
+    "province": "Quảng Nam",
+    "lat": 15.5394,
+    "lon": 108.0191,
+    "level": "high",
+    "source": "KTTV",
+    "description": "Mưa vừa đến mưa to, có nơi mưa rất to từ 18h đến 6h sáng mai. Lượng mưa phổ biến 100-200mm, có nơi trên 250mm."
+  },
+  {
+    "title": "Cảnh báo lũ quét Thừa Thiên Huế",
+    "province": "Thừa Thiên Huế",
+    "lat": 16.2637,
+    "lon": 107.6809,
+    "level": "high",
+    "source": "NCHMF",
+    "description": "Nguy cơ cao xảy ra lũ quét, sạt lở đất tại khu vực miền núi, đặc biệt huyện A Lưới, Nam Đông."
+  }
+]

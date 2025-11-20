@@ -1,0 +1,373 @@
+version: 1
+last_updated: "2025-11-18"
+
+defaults:
+  country: "VN"
+  language: "vi"
+  enabled: true
+
+sources:
+  # =========================
+  # 1. CẤP NHÀ NƯỚC (TRUST 5)
+  # =========================
+  - id: kttv_national
+    name: "Tổng cục Khí tượng Thủy văn Quốc gia"
+    type: "gov_weather"
+    url: "https://kttv.gov.vn"
+    region_scope: "national"
+    categories: ["weather_alert", "flood", "storm", "rainfall", "landslide"]
+    trust_score: 0.98
+    fetch:
+      method: "html_scrape"
+      notes: "Crawling các mục Cảnh báo, Dự báo mưa lớn, lũ, bão. Dev xác định path cụ thể."
+
+  - id: pctt_national
+    name: "Ban Chỉ đạo Quốc gia về Phòng chống thiên tai"
+    type: "gov_disaster"
+    url: "https://phongchongthientai.mard.gov.vn"
+    region_scope: "national"
+    categories: ["disaster", "flood", "dam", "reservoir", "landslide"]
+    trust_score: 0.97
+    fetch:
+      method: "html_scrape"
+      notes: "Tin chỉ đạo, công điện khẩn, cảnh báo thiên tai."
+
+  - id: drvn_roads
+    name: "Tổng cục Đường bộ Việt Nam / Cục Đường bộ Việt Nam"
+    type: "gov_transport"
+    url: "https://drvn.gov.vn"
+    region_scope: "national"
+    categories: ["road", "traffic", "flooded_road", "landslide"]
+    trust_score: 0.96
+    fetch:
+      method: "html_scrape"
+      notes: "Tin ngập đường, sạt lở, tắc đường trên quốc lộ."
+
+  # (OPTIONAL) Các đài KTTV khu vực – để dev bổ sung dần
+  - id: kttv_region_central
+    name: "Đài KTTV khu vực Trung Trung Bộ"
+    type: "gov_weather_regional"
+    url: "https://kttv.gov.vn"   # placeholder – dev cập nhật link khu vực
+    region_scope: "central"
+    categories: ["weather_alert", "flood", "storm", "rainfall"]
+    trust_score: 0.96
+    fetch:
+      method: "html_scrape"
+      notes: "Đài khu vực, ưu tiên miền Trung – hay bão lũ."
+
+  # =========================
+  # 2. BÁO CHÍ TRUNG ƯƠNG (TRUST 4.5)
+  # =========================
+  - id: vnexpress_disaster
+    name: "VnExpress - Thiên tai"
+    type: "news_national"
+    url: "https://vnexpress.net"
+    section_hint: "Thời sự / Thiên tai, Thời tiết"
+    region_scope: "national"
+    categories: ["flood", "storm", "landslide", "weather", "traffic"]
+    trust_score: 0.9
+    fetch:
+      method: "rss_or_html"
+      notes: "Ưu tiên dùng RSS nếu có; fallback HTML. Dev map tags -> province."
+
+  - id: tuoitre_disaster
+    name: "Tuổi Trẻ Online - Thiên tai"
+    type: "news_national"
+    url: "https://tuoitre.vn"
+    section_hint: "Thời sự / Thiên tai"
+    region_scope: "national"
+    categories: ["flood", "storm", "landslide", "rescue"]
+    trust_score: 0.9
+    fetch:
+      method: "html_scrape"
+      notes: "Tập trung các bài có từ khóa mưa lũ, ngập, sạt lở, bão."
+
+  - id: thanhnien_disaster
+    name: "Thanh Niên - Thiên tai"
+    type: "news_national"
+    url: "https://thanhnien.vn"
+    section_hint: "Thời sự / Thiên tai"
+    region_scope: "national"
+    categories: ["flood", "storm", "landslide", "dam", "reservoir"]
+    trust_score: 0.9
+    fetch:
+      method: "html_scrape"
+      notes: "Đặc biệt để ý các tin vỡ đập, xả lũ."
+
+  - id: vietnamnet_disaster
+    name: "VietnamNet - Thiên tai"
+    type: "news_national"
+    url: "https://vietnamnet.vn"
+    section_hint: "Thời sự / Thiên tai, Thời tiết"
+    region_scope: "national"
+    categories: ["flood", "storm", "flashflood", "landslide"]
+    trust_score: 0.88
+    fetch:
+      method: "html_scrape"
+      notes: "Dùng để cross-check thông tin với VnExpress/Tuổi Trẻ."
+
+  - id: vtv_news_weather
+    name: "VTV News - Thời tiết & Thiên tai"
+    type: "news_tv"
+    url: "https://vtv.vn"
+    section_hint: "Thời tiết, Thời sự thiên tai"
+    region_scope: "national"
+    categories: ["weather_alert", "storm", "rainfall", "flood"]
+    trust_score: 0.9
+    fetch:
+      method: "html_scrape"
+      notes: "Tích hợp nếu dev cần thêm nguồn TV chính thống."
+
+  # =========================
+  # 3. BÁO ĐỊA PHƯƠNG TRỌNG ĐIỂM (TRUST 4)
+  # =========================
+  - id: bao_quangtri
+    name: "Báo Quảng Trị"
+    type: "news_local"
+    url: "https://baoquangtri.vn"
+    region_scope: "province"
+    region: "Quảng Trị"
+    categories: ["flood", "storm", "landslide", "dam"]
+    trust_score: 0.88
+    fetch:
+      method: "html_scrape"
+      notes: "Lọc theo từ khóa: mưa lũ, ngập, lũ quét, sạt lở."
+
+  - id: bao_thuathienhue
+    name: "Báo Thừa Thiên Huế"
+    type: "news_local"
+    url: "https://baothuathienhue.vn"
+    region_scope: "province"
+    region: "Thừa Thiên Huế"
+    categories: ["flood", "storm", "landslide", "reservoir"]
+    trust_score: 0.88
+    fetch:
+      method: "html_scrape"
+      notes: "Miền thường xuyên bão lũ – ưu tiên ingest."
+
+  - id: bao_danang
+    name: "Báo Đà Nẵng"
+    type: "news_local"
+    url: "https://baodanang.vn"
+    region_scope: "city"
+    region: "Đà Nẵng"
+    categories: ["flood", "storm", "urban_flood", "traffic"]
+    trust_score: 0.87
+    fetch:
+      method: "html_scrape"
+      notes: "Ngập đô thị, kẹt đường, gió lớn."
+
+  - id: bao_quangnam
+    name: "Báo Quảng Nam"
+    type: "news_local"
+    url: "https://baoquangnam.vn"
+    region_scope: "province"
+    region: "Quảng Nam"
+    categories: ["flood", "storm", "landslide", "mountain_flood"]
+    trust_score: 0.87
+    fetch:
+      method: "html_scrape"
+      notes: "Lũ miền núi, sạt lở đường 14B, 14G, 40B..."
+
+  - id: bao_binhdinh
+    name: "Báo Bình Định"
+    type: "news_local"
+    url: "https://baobinhdinh.vn"
+    region_scope: "province"
+    region: "Bình Định"
+    categories: ["flood", "storm", "dam", "agriculture"]
+    trust_score: 0.86
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_phuyen
+    name: "Báo Phú Yên"
+    type: "news_local"
+    url: "https://baophuyen.vn"
+    region_scope: "province"
+    region: "Phú Yên"
+    categories: ["flood", "storm", "landslide"]
+    trust_score: 0.86
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_khanhhoa
+    name: "Báo Khánh Hòa"
+    type: "news_local"
+    url: "https://baokhanhhoa.vn"
+    region_scope: "province"
+    region: "Khánh Hòa"
+    categories: ["flood", "storm", "landslide", "urban_flood"]
+    trust_score: 0.86
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_gialai
+    name: "Báo Gia Lai"
+    type: "news_local"
+    url: "https://baogialai.com.vn"
+    region_scope: "province"
+    region: "Gia Lai"
+    categories: ["rain", "landslide", "dam", "reservoir"]
+    trust_score: 0.85
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_kontum
+    name: "Báo Kon Tum"
+    type: "news_local"
+    url: "https://baokontum.com.vn"
+    region_scope: "province"
+    region: "Kon Tum"
+    categories: ["storm", "landslide", "mountain_flood"]
+    trust_score: 0.85
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_daklak
+    name: "Báo Đắk Lắk"
+    type: "news_local"
+    url: "https://baodaklak.vn"
+    region_scope: "province"
+    region: "Đắk Lắk"
+    categories: ["rain", "flood", "landslide"]
+    trust_score: 0.85
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_daknong
+    name: "Báo Đắk Nông"
+    type: "news_local"
+    url: "https://baodaknong.org.vn"
+    region_scope: "province"
+    region: "Đắk Nông"
+    categories: ["rain", "landslide", "flood"]
+    trust_score: 0.84
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_longan
+    name: "Báo Long An"
+    type: "news_local"
+    url: "https://baolongan.vn"
+    region_scope: "province"
+    region: "Long An"
+    categories: ["flood", "high_tide", "urban_flood"]
+    trust_score: 0.84
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_kiengiang
+    name: "Báo Kiên Giang"
+    type: "news_local"
+    url: "https://baokiengiang.vn"
+    region_scope: "province"
+    region: "Kiên Giang"
+    categories: ["flood", "high_tide", "salinity"]
+    trust_score: 0.84
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_angiang
+    name: "Báo An Giang"
+    type: "news_local"
+    url: "https://baoangiang.com.vn"
+    region_scope: "province"
+    region: "An Giang"
+    categories: ["flood", "river_flood", "landslide"]
+    trust_score: 0.84
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_cantho
+    name: "Báo Cần Thơ"
+    type: "news_local"
+    url: "https://baocantho.com.vn"
+    region_scope: "city"
+    region: "Cần Thơ"
+    categories: ["urban_flood", "high_tide"]
+    trust_score: 0.84
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_vinhlong
+    name: "Báo Vĩnh Long"
+    type: "news_local"
+    url: "https://baovinhlong.com.vn"
+    region_scope: "province"
+    region: "Vĩnh Long"
+    categories: ["flood", "high_tide"]
+    trust_score: 0.84
+    fetch:
+      method: "html_scrape"
+
+  - id: bao_nghean
+    name: "Báo Nghệ An"
+    type: "news_local"
+    url: "https://baonghean.vn"
+    region_scope: "province"
+    region: "Nghệ An"
+    categories: ["flood", "storm", "landslide"]
+    trust_score: 0.86
+    fetch:
+      method: "html_scrape"
+
+  # =========================
+  # 4. MXH CHÍNH THỨC (CHỈ ĐÁNH DẤU, CHƯA CRAWL TỰ ĐỘNG)
+  # =========================
+  - id: fb_congan_danang
+    name: "Facebook - Công an Đà Nẵng"
+    type: "social_official"
+    platform: "facebook"
+    url: "https://www.facebook.com"   # dev điền link cụ thể
+    region_scope: "city"
+    region: "Đà Nẵng"
+    categories: ["traffic", "rescue", "flood"]
+    trust_score: 0.9
+    enabled: false
+    fetch:
+      method: "manual_review"
+      notes: "Dùng cho nhập tay, không crawl tự động để tránh rủi ro pháp lý."
+
+  - id: fb_pccc_hue
+    name: "Facebook - Cảnh sát PCCC Thừa Thiên Huế"
+    type: "social_official"
+    platform: "facebook"
+    url: "https://www.facebook.com"
+    region_scope: "province"
+    region: "Thừa Thiên Huế"
+    categories: ["rescue", "flood", "landslide"]
+    trust_score: 0.9
+    enabled: false
+    fetch:
+      method: "manual_review"
+      notes: "Chỉ dùng làm nguồn tham khảo để nhập tay."
+
+  # =========================
+  # 5. COMMUNITY / CROWD (CHỈ NHẬP TAY)
+  # =========================
+  - id: fb_local_group_quangtri_24h
+    name: "Facebook Group - Quảng Trị 24h"
+    type: "community_group"
+    platform: "facebook"
+    url: "https://www.facebook.com"
+    region_scope: "province"
+    region: "Quảng Trị"
+    categories: ["community_report", "flood", "traffic"]
+    trust_score: 0.6
+    enabled: false
+    fetch:
+      method: "manual_review"
+      notes: "Nguồn cộng đồng – phải có bước verify trước khi đưa vào hệ thống."
+
+  - id: otosaigon
+    name: "OtoSaigon - Tin đường xá"
+    type: "community_forum"
+    url: "https://www.otosaigon.com"
+    region_scope: "multi"
+    categories: ["traffic", "flooded_road"]
+    trust_score: 0.65
+    enabled: false
+    fetch:
+      method: "manual_review"
+      notes: "Chỉ dùng để nhập tay road events sau khi xác minh."

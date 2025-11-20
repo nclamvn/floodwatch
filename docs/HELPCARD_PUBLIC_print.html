@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>FloodWatch - Hướng dẫn sử dụng nhanh</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="/dev/fd/63" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">FloodWatch - Hướng dẫn sử dụng nhanh</h1>
+</header>
+<h1 id="floodwatch---hướng-dẫn-sử-dụng-nhanh">🌊 FloodWatch - Hướng dẫn
+sử dụng nhanh</h1>
+<p><strong>Hệ thống giám sát lũ lụt Việt Nam</strong>
+<strong>Website:</strong> https://floodwatch.vn</p>
+<hr />
+<h2 id="dành-cho-ai">🎯 Dành cho ai?</h2>
+<ul>
+<li>✅ Lực lượng cứu hộ, tình nguyện viên</li>
+<li>✅ Người dân vùng lũ cần thông tin khẩn cấp</li>
+<li>✅ Cơ quan chức năng địa phương</li>
+<li>✅ Báo chí, truyền thông</li>
+</ul>
+<hr />
+<h2 id="bản-đồ-đầy-đủ-vs-chế-độ-nhẹ-tối-ưu-data">📱 Bản đồ (đầy đủ) vs
+Chế độ nhẹ (tối ưu data)</h2>
+<h3 id="bản-đồ-đầy-đủ-mạng-tốt">🗺️ BẢN ĐỒ ĐẦY ĐỦ (Mạng tốt)</h3>
+<p><strong>Link:</strong> https://floodwatch.vn/map</p>
+<p><strong>Xem:</strong> - Bản đồ tương tác với vị trí báo cáo - Lọc
+theo tỉnh, loại cảnh báo - Chi tiết từng điểm nguy hiểm</p>
+<p><strong>Thích hợp:</strong> - Điều phối cứu hộ từ xa - Theo dõi diễn
+biến tổng quan - Desktop, laptop, tablet - <strong>Data sử
+dụng:</strong> ~300-500 KB/lần tải (cần mạng ổn định)</p>
+<h3 id="chế-độ-nhẹ-tối-ưu-data-mạng-yếu">📋 CHẾ ĐỘ NHẸ (Tối ưu data,
+mạng yếu)</h3>
+<p><strong>Link:</strong> https://floodwatch.vn/lite</p>
+<p><strong>Đặc điểm:</strong> - ✅ Tải nhanh (không cần JavaScript) - ✅
+Tiết kiệm data (&lt; 50 KB/trang) - ✅ Dễ in giấy - ✅ Hoạt động offline
+sau khi tải</p>
+<p><strong>Thích hợp:</strong> - Vùng mạng yếu, mất kết nối - Điện thoại
+phổ thông - Cần in ra giấy - Tiết kiệm pin</p>
+<p><strong>Cách dùng:</strong> 1. Vào: https://floodwatch.vn/lite 2.
+Chọn bộ lọc: “Last 6h” / “Last 24h” / “Last 7d” 3. Lọc theo loại: SOS /
+Alerts / Road 4. Cuộn xuống xem danh sách báo cáo</p>
+<hr />
+<h2 id="các-loại-cảnh-báo">🚨 Các loại cảnh báo</h2>
+<table>
+<thead>
+<tr>
+<th>Biểu tượng</th>
+<th>Loại</th>
+<th>Nghĩa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🔴 <strong>SOS</strong></td>
+<td>Khẩn cấp</td>
+<td>Cần cứu hộ ngay, nguy hiểm cao</td>
+</tr>
+<tr>
+<td>🟠 <strong>ALERT</strong></td>
+<td>Cảnh báo chính thức</td>
+<td>Từ KTTV, chính quyền</td>
+</tr>
+<tr>
+<td>🟡 <strong>ROAD</strong></td>
+<td>Đường bộ</td>
+<td>Ngập, sạt lở, không qua được</td>
+</tr>
+<tr>
+<td>🔵 <strong>NEEDS</strong></td>
+<td>Nhu yếu phẩm</td>
+<td>Cần lương thực, thuốc men</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="hiểu-thông-tin-báo-cáo">📊 Hiểu thông tin báo cáo</h2>
+<p><strong>Mỗi báo cáo có:</strong> - <strong>Thời gian:</strong> Khi
+nào xảy ra - <strong>Tỉnh/huyện:</strong> Ở đâu - <strong>Mô
+tả:</strong> Chuyện gì - <strong>Điểm tin cậy:</strong> 0.0 → 1.0 (càng
+cao càng chắc) - ≥ 0.8: Rất đáng tin - 0.5-0.7: Cần xác minh - &lt; 0.5:
+Thông tin chưa rõ</p>
+<p><strong>Trạng thái:</strong> - 🟠 <strong>new:</strong> Mới nhận,
+chưa xác minh - 🟢 <strong>verified:</strong> Đã xác nhận đúng - 🔵
+<strong>resolved:</strong> Đã xử lý xong - ⚪ <strong>invalid:</strong>
+Thông tin sai</p>
+<hr />
+<h2 id="mẹo-sử-dụng-hiệu-quả">💡 Mẹo sử dụng hiệu quả</h2>
+<h3 id="lọc-theo-vùng">1. Lọc theo vùng</h3>
+<pre><code>/lite?province=Quảng Bình          → Chỉ xem Quảng Bình
+/lite?province=Quảng Trị&amp;since=6h  → Quảng Trị, 6 giờ qua</code></pre>
+<h3 id="lọc-theo-loại-khẩn-cấp">2. Lọc theo loại khẩn cấp</h3>
+<pre><code>/lite?type=SOS         → Chỉ xem SOS (cần cứu ngay)
+/lite?type=ROAD        → Chỉ xem đường bị ngập</code></pre>
+<h3 id="xuất-file-csv-cho-phân-tích">3. Xuất file CSV (cho phân
+tích)</h3>
+<pre><code>https://floodwatch.vn/reports/export?format=csv&amp;since=24h</code></pre>
+<p>→ Mở bằng Excel/Google Sheets</p>
+<h3 id="dùng-trên-điện-thoại">4. Dùng trên điện thoại</h3>
+<ul>
+<li><strong>Thêm vào màn hình chính:</strong>
+<ul>
+<li>iPhone: Safari → Share → “Add to Home Screen”</li>
+<li>Android: Chrome → Menu → “Add to Home screen”</li>
+</ul></li>
+<li><strong>Bookmark /lite</strong> để truy cập nhanh khi mất mạng</li>
+</ul>
+<h3 id="in-ra-giấy-cho-trạm-cứu-hộ">5. In ra giấy (cho trạm cứu hộ)</h3>
+<ul>
+<li>Vào /lite</li>
+<li>Chọn bộ lọc phù hợp</li>
+<li>Ctrl+P (Windows) / Cmd+P (Mac)</li>
+<li>In hoặc “Save as PDF”</li>
+</ul>
+<hr />
+<h2 id="báo-cáo-tình-huống-khẩn-cấp">🆘 Báo cáo tình huống khẩn cấp</h2>
+<p><strong>Đường dẫn:</strong> https://floodwatch.vn/report</p>
+<p><strong>Cần cung cấp:</strong> 1. <strong>Loại:</strong> SOS / ROAD /
+NEEDS 2. <strong>Mô tả ngắn gọn:</strong> “Nước ngập 2m, 10 người mắc
+kẹt” 3. <strong>Vị trí:</strong> Bấm “📍 Lấy vị trí” hoặc nhập thủ công
+4. <strong>Ảnh</strong> (tùy chọn): Tối đa 3 ảnh, mỗi ảnh &lt; 5MB</p>
+<p><strong>⚠️ Lưu ý bảo mật:</strong> - ✅ <strong>Không lo về
+SĐT/email:</strong> Hệ thống TỰ ĐỘNG ẩn thông tin cá nhân (PII
+scrubbing) - ✅ Nếu vô tình ghi số điện thoại → hệ thống tự chuyển thành
+<code>***-****-***</code> - ✅ Email → tự động ẩn thành
+<code>***@***</code> - ⚠️ <strong>Tuy nhiên:</strong> Vẫn nên tránh đăng
+thông tin nhạy cảm không cần thiết - 💬 Nếu cần liên hệ trực tiếp, dùng
+kênh khác (Zalo, Telegram nhóm cứu hộ)</p>
+<hr />
+<h2 id="hỗ-trợ-liên-hệ">📞 Hỗ trợ &amp; Liên hệ</h2>
+<p><strong>Kỹ thuật:</strong> - Email: ops@floodwatch.vn - Báo lỗi:
+https://github.com/floodwatch/floodwatch/issues</p>
+<p><strong>Khẩn cấp:</strong> - Gọi 113 (Cảnh sát) - Gọi 114 (Cứu hỏa) -
+Gọi 115 (Cấp cứu)</p>
+<p><strong>Cộng đồng:</strong> - Facebook: /floodwatch.vn - Telegram:
+<span class="citation"
+data-cites="floodwatch_vn">@floodwatch_vn</span></p>
+<hr />
+<h2 id="câu-hỏi-thường-gặp">❓ Câu hỏi thường gặp</h2>
+<p><strong>Q: Dữ liệu từ đâu?</strong> A: Kết hợp từ KTTV (chính thức) +
+báo cáo cộng đồng (xác minh bởi ops team)</p>
+<p><strong>Q: Tại sao có báo cáo “new” lâu chưa thành
+“verified”?</strong> A: Ops team xác minh thủ công, ưu tiên SOS trước.
+Tin KTTV tự động verified.</p>
+<p><strong>Q: Dùng mất tiền không?</strong> A: Hoàn toàn miễn phí. Chỉ
+tốn data mạng (rất ít với /lite).</p>
+<p><strong>Q: Offline có dùng được không?</strong> A: /lite có thể cache
+trong trình duyệt. Nếu đã mở 1 lần, có thể xem lại khi mất mạng (chưa có
+dữ liệu mới).</p>
+<p><strong>Q: Tôi muốn nhận thông báo tự động?</strong> A: Liên hệ
+ops@floodwatch.vn để xin API key (dành cho tổ chức).</p>
+<hr />
+<h2 id="ví-dụ-tình-huống-thực-tế">🎓 Ví dụ tình huống thực tế</h2>
+<h3 id="tình-huống-1-điều-phối-cứu-hộ">Tình huống 1: Điều phối cứu
+hộ</h3>
+<p><strong>Bối cảnh:</strong> Bạn là trưởng đội cứu hộ, cần biết vùng
+nào cần ưu tiên.</p>
+<p><strong>Cách làm:</strong> 1. Mở /map trên laptop 2. Lọc “SOS” +
+“Last 6h” + tỉnh của bạn 3. Xem bản đồ, chọn điểm gần nhất chưa
+“resolved” 4. Click vào marker → xem chi tiết 5. Gọi điện xác nhận trước
+khi xuất phát</p>
+<h3 id="tình-huống-2-người-dân-tìm-đường-tránh-lũ">Tình huống 2: Người
+dân tìm đường tránh lũ</h3>
+<p><strong>Bối cảnh:</strong> Bạn cần đi từ A → B, sợ đường ngập.</p>
+<p><strong>Cách làm:</strong> 1. Mở /lite trên điện thoại (tiết kiệm
+pin) 2. Lọc “ROAD” + tỉnh của bạn 3. Xem danh sách đường bị ngập 4.
+Tránh các tuyến đó, chọn đường khác</p>
+<h3 id="tình-huống-3-truyền-thông-cần-số-liệu">Tình huống 3: Truyền
+thông cần số liệu</h3>
+<p><strong>Bối cảnh:</strong> Báo chí cần báo cáo số lượng SOS trong 24h
+qua.</p>
+<p><strong>Cách làm:</strong> 1. Vào /lite?type=SOS&amp;since=24h 2. Đếm
+số lượng (hoặc xuất CSV) 3. Lọc theo từng tỉnh nếu cần chi tiết</p>
+<hr />
+<h2 id="checklist-cho-người-dùng-mới">✅ Checklist cho người dùng
+mới</h2>
+<ul class="task-list">
+<li><label><input type="checkbox" />Đã bookmark /lite và
+/map</label></li>
+<li><label><input type="checkbox" />Đã test load trang trong vùng mạng
+yếu</label></li>
+<li><label><input type="checkbox" />Đã biết cách lọc theo
+tỉnh/loại</label></li>
+<li><label><input type="checkbox" />Đã lưu số hotline
+113/114/115</label></li>
+<li><label><input type="checkbox" />Đã chia sẻ link cho đội cứu
+hộ</label></li>
+</ul>
+<hr />
+<p><strong>🌊 FloodWatch - Cùng nhau vượt lũ an toàn</strong></p>
+<p><em>Hệ thống hoạt động 24/7 trong mùa mưa lũ</em> <em>Cập nhật mỗi
+giờ từ KTTV + cộng đồng</em></p>
+<p><strong>Version:</strong> 1.0 | <strong>Cập nhật:</strong>
+2025-11-01</p>
+<hr />
+<p><em>📄 In trang này và dán ở trạm cứu hộ để mọi người dễ tra
+cứu</em></p>
+</body>
+</html>

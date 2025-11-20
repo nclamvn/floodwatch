@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloodWatch - Deployment Timeline (60-90 min)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 4px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .meta {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .meta-value {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .roles {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+
+        .roles h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .roles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .role-item {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ffc107;
+        }
+
+        .role-title {
+            font-weight: 700;
+            color: #856404;
+            margin-bottom: 3px;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 150px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding: 20px 0;
+            border-left: 3px solid #e0e0e0;
+        }
+
+        .timeline-item:last-child {
+            border-left: 3px solid transparent;
+        }
+
+        .timeline-time {
+            position: absolute;
+            left: -150px;
+            top: 20px;
+            width: 120px;
+            text-align: right;
+            font-weight: 700;
+            font-size: 18px;
+            color: #3498db;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -9px;
+            top: 25px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #3498db;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #3498db;
+        }
+
+        .timeline-content {
+            margin-left: 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .timeline-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .timeline-subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .steps {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .step {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #555;
+        }
+
+        .step:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .checkpoint {
+            background: #d4edda;
+            border-left-color: #28a745;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #155724;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            color: #856404;
+        }
+
+        .danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            color: #721c24;
+        }
+
+        .code {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; padding: 20px; }
+            .timeline-item { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 FloodWatch - Production Deployment Timeline</h1>
+
+        <div class="meta">
+            <div class="meta-item">
+                <span class="meta-label">Total Duration</span>
+                <span class="meta-value">60-90 minutes</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Deployment Date</span>
+                <span class="meta-value">____ / ____ / ____</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Start Time (H-0)</span>
+                <span class="meta-value">____ : ____</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Version</span>
+                <span class="meta-value">v4.0 (Stage 5)</span>
+            </div>
+        </div>
+
+        <div class="roles">
+            <h3>👥 War-Room Roster</h3>
+            <div class="roles-grid">
+                <div class="role-item">
+                    <div class="role-title">Decider</div>
+                    <div>_______________</div>
+                </div>
+                <div class="role-item">
+                    <div class="role-title">Driver</div>
+                    <div>_______________</div>
+                </div>
+                <div class="role-item">
+                    <div class="role-title">Scribe</div>
+                    <div>_______________</div>
+                </div>
+                <div class="role-item">
+                    <div class="role-title">Observer</div>
+                    <div>_______________</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline">
+            <!-- T-15' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T-15'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">FREEZE & WAR-ROOM</div>
+                    <div class="timeline-subtitle">Code freeze, team assembly</div>
+                    <ul class="steps">
+                        <li class="step">Code freeze: No merges to main, no infra changes</li>
+                        <li class="step">Package freeze: No apt/yum/brew installs</li>
+                        <li class="step">Open war-room: All roles join video + chat</li>
+                        <li class="step">Pre-announce deployment to internal channels</li>
+                    </ul>
+                    <div class="checkpoint">⏰ Checkpoint: War-room active, all roles present</div>
+                </div>
+            </div>
+
+            <!-- T-10' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T-10'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">PREFLIGHT CHECKS</div>
+                    <div class="timeline-subtitle">9 automated validations</div>
+                    <div class="code">./infra/scripts/preflight.sh</div>
+                    <ul class="steps">
+                        <li class="step">Disk usage < 80% ✓</li>
+                        <li class="step">Inode usage < 80% ✓</li>
+                        <li class="step">Available memory > 512MB ✓</li>
+                        <li class="step">Docker & Docker Compose v2 installed ✓</li>
+                        <li class="step">Ports 80/443 available ✓</li>
+                        <li class="step">Required directories writable ✓</li>
+                        <li class="step">.env.prod validated ✓</li>
+                    </ul>
+                    <div class="danger">🔴 GATE A: If ANY check fails → STOP, fix issue, re-run</div>
+                </div>
+            </div>
+
+            <!-- T-5' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T-5'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">PRE-DEPLOYMENT BACKUP</div>
+                    <div class="timeline-subtitle">30-60 seconds</div>
+                    <div class="code">./infra/scripts/prod_backup.sh</div>
+                    <ul class="steps">
+                        <li class="step">Create timestamped database backup</li>
+                        <li class="step">Verify backup file created</li>
+                        <li class="step">Record backup filename for potential rollback</li>
+                    </ul>
+                    <div class="checkpoint">✅ Checkpoint: Backup file verified</div>
+                </div>
+            </div>
+
+            <!-- T-0' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+0'</div>
+                <div class="timeline-marker" style="background: #e74c3c; box-shadow: 0 0 0 2px #e74c3c;"></div>
+                <div class="timeline-content" style="border-left-color: #e74c3c;">
+                    <div class="timeline-title">🚀 DEPLOYMENT START</div>
+                    <div class="timeline-subtitle">One-shot deploy script (15-20 min)</div>
+                    <div class="code">./infra/scripts/deploy_production.sh</div>
+                    <ul class="steps">
+                        <li class="step"><strong>Step 1:</strong> Bring up Docker stack (api, web, db, nginx, certbot)</li>
+                        <li class="step"><strong>Step 2:</strong> Verify all containers "Up (healthy)"</li>
+                        <li class="step"><strong>Step 3:</strong> Run database migrations → 005_performance_indexes</li>
+                        <li class="step"><strong>Step 4:</strong> Seed API keys (capture for smoke tests)</li>
+                        <li class="step"><strong>Step 5:</strong> Warm-up cache (5 hits × 3 endpoints)</li>
+                        <li class="step"><strong>Step 6:</strong> Automated smoke tests (7 checks)</li>
+                        <li class="step"><strong>Step 7:</strong> Verify security headers</li>
+                    </ul>
+                    <div class="warning">⚠️ Observer monitors logs in parallel:<br>
+                    • API logs: ./infra/scripts/prod_logs.sh api<br>
+                    • Nginx logs: ./infra/scripts/prod_logs.sh nginx</div>
+                </div>
+            </div>
+
+            <!-- T+5' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+5'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">CONTAINERS & MIGRATIONS</div>
+                    <div class="timeline-subtitle">Part of deploy_production.sh</div>
+                    <ul class="steps">
+                        <li class="step">Check disk/inode before migration</li>
+                        <li class="step">docker compose ps → All "Up"</li>
+                        <li class="step">alembic upgrade head</li>
+                        <li class="step">Verify indexes created (5 indexes)</li>
+                    </ul>
+                    <div class="checkpoint">✅ Checkpoint: Migration to 005_performance_indexes complete</div>
+                </div>
+            </div>
+
+            <!-- T+10' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+10'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">WARM-UP & SMOKE TESTS</div>
+                    <div class="timeline-subtitle">Automated validation (7/7 required)</div>
+                    <ul class="steps">
+                        <li class="step">Warm-up: /health, /lite, /api/v1/reports (5× each)</li>
+                        <li class="step">Test 1: Health endpoint (200 OK)</li>
+                        <li class="step">Test 2: Security headers (CORS, HSTS, CSP, X-Frame)</li>
+                        <li class="step">Test 3: Public API with key</li>
+                        <li class="step">Test 4: Lite mode</li>
+                        <li class="step">Test 5: CSV export</li>
+                        <li class="step">Test 6: Ops dashboard (admin)</li>
+                        <li class="step">Test 7: Metrics endpoint</li>
+                    </ul>
+                    <div class="danger">🔴 GATE B: If <7/7 PASS → Decider evaluates:<br>
+                    • Option D: Lite-only mode (2 min)<br>
+                    • Option A: Rollback images (3 min)<br>
+                    • Fix & retry (if <5 min fix)</div>
+                </div>
+            </div>
+
+            <!-- T+20' (SSL First Time) -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+20'</div>
+                <div class="timeline-marker" style="background: #f39c12; box-shadow: 0 0 0 2px #f39c12;"></div>
+                <div class="timeline-content" style="border-left-color: #f39c12;">
+                    <div class="timeline-title">SSL CERTIFICATE (First-Time Only)</div>
+                    <div class="timeline-subtitle">Skip if certificates already exist</div>
+                    <div class="code">docker compose -f docker-compose.prod.yml run --rm certbot certonly \<br>
+  --webroot -w /var/www/certbot \<br>
+  -d floodwatch.vn -d api.floodwatch.vn \<br>
+  --email ops@floodwatch.vn --agree-tos</div>
+                    <ul class="steps">
+                        <li class="step">Ensure port 80 accessible (firewall)</li>
+                        <li class="step">DNS propagated (dig floodwatch.vn)</li>
+                        <li class="step">Request Let's Encrypt certificate</li>
+                        <li class="step">Reload Nginx: nginx -s reload</li>
+                    </ul>
+                    <div class="warning">⚠️ If SSL fails: Check DNS, port 80, firewall. Can proceed with HTTP for staging, but NOT for production!</div>
+                </div>
+            </div>
+
+            <!-- T+30' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+30'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">CRON JOBS & MONITORING</div>
+                    <div class="timeline-subtitle">Scheduled tasks + observability</div>
+                    <ul class="steps">
+                        <li class="step"><strong>Cron:</strong> Edit crontab -e, add CRON_TZ=Asia/Ho_Chi_Minh</li>
+                        <li class="step">4 jobs: KTTV (:05), Roads (:35), Alerts (*/2), Snapshot (23:55)</li>
+                        <li class="step"><strong>Prometheus:</strong> Start container, verify targets UP</li>
+                        <li class="step"><strong>Uptime Monitor:</strong> Add https://floodwatch.vn/health (60s)</li>
+                        <li class="step"><strong>Logrotate:</strong> Copy config to /etc/logrotate.d/</li>
+                    </ul>
+                    <div class="checkpoint">✅ Checkpoint: Cron verified, monitoring active</div>
+                </div>
+            </div>
+
+            <!-- T+40' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+40'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">LOAD TEST (Optional)</div>
+                    <div class="timeline-subtitle">Light k6 smoke test if infrastructure idle</div>
+                    <div class="code">BASE_URL=https://api.floodwatch.vn API_KEY=xxx \<br>
+k6 run ops/loadtest/k6_smoke_test.js</div>
+                    <ul class="steps">
+                        <li class="step">30 seconds, 5 VUs (very light)</li>
+                        <li class="step">Target: p95 < 200ms, error rate < 5%</li>
+                        <li class="step">If p95 > 300ms → Consider Lite-only mode temporarily</li>
+                    </ul>
+                    <div class="warning">⚠️ GATE C: High latency or errors → Enable Lite-only, investigate, expand capacity</div>
+                </div>
+            </div>
+
+            <!-- T+50' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+50'</div>
+                <div class="timeline-marker" style="background: #27ae60; box-shadow: 0 0 0 2px #27ae60;"></div>
+                <div class="timeline-content" style="border-left-color: #27ae60;">
+                    <div class="timeline-title">🎉 PUBLIC ANNOUNCEMENT</div>
+                    <div class="timeline-subtitle">Communication & handover</div>
+                    <ul class="steps">
+                        <li class="step">Share links: /map, /lite, /api-docs</li>
+                        <li class="step">Distribute API keys to partners</li>
+                        <li class="step">Send HELPCARD_PUBLIC.pdf to rescue teams</li>
+                        <li class="step">Post internal announcement with ops links</li>
+                        <li class="step">Assign war-room roster (3 shifts × 8 hours)</li>
+                        <li class="step">Schedule first hourly health check (H+60')</li>
+                    </ul>
+                    <div class="checkpoint">🎯 Deployment Complete! Total time: _____ minutes<br>
+                    Status: 🟢 All systems operational</div>
+                </div>
+            </div>
+
+            <!-- T+60' -->
+            <div class="timeline-item">
+                <div class="timeline-time">T+60'</div>
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">POST-DEPLOYMENT MONITORING</div>
+                    <div class="timeline-subtitle">First 24 hours: Hourly checks</div>
+                    <ul class="steps">
+                        <li class="step">API p95 latency: Target ≤ 150ms</li>
+                        <li class="step">Error rate: Target < 1%</li>
+                        <li class="step">Scraper lag: Target < 60 minutes</li>
+                        <li class="step">New reports queue: Target < 50</li>
+                        <li class="step">Database connections: Target < 50</li>
+                    </ul>
+                    <div class="warning">⚠️ Use docs/WAR_ROOM_CHECKLIST.md for hourly health checks<br>
+                    Escalate if: p95 > 300ms (15'), error > 5% (10'), scraper lag > 120'</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <h3 style="grid-column: 1 / -1; margin-bottom: 10px;">Legend</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #3498db;"></div>
+                <span>Normal Step</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e74c3c;"></div>
+                <span>Deployment Start</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f39c12;"></div>
+                <span>First-Time Only</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #27ae60;"></div>
+                <span>Completion</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #d4edda;"></div>
+                <span>Checkpoint</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff3cd;"></div>
+                <span>Warning</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f8d7da;"></div>
+                <span>Decision Gate</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #e8f4f8; border-radius: 8px; border-left: 4px solid #3498db;">
+            <h3 style="margin-bottom: 10px;">📚 Reference Documents</h3>
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="padding: 5px 0;">▸ <strong>RUN_ORDER.md</strong> - 1-page step-by-step execution guide</li>
+                <li style="padding: 5px 0;">▸ <strong>ROLLBACK_PLAYBOOK.md</strong> - Emergency procedures (Options A/B/C/D)</li>
+                <li style="padding: 5px 0;">▸ <strong>QUICK_REFERENCE.md</strong> - Copy-paste commands</li>
+                <li style="padding: 5px 0;">▸ <strong>WAR_ROOM_CHECKLIST.md</strong> - Hourly health checks</li>
+                <li style="padding: 5px 0;">▸ <strong>GO_LIVE_LOG_TEMPLATE.md</strong> - Real-time logging</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center; color: #7f8c8d; font-size: 12px;">
+            <p>FloodWatch Deployment Gantt v1.1.1 | Last updated: 2025-11-01</p>
+            <p>Print this page: Cmd/Ctrl+P → Save as PDF</p>
+        </div>
+    </div>
+</body>
+</html>

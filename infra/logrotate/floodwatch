@@ -1,0 +1,58 @@
+# LogRotate configuration for FloodWatch
+#
+# Copy this file to /etc/logrotate.d/floodwatch:
+#   sudo cp infra/logrotate/floodwatch /etc/logrotate.d/floodwatch
+#   sudo chmod 644 /etc/logrotate.d/floodwatch
+#
+# Test configuration:
+#   sudo logrotate -d /etc/logrotate.d/floodwatch
+#
+# Force rotation manually:
+#   sudo logrotate -f /etc/logrotate.d/floodwatch
+#
+
+/opt/floodwatch/logs/*.log {
+    # Rotate daily
+    daily
+
+    # Keep 14 days of logs
+    rotate 14
+
+    # Compress old logs with gzip
+    compress
+
+    # Delay compression until next rotation
+    # (so yesterday's log is uncompressed for easy tailing)
+    delaycompress
+
+    # Don't error if log file is missing
+    missingok
+
+    # Don't rotate if log is empty
+    notifempty
+
+    # Copy and truncate instead of moving
+    # (safer for apps that keep file handles open)
+    copytruncate
+
+    # Set permissions on rotated files
+    create 0644 root root
+
+    # Shared script for all logs
+    sharedscripts
+
+    # Run after rotation (optional: notify monitoring)
+    postrotate
+        # Example: Send metric to monitoring
+        # curl -X POST https://monitoring/api/log-rotated || true
+    endscript
+}
+
+# Separate config for snapshot PDFs (different retention)
+/opt/floodwatch/ops/snapshots/*.pdf {
+    weekly
+    rotate 8
+    compress
+    missingok
+    notifempty
+}

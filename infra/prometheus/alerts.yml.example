@@ -1,0 +1,133 @@
+# Prometheus Alert Rules for FloodWatch
+#
+# Copy to alerts.yml and customize thresholds
+
+groups:
+  - name: floodwatch_api_alerts
+    interval: 30s
+    rules:
+      # High error rate (>5% of requests failing)
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High HTTP error rate on FloodWatch API"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes (threshold: 5%)"
+
+      # Slow response time (avg >200ms)
+      - alert: SlowResponseTime
+        expr: http_request_duration_milliseconds_avg{path="/reports"} > 200
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Slow response time on /reports endpoint"
+          description: "Average response time is {{ $value }}ms (threshold: 200ms)"
+
+      # Critical slow response (avg >500ms)
+      - alert: CriticalSlowResponseTime
+        expr: http_request_duration_milliseconds_avg{path="/reports"} > 500
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "CRITICAL: Very slow response time on /reports"
+          description: "Average response time is {{ $value }}ms (threshold: 500ms)"
+
+  - name: floodwatch_scraper_alerts
+    interval: 1m
+    rules:
+      # KTTV scraper hasn't run in over 1 hour
+      - alert: ScraperNotRunning
+        expr: (time() - last_scraper_run_timestamp_seconds{job="kttv_scraper"}) > 3600
+        for: 5m
+        labels:
+          severity: critical
+          component: scraper
+        annotations:
+          summary: "KTTV scraper has not run successfully in over 1 hour"
+          description: "Last successful run was {{ $value | humanizeDuration }} ago"
+
+      # High scraper failure rate
+      - alert: HighScraperFailureRate
+        expr: |
+          (
+            sum(rate(cron_runs_total{job="kttv_scraper",status="failed"}[1h]))
+            /
+            sum(rate(cron_runs_total{job="kttv_scraper"}[1h]))
+          ) > 0.2
+        for: 30m
+        labels:
+          severity: warning
+          component: scraper
+        annotations:
+          summary: "High failure rate for KTTV scraper"
+          description: "Scraper failing {{ $value | humanizePercentage }} of the time"
+
+  - name: floodwatch_operational_alerts
+    interval: 1m
+    rules:
+      # High queue of unverified reports
+      - alert: HighNewReportsQueue
+        expr: reports_by_status_current{status="new"} > 100
+        for: 15m
+        labels:
+          severity: warning
+          component: ops
+        annotations:
+          summary: "High number of unverified reports in queue"
+          description: "{{ $value }} reports waiting for ops team verification"
+
+      # Critical queue (>200 reports)
+      - alert: CriticalNewReportsQueue
+        expr: reports_by_status_current{status="new"} > 200
+        for: 5m
+        labels:
+          severity: critical
+          component: ops
+        annotations:
+          summary: "CRITICAL: Very high queue of unverified reports"
+          description: "{{ $value }} reports waiting - ops team may be overwhelmed"
+
+      # No new reports in last 6 hours (possible system issue)
+      - alert: NoRecentReports
+        expr: |
+          (
+            rate(reports_total[6h]) * 6 * 3600
+          ) < 1
+        for: 6h
+        labels:
+          severity: warning
+          component: ingestion
+        annotations:
+          summary: "No new reports in the last 6 hours"
+          description: "Possible issue with data ingestion or unusually quiet period"
+
+  - name: floodwatch_alerts_dispatcher
+    interval: 1m
+    rules:
+      # Alerts dispatcher failures
+      - alert: AlertsDispatcherFailing
+        expr: |
+          (
+            sum(rate(cron_runs_total{job="alerts_dispatcher",status="failed"}[1h]))
+            /
+            sum(rate(cron_runs_total{job="alerts_dispatcher"}[1h]))
+          ) > 0.5
+        for: 30m
+        labels:
+          severity: critical
+          component: alerts
+        annotations:
+          summary: "Alerts dispatcher failing frequently"
+          description: "{{ $value | humanizePercentage }} of dispatcher runs failing"

@@ -1,0 +1,58 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     🌊 FLOODWATCH - CHẶNG 2 HOÀN THÀNH                      ║
+║                     Database + Forms + Clustering + Scraping                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+✅ HOÀN THÀNH 100%
+
+📦 BACKEND (Database Integration):
+   • SQLAlchemy + Alembic ORM với PostGIS
+   • Migrations: 001_initial_schema.py
+   • Repositories: ReportRepository, RoadEventRepository
+   • Endpoints chuyển sang DB (thay in-memory)
+   • Structlog JSON logging
+   • Rate limiting: 30 req/min trên /ingest/community
+   • VERSION 2.0.0 trong API
+
+🎨 FRONTEND (Forms + Map Enhancements):
+   • /report - Form cộng đồng với GPS + validation
+   • MapViewClustered - Supercluster integration
+   • Heatmap layer cho rainfall (RAIN type)
+   • /routes - Trang tuyến đường với filters
+
+🤖 CRON JOBS (Real Scraping):
+   • kttv_alerts.py V2 - Real nchmf.gov.vn scraping
+   • Retry: 3 attempts, exponential backoff
+   • Idempotency: SHA1 hash (title + date)
+   • Fallback mock nếu scraping fails
+   • roads_press_watch.py - Keywords + hash dedup
+   • provinces.json - Geocoding config
+
+📊 FEATURES MỚI:
+   • Database: PostgreSQL + PostGIS với spatial indexes
+   • Clustering: Supercluster cho 1000+ markers
+   • Heatmap: Rainfall density visualization
+   • Trust Score: Rule-based V1
+   • Logging: Structured JSON logs
+   • Rate Limit: slowapi integration
+
+⚠️  CẦN TEST (Docker chưa chạy):
+   1. Khởi động Docker Desktop
+   2. cd ~/floodwatch && ./scripts/dev_up.sh
+   3. Run migrations: docker compose exec api alembic upgrade head
+   4. Test endpoints: curl http://localhost:8000/health
+   5. Access: http://localhost:3000/map, /report, /routes
+
+📝 BÁO CÁO CHI TIẾT: ~/floodwatch/REPORT_STAGE2.md
+
+🎯 ROADMAP CHẶNG 3:
+   • Dashboard /ops cho cứu hộ
+   • Trust Score V1 nâng cao
+   • Low-bandwidth /lite mode
+   • Public API v1 với API keys
+   • Telegram alerts (optional)
+
+═══════════════════════════════════════════════════════════════════════════════
+Status: ✅ READY FOR DOCKER TEST
+Next: User khởi động Docker → Test → Approval → Chặng 3
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,47 @@
+# Prometheus Configuration for FloodWatch
+#
+# Copy to prometheus.yml and update ADMIN_TOKEN
+# Run: prometheus --config.file=infra/prometheus/prometheus.yml
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'floodwatch-prod'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - 'localhost:9093'
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # FloodWatch API
+  - job_name: 'floodwatch-api'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/metrics'
+    params:
+      token: ['REPLACE_WITH_ADMIN_TOKEN']  # TODO: Replace with actual token
+    static_configs:
+      - targets: ['localhost:8000']
+        labels:
+          service: 'floodwatch-api'
+          component: 'backend'
+
+  # PostgreSQL exporter (optional)
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['localhost:9187']
+
+  # Node exporter (optional)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['localhost:9100']

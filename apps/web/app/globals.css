@@ -1,0 +1,449 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   Design Tokens: CSS Custom Properties
+   ======================================== */
+
+:root {
+  /* Light Mode Colors */
+  --color-bg-primary: 255, 255, 255;
+  --color-bg-secondary: 250, 250, 250;
+  --color-bg-tertiary: 245, 245, 245;
+
+  --color-text-primary: 23, 23, 23;
+  --color-text-secondary: 82, 82, 82;
+  --color-text-tertiary: 163, 163, 163;
+
+  --color-border-subtle: 229, 229, 229;
+  --color-border-default: 212, 212, 212;
+
+  --color-accent: 59, 130, 246;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 8px 0 rgb(0 0 0 / 0.04);
+  --shadow-soft-md: 0 4px 12px 0 rgb(0 0 0 / 0.05);
+  --shadow-soft-lg: 0 8px 24px 0 rgb(0 0 0 / 0.06);
+
+  /* Border Radius */
+  --radius-card: 12px;
+  --radius-prominent: 16px;
+  --radius-sheet: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Mode Colors */
+    --color-bg-primary: 10, 10, 10;
+    --color-bg-secondary: 23, 23, 23;
+    --color-bg-tertiary: 38, 38, 38;
+
+    --color-text-primary: 250, 250, 250;
+    --color-text-secondary: 212, 212, 212;
+    --color-text-tertiary: 115, 115, 115;
+
+    --color-border-subtle: 38, 38, 38;
+    --color-border-default: 64, 64, 64;
+
+    --color-accent: 96, 165, 250;
+
+    /* Shadows (more pronounced in dark mode) */
+    --shadow-soft: 0 2px 8px 0 rgb(0 0 0 / 0.3);
+    --shadow-soft-md: 0 4px 12px 0 rgb(0 0 0 / 0.4);
+    --shadow-soft-lg: 0 8px 24px 0 rgb(0 0 0 / 0.5);
+  }
+}
+
+body {
+  background-color: rgb(var(--color-bg-primary));
+  color: rgb(var(--color-text-primary));
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ========================================
+   Component Utilities
+   ======================================== */
+
+/* MapLibre GL styles - loaded dynamically via layout.tsx */
+/* Supports both Mapbox and Goong Maps providers */
+
+/* Hide MapLibre logo (also works with mapboxgl- for backwards compatibility) */
+.maplibregl-ctrl-logo,
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
+
+/* Modern Map Popup Styling - Glass Effect */
+.modern-popup .maplibregl-popup-content,
+.modern-popup .mapboxgl-popup-content {
+  padding: 0;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft-lg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  min-width: 280px;
+}
+
+.dark .modern-popup .maplibregl-popup-content,
+.dark .modern-popup .mapboxgl-popup-content {
+  background-color: rgba(23, 23, 23, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modern-popup .maplibregl-popup-close-button,
+.modern-popup .mapboxgl-popup-close-button {
+  font-size: 22px;
+  padding: 4px;
+  color: rgb(var(--color-text-secondary));
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.modern-popup .maplibregl-popup-close-button:hover,
+.modern-popup .mapboxgl-popup-close-button:hover {
+  background-color: rgb(var(--color-bg-tertiary));
+  color: rgb(var(--color-text-primary));
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.dark .modern-popup .maplibregl-popup-close-button,
+.dark .modern-popup .mapboxgl-popup-close-button {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .modern-popup .maplibregl-popup-close-button:hover,
+.dark .modern-popup .mapboxgl-popup-close-button:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.modern-popup .maplibregl-popup-tip,
+.modern-popup .mapboxgl-popup-tip {
+  border-top-color: rgb(var(--color-bg-primary));
+}
+
+/* ========================================
+   Map Controls Positioning (Center)
+   ======================================== */
+
+/* Position navigation controls at center-right edge */
+.maplibregl-ctrl-bottom-right,
+.mapboxgl-ctrl-bottom-right {
+  bottom: auto !important;
+  top: 50% !important;
+  transform: translateY(-50%);
+  right: 16px;
+}
+
+/* Mobile: keep at bottom-right to avoid header overlap */
+@media (max-width: 640px) {
+  .maplibregl-ctrl-bottom-right,
+  .mapboxgl-ctrl-bottom-right {
+    bottom: 70px !important;
+    top: auto !important;
+    transform: none;
+    right: 12px;
+  }
+}
+
+/* Style navigation controls with modern look */
+.maplibregl-ctrl-group,
+.mapboxgl-ctrl-group {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
+}
+
+.dark .maplibregl-ctrl-group,
+.dark .mapboxgl-ctrl-group {
+  background: rgba(23, 23, 23, 0.95) !important;
+}
+
+.maplibregl-ctrl-group button,
+.mapboxgl-ctrl-group button {
+  width: 36px;
+  height: 36px;
+  border: none !important;
+}
+
+.maplibregl-ctrl-group button:hover,
+.mapboxgl-ctrl-group button:hover {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark .maplibregl-ctrl-group button:hover,
+.dark .mapboxgl-ctrl-group button:hover {
+  background-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+/* Scale control styling */
+.maplibregl-ctrl-scale,
+.mapboxgl-ctrl-scale {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 8px !important;
+  border: none !important;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: rgb(23, 23, 23);
+}
+
+.dark .maplibregl-ctrl-scale,
+.dark .mapboxgl-ctrl-scale {
+  background: rgba(23, 23, 23, 0.9) !important;
+  color: rgb(250, 250, 250);
+}
+
+/* Mobile UX - Horizontal scroll without scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Touch-friendly tap targets (44px minimum) */
+@media (max-width: 768px) {
+  button,
+  select,
+  input[type="submit"],
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ========================================
+   Skeleton Loading States
+   ======================================== */
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--color-bg-tertiary)) 0%,
+    rgb(var(--color-bg-secondary)) 50%,
+    rgb(var(--color-bg-tertiary)) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-card);
+}
+
+/* ========================================
+   Marker Breathing Animation - Enhanced
+   ======================================== */
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1) !important;
+    opacity: 0.4 !important;
+  }
+  50% {
+    transform: scale(2.2) !important;
+    opacity: 0.9 !important;
+  }
+}
+
+@keyframes breathe-glow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.6;
+  }
+}
+
+/* Apply subtle breathing to markers */
+.marker-glow {
+  animation: breathe-glow 2.5s ease-in-out infinite !important;
+  will-change: transform, opacity !important;
+}
+
+/* ========================================
+   Custom Scrollbar (for desktop)
+   ======================================== */
+
+@media (min-width: 768px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(229, 231, 235, 0.3); /* Light gray track */
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.6); /* Darker gray thumb */
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(55, 65, 81, 0.8); /* Even darker on hover */
+  }
+}
+
+/* Dark mode scrollbar */
+@media (min-width: 768px) {
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(55, 65, 81, 0.2);
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.4);
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.6);
+  }
+}
+
+/* ========================================
+   Pill Component Utilities
+   ======================================== */
+
+:root {
+  --surface-pill: 0.85;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-pill: 0.85;
+  }
+}
+
+/* Reusable pill class for overlay controls */
+.pill {
+  border-radius: 9999px;
+  background: color-mix(in oklab, white var(--surface-pill), transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08);
+  border: 1px solid rgb(0 0 0 / 0.05);
+}
+
+.dark .pill {
+  background: color-mix(in oklab, rgb(23 23 23) var(--surface-pill), transparent);
+  border-color: rgb(255 255 255 / 0.06);
+}
+
+/* Enhanced backdrop blur support */
+@supports (backdrop-filter: blur(8px)) {
+  .pill {
+    backdrop-filter: blur(8px);
+  }
+}
+
+@supports not (backdrop-filter: blur(8px)) {
+  .pill {
+    background: rgb(255 255 255 / 0.95);
+  }
+
+  .dark .pill {
+    background: rgb(23 23 23 / 0.95);
+  }
+}
+
+/* ========================================
+   Pill Dropdown Styling (Remove Browser Defaults)
+   ======================================== */
+
+.pill-dropdown {
+  /* Remove default select styling */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* Custom arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23525252' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+  padding-right: 2.5rem;
+
+  /* Remove border */
+  border: none;
+  outline: none;
+}
+
+.dark .pill-dropdown {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23D4D4D4' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+/* Dropdown menu (datalist/options) styling - Enhanced */
+.pill-dropdown {
+  /* Better text color for readability */
+  color: rgb(23, 23, 23);
+}
+
+.dark .pill-dropdown {
+  color: rgb(250, 250, 250);
+}
+
+/* Try to style dropdown menu on supported browsers */
+.pill-dropdown option {
+  background-color: rgba(255, 255, 255, 0.95);
+  color: rgb(23, 23, 23);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin: 2px 0;
+}
+
+.dark .pill-dropdown option {
+  background-color: rgba(23, 23, 23, 0.95);
+  color: rgb(250, 250, 250);
+}
+
+.pill-dropdown option:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.dark .pill-dropdown option:hover {
+  background-color: rgba(96, 165, 250, 0.2);
+}
+
+/* Hover state for select button */
+.pill-dropdown:hover {
+  background-color: rgb(255 255 255 / 0.95);
+}
+
+.dark .pill-dropdown:hover {
+  background-color: rgb(23 23 23 / 0.95);
+}
+
+/* Firefox specific dropdown styling */
+@-moz-document url-prefix() {
+  .pill-dropdown option {
+    background-color: white;
+    color: rgb(23, 23, 23);
+  }
+
+  .dark .pill-dropdown option {
+    background-color: rgb(23, 23, 23);
+    color: rgb(250, 250, 250);
+  }
+}

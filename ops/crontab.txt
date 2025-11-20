@@ -1,0 +1,36 @@
+# FloodWatch Cron Jobs
+# Copy vào crontab trên server: crontab -e
+# Hoặc: crontab < /path/to/this/file
+
+# ===============================================
+# Data Ingestion Jobs
+# ===============================================
+
+# KTTV Alerts - Mỗi 10 phút
+# Scrape cảnh báo từ Trung tâm KTTV
+*/10 * * * * /root/floodwatch/ops/run_ingestion.sh kttv
+
+# Roads Press Watch - Mỗi 30 phút
+# Giám sát tin tức về tình hình giao thông/đường sá
+*/30 * * * * /root/floodwatch/ops/run_ingestion.sh roads
+
+# ===============================================
+# Maintenance Jobs
+# ===============================================
+
+# Database Backup - Mỗi ngày lúc 2:00 AM
+0 2 * * * /root/floodwatch/ops/backup_db.sh >> /var/log/floodwatch/backup.log 2>&1
+
+# Log Rotation - Mỗi tuần Chủ Nhật lúc 3:00 AM
+0 3 * * 0 find /var/log/floodwatch -name "*.log" -mtime +7 -delete
+
+# Health Check - Mỗi 5 phút
+*/5 * * * * curl -sf http://localhost:8000/health > /dev/null || echo "API is down!" | mail -s "FloodWatch Alert" your-email@example.com
+
+# ===============================================
+# Optional: Alerts Dispatcher
+# ===============================================
+
+# Gửi alerts qua webhook/telegram - Mỗi 2 phút
+# (Uncomment khi đã setup xong)
+# */2 * * * * cd /root/floodwatch && docker compose exec -T api python ops/cron/alerts_dispatcher.py >> /var/log/floodwatch/alerts.log 2>&1
