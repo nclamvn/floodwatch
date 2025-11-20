@@ -309,13 +309,15 @@ export default function MapPage() {
         </div>
       </header>
 
-      {/* Mobile: List toggle button - Fixed at bottom right */}
+      {/* Mobile: News toggle button - Top right to balance with left controls */}
       <button
         onClick={() => setSheetOpen(!sheetOpen)}
-        className="fixed bottom-20 right-4 z-30 px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg transition-all sm:hidden"
+        className="sm:hidden fixed top-3 right-3 z-40 w-14 h-14 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-bold flex flex-col items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500"
       >
-        <span className="text-base">📋</span>
-        <span>{reports.length}</span>
+        <span className="text-lg">📋</span>
+        {filteredReports.length > 0 && (
+          <span className="text-[10px] leading-none mt-0.5">{filteredReports.length}</span>
+        )}
       </button>
 
       {/* Gradient overlay for readability */}
