@@ -50,5 +50,5 @@ COPY --from=builder /app ./
 EXPOSE 3000
 
 # Chạy Next.js ở chế độ production với PORT từ Render
-CMD npm start -- -p ${PORT:-3000}
+CMD sh -c "next start -p ${PORT:-3000}"
 
