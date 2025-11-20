@@ -66,9 +66,9 @@ export default function DisasterLegend({ lastUpdated }: DisasterLegendProps) {
   }
 
   return (
-    <div ref={legendRef} className="absolute bottom-40 right-4 z-40 w-72 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md rounded-lg shadow-lg border border-white/20 dark:border-neutral-700/30 overflow-hidden">
+    <div ref={legendRef} className="absolute bottom-40 right-3 left-3 sm:left-auto sm:right-4 z-40 sm:w-72 max-w-[calc(100vw-24px)] sm:max-w-none bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md rounded-lg shadow-lg border border-white/20 dark:border-neutral-700/30 overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 bg-gradient-to-r from-neutral-700 to-neutral-800 dark:from-neutral-800 dark:to-neutral-900 text-white flex items-center justify-between">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-neutral-700 to-neutral-800 dark:from-neutral-800 dark:to-neutral-900 text-white flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Info className="w-5 h-5" />
           <h3 className="font-bold text-sm">Chú giải</h3>
@@ -85,7 +85,7 @@ export default function DisasterLegend({ lastUpdated }: DisasterLegendProps) {
       </div>
 
       {/* Content */}
-      <div className="p-3 space-y-4 max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
+      <div className="p-2.5 sm:p-3 space-y-3 sm:space-y-4 max-h-[calc(100vh-250px)] sm:max-h-[calc(100vh-250px)] overflow-y-auto custom-scrollbar">
         {/* Severity Levels */}
         <div>
           <h4 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">
@@ -148,7 +148,7 @@ export default function DisasterLegend({ lastUpdated }: DisasterLegendProps) {
       </div>
 
       {/* Footer Note */}
-      <div className="px-4 py-2 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200/50 dark:border-neutral-700/50">
+      <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200/50 dark:border-neutral-700/50">
         <p className="text-xs text-neutral-500 dark:text-neutral-400 flex items-start gap-1">
           <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />

@@ -118,7 +118,7 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       <div
         className="flex items-center h-full gap-2 px-2"
         style={{
-          animation: isPaused ? 'none' : 'scroll-right 40s linear infinite',
+          animation: isPaused ? 'none' : 'scroll-right 25s linear infinite',
           animationPlayState: isPaused ? 'paused' : 'running'
         }}
       >
