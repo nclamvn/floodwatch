@@ -102,7 +102,7 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
       </div>
 
       {/* Mobile: Two rows - better organization */}
-      <div className="sm:hidden absolute top-3 left-3 right-3 z-40 flex flex-col gap-2">
+      <div className="sm:hidden absolute top-3 left-3 right-20 z-40 flex flex-col gap-2">
         {/* Row 1: Map Styles (4 buttons) */}
         <div className="flex flex-row gap-2 justify-start">
           <MapStyleSwitcher value={baseMapStyle} onChange={onStyleChange} />
