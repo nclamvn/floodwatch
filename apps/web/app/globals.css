@@ -131,12 +131,21 @@ body {
   border-top-color: rgb(var(--color-bg-primary));
 }
 
-/* AI Forecast Popup - Force white frame width to prevent text overflow */
+/* AI Forecast Popup - Responsive width to prevent text overflow */
 .ai-forecast-popup .maplibregl-popup-content,
 .ai-forecast-popup .mapboxgl-popup-content {
-  min-width: 340px !important;
-  max-width: 400px !important;
+  min-width: 260px !important;
+  max-width: 280px !important;
   width: auto !important;
+}
+
+/* Desktop: larger popup */
+@media (min-width: 640px) {
+  .ai-forecast-popup .maplibregl-popup-content,
+  .ai-forecast-popup .mapboxgl-popup-content {
+    min-width: 340px !important;
+    max-width: 400px !important;
+  }
 }
 
 /* ========================================

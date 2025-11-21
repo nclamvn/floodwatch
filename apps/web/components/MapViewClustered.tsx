@@ -593,7 +593,7 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
           closeOnClick={true}
           className="modern-popup"
         >
-          <div className="p-4 max-w-xs min-w-[280px]">
+          <div className="p-3 sm:p-4 max-w-[260px] sm:max-w-xs min-w-[240px] sm:min-w-[280px]">
             {/* Badge & Trust Score */}
             <div className="flex items-center gap-2 mb-3">
               <span className={`px-2.5 py-1 text-xs font-medium rounded ${

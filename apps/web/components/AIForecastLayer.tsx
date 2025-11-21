@@ -178,7 +178,7 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
           closeOnClick={true}
           className="modern-popup ai-forecast-popup"
         >
-          <div className="p-4 min-w-[300px] max-w-[380px]">
+          <div className="p-3 sm:p-4 min-w-[240px] sm:min-w-[300px] max-w-[260px] sm:max-w-[380px]">
             {/* Header - UI Spec Section 3.3.1 */}
             <div className="mb-3">
               {/* Title Line */}

@@ -305,7 +305,7 @@ export default function TrafficLayer({
           className="modern-popup"
           maxWidth="400px"
         >
-          <div className="p-4 min-w-[280px] max-w-[380px]">
+          <div className="p-3 sm:p-4 min-w-[240px] sm:min-w-[280px] max-w-[260px] sm:max-w-[380px]">
             {/* Header */}
             <div className="flex items-center gap-2 mb-3">
               <span className="text-2xl">{DISRUPTION_ICONS[selectedDisruption.type] || '🚧'}</span>
