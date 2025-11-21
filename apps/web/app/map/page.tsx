@@ -312,7 +312,7 @@ export default function MapPage() {
       {/* Mobile: News toggle button - Top right to balance with left controls */}
       <button
         onClick={() => setSheetOpen(!sheetOpen)}
-        className="sm:hidden fixed top-3 right-3 z-50 w-14 h-14 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-bold flex flex-col items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500"
+        className="sm:hidden fixed top-3 right-3 z-[70] w-14 h-14 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-bold flex flex-col items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500"
       >
         <span className="text-lg">📋</span>
         {filteredReports.length > 0 && (

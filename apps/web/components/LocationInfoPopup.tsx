@@ -9,7 +9,7 @@ export function LocationInfoPopup() {
 
   return (
     <div
-      className="absolute top-4 left-[calc(100%+12px)] z-50 bg-white/10 dark:bg-black/10 px-4 py-2 rounded-lg shadow-lg text-xs max-w-xs backdrop-blur-lg border border-white/30"
+      className="absolute top-4 left-[calc(100%+12px)] z-40 bg-white/10 dark:bg-black/10 px-4 py-2 rounded-lg shadow-lg text-xs max-w-xs backdrop-blur-lg border border-white/30"
       style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
     >
       {/* Header */}
