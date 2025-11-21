@@ -124,7 +124,7 @@ class TelegramBot:
     def send_welcome(self, chat_id: int) -> bool:
         """Send welcome message to new user"""
         message = """
-👋 <b>Chào mừng đến với FloodWatch Bot!</b>
+👋 <b>Chào mừng đến với Hệ thống Cảnh báo Thiên tai!</b>
 
 🌊 Bot cảnh báo mưa lũ tự động cho Việt Nam
 

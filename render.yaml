@@ -18,3 +18,17 @@ services:
           property: connectionString
       - key: PYTHON_VERSION
         value: "3.11.9"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        value: dy4bgtjqq
+      - key: CLOUDINARY_API_KEY
+        value: "863741882762283"
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: TTS_ALTERNATING_VOICES
+        value: "true"
+      - key: ENVIRONMENT
+        value: production
+      - key: ADMIN_TOKEN
+        sync: false

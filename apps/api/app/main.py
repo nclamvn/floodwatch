@@ -50,6 +50,10 @@ from app.telegram_handler import router as telegram_router
 # Import ingestion scheduler
 from app.services.ingestion_scheduler import start_scheduler, stop_scheduler, get_scheduler_status
 
+# Import AI News services
+from app.services.news_summary_engine import get_news_summary_engine
+from app.services.audio_generator import get_audio_generator
+
 # Configure logging (JSON in production, console in dev)
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 configure_logging(json_logs=(ENVIRONMENT == "production"))
@@ -2523,6 +2527,157 @@ async def get_ai_forecast_accuracy_stats(
             "description": "Accuracy metrics for verified AI forecasts"
         }
     }
+
+
+# ==================== AI NEWS BULLETIN ====================
+
+@app.get("/ai-news/latest")
+@limiter.limit("100/minute")
+async def get_latest_ai_news_bulletin(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Get the latest AI-generated news bulletin
+
+    Returns the most recent 1-minute audio bulletin with:
+    - Summary text (150-200 words)
+    - Audio URL (MP3 from Cloudinary)
+    - Generated timestamp
+    - Priority level and affected regions
+    - Key points and recommended actions
+
+    The bulletin is automatically regenerated every 10 minutes.
+    If no bulletin exists, triggers generation of a new one.
+    """
+    try:
+        logger.info("fetching_latest_ai_news_bulletin")
+
+        # Get services
+        summary_engine = get_news_summary_engine()
+        audio_generator = get_audio_generator()
+
+        # Generate latest summary from recent data (last 10 minutes)
+        summary = summary_engine.generate_summary(db, minutes=10)
+
+        if not summary:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate news summary"
+            )
+
+        # Extract summary text
+        summary_text = summary.get('summary_text', '')
+
+        # Generate and upload audio
+        audio_url, generated_at = audio_generator.generate_bulletin_audio(
+            summary_text=summary_text,
+            language='vi'
+        )
+
+        logger.info(
+            "ai_news_bulletin_served",
+            audio_url=audio_url,
+            priority=summary.get('priority_level')
+        )
+
+        return {
+            "data": {
+                "title": summary.get('title'),
+                "summary_text": summary_text,
+                "audio_url": audio_url,
+                "generated_at": generated_at.isoformat(),
+                "priority_level": summary.get('priority_level', 'low'),
+                "regions_affected": summary.get('regions_affected', []),
+                "key_points": summary.get('key_points', []),
+                "recommended_actions": summary.get('recommended_actions', [])
+            },
+            "meta": {
+                "bulletin_duration_seconds": 60,
+                "refresh_interval_minutes": 10,
+                "language": "vi"
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("ai_news_bulletin_failed", error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate AI news bulletin: {str(e)}"
+        )
+
+
+@app.post("/ai-news/regenerate")
+@limiter.limit("10/minute")
+async def regenerate_ai_news_bulletin(
+    request: Request,
+    db: Session = Depends(get_db),
+    api_key: str = Depends(require_api_key)
+):
+    """
+    Manually trigger regeneration of AI news bulletin
+
+    Requires API key with write permissions.
+
+    Useful for:
+    - Admin dashboard control
+    - Emergency updates
+    - Testing the bulletin generation pipeline
+
+    The new bulletin will overwrite the previous one on Cloudinary.
+    """
+    try:
+        logger.info("manual_ai_news_regeneration_triggered")
+
+        # Get services
+        summary_engine = get_news_summary_engine()
+        audio_generator = get_audio_generator()
+
+        # Generate summary
+        summary = summary_engine.generate_summary(db, minutes=10)
+
+        if not summary:
+            raise HTTPException(
+                status_code=500,
+                detail="No data available to generate bulletin"
+            )
+
+        # Generate audio
+        summary_text = summary.get('summary_text', '')
+        audio_url, generated_at = audio_generator.generate_bulletin_audio(
+            summary_text=summary_text,
+            language='vi'
+        )
+
+        logger.info(
+            "ai_news_bulletin_regenerated",
+            audio_url=audio_url,
+            trigger="manual"
+        )
+
+        return {
+            "data": {
+                "title": summary.get('title'),
+                "audio_url": audio_url,
+                "generated_at": generated_at.isoformat(),
+                "priority_level": summary.get('priority_level')
+            },
+            "meta": {
+                "message": "AI news bulletin regenerated successfully",
+                "trigger": "manual"
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("ai_news_regeneration_failed", error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Bulletin regeneration failed: {str(e)}"
+        )
 
 
 # Startup message
