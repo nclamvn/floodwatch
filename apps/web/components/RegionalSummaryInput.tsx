@@ -53,7 +53,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
   // Collapsed state - Circular glass button with animated border
   if (!isExpanded) {
     return (
-      <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-30">
+      <div className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-30">
         <button
           onClick={handleExpand}
           className="relative group"
@@ -65,7 +65,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
 
           {/* Glass button */}
           <div className="relative w-16 h-16 rounded-full backdrop-blur-xl bg-white/30 dark:bg-white/10 border border-white/50 flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-transform">
-            <span className="text-lg font-bold text-gray-900 dark:text-white">
+            <span className="text-lg font-bold text-gray-900">
               Hỏi
             </span>
           </div>
@@ -76,13 +76,13 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
 
   // Expanded state - Horizontal glass input
   return (
-    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-24 z-30 w-[90%] max-w-md">
+    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-30 w-[90%] max-w-md">
       <div className="relative">
         {/* Glass container */}
         <div className="relative backdrop-blur-xl bg-white/30 dark:bg-white/10 rounded-full border border-white/50 shadow-2xl overflow-hidden">
           <div className="flex items-center gap-2 px-6 py-4">
             {/* Search icon */}
-            <Search className="w-5 h-5 text-gray-700 dark:text-gray-300 flex-shrink-0" />
+            <Search className="w-5 h-5 text-gray-700 flex-shrink-0" />
 
             {/* Input field with shimmer effect on text */}
             <div className="flex-1 relative">
@@ -94,7 +94,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
                 placeholder="VD: Đà Nẵng"
                 disabled={isLoading}
                 autoFocus
-                className="w-full bg-transparent outline-none border-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base disabled:opacity-50"
+                className="w-full bg-transparent outline-none border-none text-gray-900 placeholder-gray-700 text-base disabled:opacity-50"
               />
               {/* Loading shimmer effect on input text */}
               {isLoading && inputValue && (
@@ -108,7 +108,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
             {!isLoading && inputValue.trim() && (
               <button
                 onClick={handleSearch}
-                className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 transition-colors flex-shrink-0"
+                className="p-2 rounded-full hover:bg-white/30 text-gray-700 transition-colors flex-shrink-0"
                 aria-label="Tìm kiếm"
               >
                 <Send className="w-5 h-5" />
