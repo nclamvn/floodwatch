@@ -53,7 +53,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
   // Collapsed state - Circular glass button with animated border
   if (!isExpanded) {
     return (
-      <div className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-30">
+      <div className="fixed left-1/2 -translate-x-1/2 bottom-[85px] z-30">
         <button
           onClick={handleExpand}
           className="relative group"
@@ -76,7 +76,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
 
   // Expanded state - Horizontal glass input
   return (
-    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-30 w-[90%] max-w-md">
+    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-[85px] z-30 w-[90%] max-w-md">
       <div className="relative">
         {/* Glass container */}
         <div className="relative backdrop-blur-xl bg-white/30 dark:bg-white/10 rounded-full border border-white/50 shadow-2xl overflow-hidden">
