@@ -186,9 +186,9 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
           </button>
         </div>
 
-        {/* Row 3: Audio News Player - Pill shape, full width */}
-        <div className="flex justify-start w-[168px]">
-          <HeaderVoicePlayer key="map-controls-audio-mobile" className="!w-full !rounded-full !px-3 !py-1.5" showLabel={true} />
+        {/* Row 3: Audio News Player - Aligned with AI button right edge */}
+        <div className="flex justify-end pr-[23%]">
+          <HeaderVoicePlayer key="map-controls-audio-mobile" className="!w-[168px] !rounded-full !px-3 !py-1.5" showLabel={true} />
         </div>
 
         {/* Location Info Popup - below audio player on mobile */}
