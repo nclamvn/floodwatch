@@ -32,3 +32,5 @@ services:
         value: production
       - key: ADMIN_TOKEN
         sync: false
+      - key: CORS_ORIGINS
+        value: "https://thongtinmualu.live,https://www.thongtinmualu.live"
