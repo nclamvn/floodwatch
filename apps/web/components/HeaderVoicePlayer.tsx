@@ -60,7 +60,7 @@ export function HeaderVoicePlayer({ className = '', showLabel = false }: HeaderV
         </div>
 
         {/* Text Label - Smaller font for slim design */}
-        <span className="relative z-10 text-xs font-semibold text-gray-400 whitespace-nowrap select-none">
+        <span className="relative z-10 text-xs font-semibold text-gray-800 whitespace-nowrap select-none">
           {isLoading ? 'Đang tải...' : 'Nghe tin mới nhất'}
         </span>
 
