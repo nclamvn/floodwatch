@@ -20,12 +20,14 @@ import { useAIForecasts } from '@/hooks/useAIForecasts'
 interface Report {
   id: string
   type: string
+  source: string
   title: string
   description?: string
   province?: string
   lat?: number
   lon?: number
   trust_score: number
+  status: string
   created_at: string
   media?: string[]
 }
