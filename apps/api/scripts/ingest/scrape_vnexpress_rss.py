@@ -201,50 +201,88 @@ def extract_images_from_url(url: str) -> List[str]:
 
 def is_disaster_related(title: str, description: str = "") -> bool:
     """
-    Check if article is related to natural disasters/floods/weather ONLY.
-
-    Returns False for unrelated news like traffic accidents, politics, sports, etc.
+    Strictly check if article is about ACTIVE natural disasters/floods/weather.
+    Excludes political news, fraud cases, opinion pieces, appointments.
     """
+    title_lower = title.lower()
     text = (title + " " + description).lower()
 
-    # Exclude non-disaster news first
+    # EXCLUDE non-disaster news first (higher priority)
     exclude_keywords = [
+        # Political/administrative
+        "làm chủ tịch", "lam chu tich", "giữ chức", "giu chuc",
+        "bổ nhiệm", "bo nhiem", "phó bí thư", "pho bi thu",
+        "hội nghị", "hoi nghi", "họp bàn", "hop ban",
+        "khen thưởng", "khen thuong", "trao tặng", "trao tang",
+
+        # Crime/legal (unless disaster-related)
+        "bắt giám đốc", "bat giam doc", "khởi tố", "khoi to",
+        "lừa đảo", "lua dao", "truy tố", "truy to",
+        "phán", "phan", "âm binh", "am binh",
+
+        # Infrastructure/development
+        "phát triển bệnh viện", "phat trien benh vien",
+        "biểu trưng mới", "bieu trung moi",
+        "chuyển đổi động cơ", "chuyen doi dong co",
+
+        # Opinion/lifestyle
+        "nhiều hay ít", "nhieu hay it",
+        "xu hướng", "xu huong", "vì sao", "vi sao",
+        "tại sao", "tai sao",
+
+        # Traffic accidents (unless disaster-caused)
         "tai nạn giao thông", "tai nan giao thong",
-        "va chạm", "va cham",
-        "đâm xe", "dam xe",
-        "xe máy", "xe may",
-        "ô tô", "o to",
-        "xe khách", "xe khach",
-        "xe tải", "xe tai",
+        "va chạm", "va cham", "đâm xe", "dam xe",
         "lật xe", "lat xe",
-        "chính trị", "chinh tri",
-        "bóng đá", "bong da",
-        "thể thao", "the thao",
-        "giải trí", "giai tri",
-        "ca sĩ", "ca si",
-        "nghệ sĩ", "nghe si"
+
+        # Other
+        "tiền lẻ", "tien le",
+        "công chức", "cong chuc", "viên chức", "vien chuc",
+        "chế biến mỡ", "che bien mo",
+        "chính trị", "chinh tri", "bóng đá", "bong da",
+        "thể thao", "the thao", "giải trí", "giai tri"
     ]
 
-    # Exclude if contains traffic accident keywords (unless also has disaster keywords)
-    if any(keyword in text for keyword in exclude_keywords):
-        # Allow if it's a traffic accident DUE TO disaster (e.g., landslide on road)
-        disaster_caused = any(kw in text for kw in ["sạt lở", "sat lo", "lở đất", "lo dat", "ngập", "ngap", "lũ cuốn", "lu cuon"])
-        if not disaster_caused:
+    # If title contains exclude keywords, reject immediately
+    if any(keyword in title_lower for keyword in exclude_keywords):
+        # Exception: if it's clearly disaster consequence, allow it
+        disaster_consequence_keywords = [
+            "mưa lũ", "mua lu", "bão lũ", "bao lu", "thiệt hại do", "thiet hai do",
+            "sau bão", "sau bao", "sau lũ", "sau lu", "hậu quả", "hau qua",
+            "khắc phục", "khac phuc", "tái thiết", "tai thiet"
+        ]
+        if not any(kw in text for kw in disaster_consequence_keywords):
             return False
 
-    # Natural disaster/weather keywords ONLY
-    disaster_keywords = [
-        "mưa", "mua", "lũ", "lu", "lụt", "lut", "ngập", "ngap",
-        "bão", "bao", "thiên tai", "thien tai", "sạt lở", "sat lo",
-        "lở đất", "lo dat", "động đất", "dong dat", "hạn hán", "han han",
+    # Core disaster keywords (must be in title OR prominent in description)
+    core_disaster_keywords = [
+        "mưa lũ", "mua lu", "lũ lụt", "lu lut", "ngập lụt", "ngap lut",
+        "bão", "bao", "thiên tai", "thien tai",
+        "sạt lở", "sat lo", "lở đất", "lo dat",
+        "động đất", "dong dat", "hạn hán", "han han",
         "cháy rừng", "chay rung", "triều cường", "trieu cuong",
-        "thời tiết", "thoi tiet", "dự báo thời tiết", "du bao thoi tiet",
-        "áp thấp", "ap thap", "nhiệt đới", "nhiet doi",
-        "vỡ đập", "vo dap", "xả lũ", "xa lu", "hồ chứa", "ho chua",
-        "đường ngập", "duong ngap", "sơ tán", "so tan", "di dời", "di doi"
+        "xả lũ", "xa lu", "vỡ đập", "vo dap",
+        "ngập sâu", "ngap sau", "ngập nặng", "ngap nang",
+        "cô lập", "co lap", "mắc kẹt", "mac ket",
+        "thiệt mạng", "thiet mang", "tử vong do", "tu vong do",
+        "chết đói", "chet doi", "chết lụt", "chet lut",
+        "mất tích do", "mat tich do"
     ]
 
-    return any(keyword in text for keyword in disaster_keywords)
+    # Must have core disaster keyword in title
+    has_disaster_in_title = any(keyword in title_lower for keyword in core_disaster_keywords)
+
+    # Or title mentions disaster response/rescue
+    disaster_response_keywords = [
+        "cứu hộ", "cuu ho", "cứu trợ", "cuu tro", "cứu nạn", "cuu nan",
+        "sơ tán", "so tan", "di dời khẩn", "di doi khan",
+        "hỗ trợ khẩn", "ho tro khan", "ứng phó", "ung pho",
+        "cảnh báo lũ", "canh bao lu", "cảnh báo bão", "canh bao bao"
+    ]
+    has_response_in_title = any(keyword in title_lower for keyword in disaster_response_keywords)
+
+    # Accept if has disaster keyword OR disaster response in title
+    return has_disaster_in_title or has_response_in_title
 
 
 def deduplicate_check(db, title: str, created_at: datetime, window_hours: int = 24) -> bool:

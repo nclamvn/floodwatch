@@ -24,10 +24,10 @@ export function MapStyleSwitcher({ value, onChange }: Props) {
             key={opt.id}
             onClick={() => onChange(opt.id)}
             className={
-              'rounded-full w-9 h-9 p-0 text-[10px] font-semibold transition-all duration-200 flex items-center justify-center shadow-lg backdrop-blur-sm border ' +
+              'rounded-full w-9 h-9 p-0 text-[10px] font-semibold transition-all duration-200 flex items-center justify-center shadow-sm backdrop-blur-md border ' +
               (opt.id === value
                 ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-700/50')
+                : 'bg-white/80 hover:bg-white/95 text-gray-900 hover:text-black border-white/30 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 dark:border-white/10')
             }
             title={opt.label}
           >

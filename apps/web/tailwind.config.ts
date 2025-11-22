@@ -99,6 +99,16 @@ const config: Config = {
       transitionTimingFunction: {
         'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
+      // Custom Animations
+      keyframes: {
+        spotlight: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(400%)' },
+        },
+      },
+      animation: {
+        spotlight: 'spotlight 2s ease-in-out infinite',
+      },
     },
   },
   plugins: [],

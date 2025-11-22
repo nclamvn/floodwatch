@@ -1,8 +1,9 @@
 'use client'
 
-import { MapPin, MapPinned, Wind, Loader2, Layers } from 'lucide-react'
+import { MapPin, MapPinned, Wind, Loader2, Info } from 'lucide-react'
 import { MapStyleSwitcher } from './MapStyleSwitcher'
 import { LocationInfoPopup } from './LocationInfoPopup'
+import { HeaderVoicePlayer } from './HeaderVoicePlayer'
 import { type BaseMapStyleId } from '@/lib/mapProvider'
 import { useLocation } from '@/contexts/LocationContext'
 
@@ -10,34 +11,52 @@ interface MapControlsGroupProps {
   baseMapStyle: BaseMapStyleId
   onStyleChange: (style: BaseMapStyleId) => void
   onWindyClick: () => void
-  onLayerControlClick: () => void
-  layerControlActive?: boolean
   onAIForecastClick: () => void
   aiForecastActive?: boolean
+  onLegendClick: () => void
+  legendActive?: boolean
 }
 
-export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onLayerControlClick, layerControlActive, onAIForecastClick, aiForecastActive }: MapControlsGroupProps) {
+export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onAIForecastClick, aiForecastActive, onLegendClick, legendActive }: MapControlsGroupProps) {
   const { userLocation, isLocating, requestLocation } = useLocation()
 
   return (
     <>
       {/* Desktop: Single row with all buttons */}
       <div className="hidden sm:flex absolute top-4 left-4 z-40 flex-row gap-2 relative">
+        {/* Legend Button - Frosted Glass (MOVED TO FAR LEFT) */}
+        <button
+          onClick={onLegendClick}
+          className={`
+            w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
+            flex items-center justify-center
+            transition-all duration-200 hover:scale-105 active:scale-95
+            ${
+              legendActive
+                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
+                : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 dark:border-white/10'
+            }
+          `}
+          title="Chú giải bản đồ"
+        >
+          <Info className="w-4 h-4" />
+        </button>
+
         {/* Map Style Switcher - 4 buttons */}
         <MapStyleSwitcher value={baseMapStyle} onChange={onStyleChange} />
 
-        {/* My Location Button */}
+        {/* My Location Button - Frosted Glass */}
         <button
           onClick={requestLocation}
           disabled={isLocating}
           className={`
-            w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border
+            w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
             flex items-center justify-center
             transition-all duration-200
             ${
               userLocation
                 ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-700/50'
+                : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 dark:border-white/10'
             }
             ${isLocating ? 'cursor-wait opacity-70' : 'hover:scale-105 active:scale-95'}
           `}
@@ -52,50 +71,35 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
           )}
         </button>
 
-        {/* Layer Control Button */}
-        <button
-          onClick={onLayerControlClick}
-          className={`
-            w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border
-            flex items-center justify-center
-            transition-all duration-200 hover:scale-105 active:scale-95
-            ${
-              layerControlActive
-                ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500'
-                : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-700/50'
-            }
-          `}
-          title="Lớp hiển thị"
-        >
-          <Layers className="w-4 h-4" />
-        </button>
-
-        {/* Windy Button */}
+        {/* Windy Button - Frosted Glass */}
         <button
           onClick={onWindyClick}
-          className="w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+          className="w-9 h-9 rounded-full shadow-sm backdrop-blur-md border bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
           title="Xem dự báo thời tiết Windy"
         >
           <Wind className="w-4 h-4" />
         </button>
 
-        {/* AI Forecast Button */}
+        {/* AI Forecast Button - Frosted Glass */}
         <button
           onClick={onAIForecastClick}
           className={`
-            w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border
+            w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
             flex items-center justify-center
             transition-all duration-200 hover:scale-105 active:scale-95
             ${
               aiForecastActive
                 ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500'
-                : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50 dark:bg-gray-800/95 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-700/50'
+                : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 dark:border-white/10'
             }
           `}
           title="Dự báo AI"
         >
           <span className="text-xs font-bold">AI</span>
         </button>
+
+        {/* Audio News Player */}
+        <HeaderVoicePlayer key="map-controls-audio" />
 
         {/* Location Info Popup */}
         <LocationInfoPopup />
@@ -110,18 +114,36 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
 
         {/* Row 2: Action buttons (4 buttons evenly spaced) */}
         <div className="flex flex-row gap-2 justify-start">
-          {/* My Location */}
+          {/* Legend - Frosted Glass (MOVED TO FAR LEFT) */}
+          <button
+            onClick={onLegendClick}
+            className={`
+              w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
+              flex items-center justify-center
+              transition-all duration-200 active:scale-95
+              ${
+                legendActive
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
+                  : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30'
+              }
+            `}
+            title="Chú giải"
+          >
+            <Info className="w-4 h-4" />
+          </button>
+
+          {/* My Location - Frosted Glass */}
           <button
             onClick={requestLocation}
             disabled={isLocating}
             className={`
-              w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border
+              w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
               flex items-center justify-center
               transition-all duration-200
               ${
                 userLocation
                   ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                  : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50'
+                  : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30'
               }
               ${isLocating ? 'cursor-wait opacity-70' : 'active:scale-95'}
             `}
@@ -136,50 +158,35 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
             )}
           </button>
 
-          {/* Layer Control */}
-          <button
-            onClick={onLayerControlClick}
-            className={`
-              w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border
-              flex items-center justify-center
-              transition-all duration-200 active:scale-95
-              ${
-                layerControlActive
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500'
-                  : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50'
-              }
-            `}
-            title="Lớp"
-          >
-            <Layers className="w-4 h-4" />
-          </button>
-
-          {/* Windy */}
+          {/* Windy - Frosted Glass */}
           <button
             onClick={onWindyClick}
-            className="w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 flex items-center justify-center transition-all duration-200 active:scale-95"
+            className="w-9 h-9 rounded-full shadow-sm backdrop-blur-md border bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 flex items-center justify-center transition-all duration-200 active:scale-95"
             title="Windy"
           >
             <Wind className="w-4 h-4" />
           </button>
 
-          {/* AI Forecast */}
+          {/* AI Forecast - Frosted Glass */}
           <button
             onClick={onAIForecastClick}
             className={`
-              w-9 h-9 rounded-full shadow-lg backdrop-blur-sm border
+              w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
               flex items-center justify-center
               transition-all duration-200 active:scale-95
               ${
                 aiForecastActive
                   ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500'
-                  : 'bg-white/90 hover:bg-white text-gray-700 border-gray-200/50'
+                  : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30'
               }
             `}
             title="AI"
           >
             <span className="text-xs font-bold">AI</span>
           </button>
+
+          {/* Audio News Player */}
+          <HeaderVoicePlayer key="map-controls-audio-mobile" />
         </div>
 
         {/* Location Info Popup - below buttons on mobile */}

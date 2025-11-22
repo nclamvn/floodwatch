@@ -27,6 +27,7 @@ from app.services.hazard_repo import HazardEventRepository
 from app.services.distress_repo import DistressReportRepository
 from app.services.traffic_repo import TrafficDisruptionRepository
 from app.services.ai_forecast_repo import AIForecastRepository
+from app.services.help_repo import HelpRequestRepository, HelpOfferRepository
 
 # Import trust score calculator
 from app.services.trust_score import TrustScoreCalculator
@@ -53,6 +54,7 @@ from app.services.ingestion_scheduler import start_scheduler, stop_scheduler, ge
 # Import AI News services
 from app.services.news_summary_engine import get_news_summary_engine
 from app.services.audio_generator import get_audio_generator
+from app.services.regional_summary_service import get_regional_summary_service
 
 # Configure logging (JSON in production, console in dev)
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
@@ -543,6 +545,48 @@ async def get_road_events(
         "total": total,
         "data": [road.to_dict() for road in roads]
     }
+
+
+@app.post("/reports/{report_id}/generate-summary")
+async def generate_report_summary(
+    report_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate AI summary for a report that has no description.
+    Uses OpenAI to create context-aware summary from title.
+    """
+    try:
+        # Get report
+        report = db.query(Report).filter(Report.id == report_id).first()
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+
+        # Generate summary using AI
+        from app.services.news_summary_engine import get_news_summary_engine
+        engine = get_news_summary_engine()
+
+        summary = engine.generate_article_summary(
+            title=report.title,
+            source_url=report.source
+        )
+
+        if not summary:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate summary"
+            )
+
+        return {
+            "report_id": report_id,
+            "summary": summary
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("generate_summary_error", report_id=report_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @app.post("/ingest/road-event")
@@ -1203,6 +1247,86 @@ async def api_v1_get_road_events(
         "total": total,
         "data": [road.to_dict() for road in roads]
     }
+
+
+@app.get("/api/v1/regional-summary")
+@limiter.limit("20/minute")
+async def get_regional_summary(
+    request: Request,
+    db: Session = Depends(get_db),
+    province: str = Query(..., min_length=2, description="Province name (e.g., 'Đà Nẵng', 'Quảng Nam')"),
+    hours: int = Query(24, ge=1, le=168, description="Time window in hours (1-168)")
+):
+    """
+    Get AI-powered regional disaster summary for a specific province
+
+    Rate limit: 20 requests per minute (to protect OpenAI API costs)
+
+    Args:
+        province: Province name (Vietnamese or English, with or without diacritics)
+        hours: Time window in hours (default: 24, max: 168 = 1 week)
+
+    Returns:
+        - summary_text: AI-generated summary in Vietnamese (markdown format)
+        - severity_level: low/moderate/high/critical
+        - statistics: Report counts by type, trust scores
+        - top_reports: List of most important reports
+        - key_points: Bullet-point highlights
+        - recommendations: Safety recommendations
+
+    Error responses:
+        - 400: Invalid province name (includes suggestions)
+        - 500: AI service failure (returns fallback template)
+    """
+    try:
+        logger.info(
+            "regional_summary_requested",
+            province_query=province,
+            hours=hours,
+            ip=request.client.host
+        )
+
+        # Get service instance
+        service = get_regional_summary_service()
+
+        # Generate summary
+        result = service.generate_summary(
+            db=db,
+            province_query=province,
+            hours=hours
+        )
+
+        if result is None:
+            # Province not found
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Province not found",
+                    "message": f"Không tìm thấy tỉnh/thành '{province}'. Vui lòng kiểm tra tên tỉnh.",
+                    "suggestions": [
+                        "Đà Nẵng", "Hà Nội", "Hồ Chí Minh",
+                        "Quảng Nam", "Quảng Ngãi", "Thừa Thiên Huế"
+                    ]
+                }
+            )
+
+        logger.info(
+            "regional_summary_generated",
+            province=result['province'],
+            severity=result['severity_level'],
+            reports_count=result['statistics']['total_reports']
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("regional_summary_failed", error=str(e), province=province)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate regional summary: {str(e)}"
+        )
 
 
 # ==================== LITE MODE & CSV EXPORT ====================
@@ -1919,6 +2043,40 @@ class TrafficDisruptionCreate(BaseModel):
     media_urls: Optional[List[str]] = None
 
 
+# Pydantic models for help connection
+class HelpRequestCreate(BaseModel):
+    """Model for creating a help request"""
+    lat: float = Field(ge=-90, le=90, description="Latitude")
+    lon: float = Field(ge=-180, le=180, description="Longitude")
+    needs_type: Literal["food", "water", "shelter", "medical", "clothing", "transport", "other"]
+    urgency: Literal["critical", "high", "medium", "low"]
+    description: str = Field(min_length=10, description="Description of what help is needed")
+    people_count: Optional[int] = Field(None, ge=1, description="Number of people needing help")
+    address: Optional[str] = Field(None, max_length=500)
+    contact_name: str = Field(min_length=1, max_length=255)
+    contact_phone: str = Field(min_length=1, max_length=50)
+    contact_method: Optional[str] = Field(None, max_length=50, description="Preferred contact method (phone, sms, zalo, etc.)")
+    notes: Optional[str] = None
+    images: Optional[List[str]] = Field(None, description="Array of image URLs")
+
+
+class HelpOfferCreate(BaseModel):
+    """Model for creating a help offer"""
+    lat: float = Field(ge=-90, le=90, description="Latitude")
+    lon: float = Field(ge=-180, le=180, description="Longitude")
+    service_type: Literal["rescue", "transportation", "medical", "shelter", "food_water", "supplies", "volunteer", "donation", "other"]
+    description: str = Field(min_length=10, description="Description of what help is being offered")
+    capacity: Optional[int] = Field(None, ge=1, description="How many people can be helped")
+    availability: Optional[str] = Field(None, max_length=500, description="Time availability")
+    address: Optional[str] = Field(None, max_length=500)
+    coverage_radius_km: Optional[float] = Field(None, gt=0, description="Service coverage radius in km")
+    contact_name: str = Field(min_length=1, max_length=255)
+    contact_phone: str = Field(min_length=1, max_length=50)
+    contact_method: Optional[str] = Field(None, max_length=50)
+    organization: Optional[str] = Field(None, max_length=255, description="Organization name (if applicable)")
+    notes: Optional[str] = None
+
+
 @app.post("/distress")
 @limiter.limit("5/hour")
 async def create_distress_report(
@@ -2175,6 +2333,203 @@ async def create_traffic_disruption(
         "data": disruption.to_dict(),
         "meta": {
             "message": "Cảm ơn bạn đã báo cáo. Thông tin đang được xác minh."
+        }
+    }
+
+
+# ============================================================================
+# HELP CONNECTION ENDPOINTS
+# ============================================================================
+
+@app.post("/help/requests")
+@limiter.limit("10/hour")
+async def create_help_request(
+    request: Request,
+    request_data: HelpRequestCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a help request - people needing assistance during disasters
+
+    Rate limit: 10 requests per hour per IP
+    """
+    # Create help request
+    data = request_data.dict()
+    help_request = HelpRequestRepository.create(db, data)
+
+    logger.info(f"Created help request: {help_request.id} (needs={help_request.needs_type.value}, urgency={help_request.urgency.value})")
+
+    return {
+        "data": help_request.to_dict(),
+        "meta": {
+            "message": "Yêu cầu cứu trợ đã được ghi nhận. Chúng tôi sẽ kết nối bạn với những người có thể giúp đỡ."
+        }
+    }
+
+
+@app.get("/help/requests")
+@limiter.limit("60/minute")
+async def get_help_requests(
+    request: Request,
+    lat: Optional[float] = Query(None, description="Latitude for spatial filtering"),
+    lon: Optional[float] = Query(None, description="Longitude for spatial filtering"),
+    radius_km: Optional[float] = Query(20, description="Search radius in km"),
+    needs_type: Optional[str] = Query(None, description="Comma-separated needs types"),
+    urgency: Optional[str] = Query(None, description="Comma-separated urgency levels"),
+    status: Optional[str] = Query(None, description="Comma-separated status values"),
+    verified_only: bool = Query(False, description="Only return verified requests"),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Get help requests with optional spatial and filtering
+    """
+    # Parse comma-separated filters
+    needs_types = needs_type.split(',') if needs_type else None
+    urgency_levels = urgency.split(',') if urgency else None
+    statuses = status.split(',') if status else None
+
+    if lat is not None and lon is not None:
+        # Spatial query
+        requests, total, distances = HelpRequestRepository.get_all(
+            db, lat=lat, lng=lon, radius_km=radius_km,
+            needs_types=needs_types,
+            urgency_levels=urgency_levels,
+            status=statuses,
+            verified_only=verified_only,
+            limit=limit,
+            offset=offset,
+            sort_by='distance'
+        )
+
+        # Add distance to each request
+        data = []
+        for req, dist in zip(requests, distances):
+            req_dict = req.to_dict()
+            req_dict['distance_km'] = round(dist, 2)
+            data.append(req_dict)
+    else:
+        # Non-spatial query
+        requests, total, _ = HelpRequestRepository.get_all(
+            db,
+            needs_types=needs_types,
+            urgency_levels=urgency_levels,
+            status=statuses,
+            verified_only=verified_only,
+            limit=limit,
+            offset=offset
+        )
+        data = [req.to_dict() for req in requests]
+
+    # Get stats
+    stats = HelpRequestRepository.get_stats(db)
+
+    return {
+        "data": data,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        },
+        "meta": {
+            "active_count": stats['active'],
+            "critical_count": stats['critical_urgent'],
+            "fulfilled_count": stats['fulfilled']
+        }
+    }
+
+
+@app.post("/help/offers")
+@limiter.limit("10/hour")
+async def create_help_offer(
+    request: Request,
+    offer_data: HelpOfferCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a help offer - people/organizations offering assistance
+
+    Rate limit: 10 requests per hour per IP
+    """
+    # Create help offer
+    data = offer_data.dict()
+    help_offer = HelpOfferRepository.create(db, data)
+
+    logger.info(f"Created help offer: {help_offer.id} (service={help_offer.service_type.value})")
+
+    return {
+        "data": help_offer.to_dict(),
+        "meta": {
+            "message": "Cảm ơn bạn đã đăng ký hỗ trợ! Thông tin của bạn sẽ được hiển thị để kết nối với những người cần giúp đỡ."
+        }
+    }
+
+
+@app.get("/help/offers")
+@limiter.limit("60/minute")
+async def get_help_offers(
+    request: Request,
+    lat: Optional[float] = Query(None, description="Latitude for spatial filtering"),
+    lon: Optional[float] = Query(None, description="Longitude for spatial filtering"),
+    radius_km: Optional[float] = Query(50, description="Search radius in km"),
+    service_type: Optional[str] = Query(None, description="Comma-separated service types"),
+    status: Optional[str] = Query(None, description="Comma-separated status values"),
+    verified_only: bool = Query(False, description="Only return verified offers"),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Get help offers with optional spatial filtering
+    """
+    # Parse comma-separated filters
+    service_types = service_type.split(',') if service_type else None
+    statuses = status.split(',') if status else None
+
+    if lat is not None and lon is not None:
+        # Spatial query
+        offers, total, distances = HelpOfferRepository.get_all(
+            db, lat=lat, lng=lon, radius_km=radius_km,
+            service_types=service_types,
+            status=statuses,
+            verified_only=verified_only,
+            limit=limit,
+            offset=offset,
+            sort_by='distance'
+        )
+
+        # Add distance to each offer
+        data = []
+        for offer, dist in zip(offers, distances):
+            offer_dict = offer.to_dict()
+            offer_dict['distance_km'] = round(dist, 2)
+            data.append(offer_dict)
+    else:
+        # Non-spatial query
+        offers, total, _ = HelpOfferRepository.get_all(
+            db,
+            service_types=service_types,
+            status=statuses,
+            verified_only=verified_only,
+            limit=limit,
+            offset=offset
+        )
+        data = [offer.to_dict() for offer in offers]
+
+    # Get stats
+    stats = HelpOfferRepository.get_stats(db)
+
+    return {
+        "data": data,
+        "pagination": {
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        },
+        "meta": {
+            "active_count": stats['active'],
+            "fulfilled_count": stats['fulfilled']
         }
     }
 
@@ -2547,7 +2902,7 @@ async def get_latest_ai_news_bulletin(
     - Priority level and affected regions
     - Key points and recommended actions
 
-    The bulletin is automatically regenerated every 10 minutes.
+    The bulletin is automatically regenerated every 15 minutes (5:00-23:59).
     If no bulletin exists, triggers generation of a new one.
     """
     try:
@@ -2557,8 +2912,9 @@ async def get_latest_ai_news_bulletin(
         summary_engine = get_news_summary_engine()
         audio_generator = get_audio_generator()
 
-        # Generate latest summary from recent data (last 10 minutes)
-        summary = summary_engine.generate_summary(db, minutes=10)
+        # Generate latest summary from recent data (last 60 minutes)
+        # Changed from 10 to 60 minutes because scrapers run every 30-120 minutes
+        summary = summary_engine.generate_summary(db, minutes=60)
 
         if not summary:
             raise HTTPException(

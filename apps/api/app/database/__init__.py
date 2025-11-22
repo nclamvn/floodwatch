@@ -5,7 +5,8 @@ from .models import (
     HazardEvent, HazardType, SeverityLevel,
     DistressReport, DistressStatus, DistressUrgency,
     TrafficDisruption, DisruptionType, DisruptionSeverity,
-    AIForecast
+    AIForecast,
+    HelpRequest, HelpOffer, NeedsType, ServiceType, HelpStatus, HelpUrgency
 )
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "HazardEvent", "HazardType", "SeverityLevel",
     "DistressReport", "DistressStatus", "DistressUrgency",
     "TrafficDisruption", "DisruptionType", "DisruptionSeverity",
-    "AIForecast"
+    "AIForecast",
+    "HelpRequest", "HelpOffer", "NeedsType", "ServiceType", "HelpStatus", "HelpUrgency"
 ]

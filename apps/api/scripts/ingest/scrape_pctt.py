@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app.database import SessionLocal, Report
 from app.database.models import ReportType
 from app.services.province_extractor import extract_location_data
+from app.services.article_extractor import extract_article_hybrid
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -49,6 +50,92 @@ HEADERS = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
 }
+
+
+def is_disaster_related(title: str, description: str = "") -> bool:
+    """
+    Strictly check if article is about ACTIVE natural disasters/floods/weather.
+    Excludes political news, fraud cases, opinion pieces, appointments.
+    """
+    title_lower = title.lower()
+    text = (title + " " + description).lower()
+
+    # EXCLUDE non-disaster news first (higher priority)
+    exclude_keywords = [
+        # Political/administrative
+        "làm chủ tịch", "lam chu tich", "giữ chức", "giu chuc",
+        "bổ nhiệm", "bo nhiem", "phó bí thư", "pho bi thu",
+        "hội nghị", "hoi nghi", "họp bàn", "hop ban",
+        "khen thưởng", "khen thuong", "trao tặng", "trao tang",
+
+        # Crime/legal (unless disaster-related)
+        "bắt giám đốc", "bat giam doc", "khởi tố", "khoi to",
+        "lừa đảo", "lua dao", "truy tố", "truy to",
+        "phán", "phan", "âm binh", "am binh",
+
+        # Infrastructure/development
+        "phát triển bệnh viện", "phat trien benh vien",
+        "biểu trưng mới", "bieu trung moi",
+        "chuyển đổi động cơ", "chuyen doi dong co",
+
+        # Opinion/lifestyle
+        "nhiều hay ít", "nhieu hay it",
+        "xu hướng", "xu huong", "vì sao", "vi sao",
+        "tại sao", "tai sao",
+
+        # Traffic accidents (unless disaster-caused)
+        "tai nạn giao thông", "tai nan giao thong",
+        "va chạm", "va cham", "đâm xe", "dam xe",
+        "lật xe", "lat xe",
+
+        # Other
+        "tiền lẻ", "tien le",
+        "công chức", "cong chuc", "viên chức", "vien chuc",
+        "chế biến mỡ", "che bien mo",
+        "chính trị", "chinh tri", "bóng đá", "bong da",
+        "thể thao", "the thao", "giải trí", "giai tri"
+    ]
+
+    # If title contains exclude keywords, reject immediately
+    if any(keyword in title_lower for keyword in exclude_keywords):
+        # Exception: if it's clearly disaster consequence, allow it
+        disaster_consequence_keywords = [
+            "mưa lũ", "mua lu", "bão lũ", "bao lu", "thiệt hại do", "thiet hai do",
+            "sau bão", "sau bao", "sau lũ", "sau lu", "hậu quả", "hau qua",
+            "khắc phục", "khac phuc", "tái thiết", "tai thiet"
+        ]
+        if not any(kw in text for kw in disaster_consequence_keywords):
+            return False
+
+    # Core disaster keywords (must be in title OR prominent in description)
+    core_disaster_keywords = [
+        "mưa lũ", "mua lu", "lũ lụt", "lu lut", "ngập lụt", "ngap lut",
+        "bão", "bao", "thiên tai", "thien tai",
+        "sạt lở", "sat lo", "lở đất", "lo dat",
+        "động đất", "dong dat", "hạn hán", "han han",
+        "cháy rừng", "chay rung", "triều cường", "trieu cuong",
+        "xả lũ", "xa lu", "vỡ đập", "vo dap",
+        "ngập sâu", "ngap sau", "ngập nặng", "ngap nang",
+        "cô lập", "co lap", "mắc kẹt", "mac ket",
+        "thiệt mạng", "thiet mang", "tử vong do", "tu vong do",
+        "chết đói", "chet doi", "chết lụt", "chet lut",
+        "mất tích do", "mat tich do"
+    ]
+
+    # Must have core disaster keyword in title
+    has_disaster_in_title = any(keyword in title_lower for keyword in core_disaster_keywords)
+
+    # Or title mentions disaster response/rescue
+    disaster_response_keywords = [
+        "cứu hộ", "cuu ho", "cứu trợ", "cuu tro", "cứu nạn", "cuu nan",
+        "sơ tán", "so tan", "di dời khẩn", "di doi khan",
+        "hỗ trợ khẩn", "ho tro khan", "ứng phó", "ung pho",
+        "cảnh báo lũ", "canh bao lu", "cảnh báo bão", "canh bao bao"
+    ]
+    has_response_in_title = any(keyword in title_lower for keyword in disaster_response_keywords)
+
+    # Accept if has disaster keyword OR disaster response in title
+    return has_disaster_in_title or has_response_in_title
 
 
 def classify_pctt_type(title: str, description: str = "", url_type: str = "") -> ReportType:
@@ -281,6 +368,10 @@ def scrape_pctt(dry_run: bool = False) -> int:
                             print(f"  [SKIP] Duplicate: {title[:60]}...")
                             continue
 
+                        # Filter: only disaster-related news
+                        if not is_disaster_related(title, description):
+                            continue
+
                         # Extract location
                         location_data = extract_location_data(title + " " + description)
 
@@ -291,12 +382,27 @@ def scrape_pctt(dry_run: bool = False) -> int:
                             site.get('type', '')
                         )
 
+                        # Try to extract full article content
+                        summary = description  # Keep listing summary as fallback
+                        final_description = summary
+                        if link:
+                            try:
+                                article_result = extract_article_hybrid(link, language='vi')
+                                if article_result['success'] and len(article_result['full_text']) > 300:
+                                    final_description = article_result['full_text']
+                                    print(f"  ✓ Full article extracted: {len(final_description)} chars from {link[:50]}...")
+                                else:
+                                    print(f"  ✗ Using listing summary fallback ({len(summary)} chars)")
+                            except Exception as e:
+                                print(f"  ✗ Article extraction failed: {str(e)}, using summary")
+                                final_description = summary
+
                         # Create report
                         report = Report(
                             type=report_type,
                             source=link,
                             title=title[:500],
-                            description=description[:1000] if description else None,
+                            description=final_description if final_description else None,
                             province=location_data['province'],
                             lat=location_data['lat'],
                             lon=location_data['lon'],

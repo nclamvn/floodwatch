@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app.database import SessionLocal, Report
 from app.database.models import ReportType
 from app.services.province_extractor import extract_location_data
+from app.services.article_extractor import extract_article_hybrid
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -297,12 +298,27 @@ def scrape_kttv(dry_run: bool = False) -> int:
                             site.get('type', '')
                         )
 
+                        # Try to extract full article content
+                        summary = description  # Keep listing summary as fallback
+                        final_description = summary
+                        if link:
+                            try:
+                                article_result = extract_article_hybrid(link, language='vi')
+                                if article_result['success'] and len(article_result['full_text']) > 300:
+                                    final_description = article_result['full_text']
+                                    print(f"  ✓ Full article extracted: {len(final_description)} chars from {link[:50]}...")
+                                else:
+                                    print(f"  ✗ Using listing summary fallback ({len(summary)} chars)")
+                            except Exception as e:
+                                print(f"  ✗ Article extraction failed: {str(e)}, using summary")
+                                final_description = summary
+
                         # Create report
                         report = Report(
                             type=report_type,
                             source=link,
                             title=title[:500],
-                            description=description[:1000] if description else None,
+                            description=final_description if final_description else None,
                             province=location_data['province'],
                             lat=location_data['lat'],
                             lon=location_data['lon'],

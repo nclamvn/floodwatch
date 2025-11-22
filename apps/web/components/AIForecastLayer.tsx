@@ -91,6 +91,13 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
     }
   }, [forecasts])
 
+  // Debug logging
+  console.log('🔮 AI Forecast Layer:', {
+    forecastCount: forecasts.length,
+    visible,
+    willRender: forecasts.length > 0 && visible
+  })
+
   if (forecasts.length === 0 || !visible) return null
 
   return (

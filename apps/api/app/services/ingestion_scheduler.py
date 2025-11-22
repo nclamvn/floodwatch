@@ -237,6 +237,141 @@ def run_chinhphu_scraper():
         return 0
 
 
+def run_dantri_scraper():
+    """Run Dantri RSS scraper."""
+    try:
+        logger.info("ingestion_job_started", source="dantri")
+        from scrape_dantri_rss import scrape_dantri_rss
+
+        count = scrape_dantri_rss(dry_run=False)
+
+        logger.info(
+            "ingestion_job_completed",
+            source="dantri",
+            reports_created=count,
+            status="success"
+        )
+
+        return count
+
+    except Exception as e:
+        logger.error(
+            "ingestion_job_failed",
+            source="dantri",
+            error=str(e),
+            exc_info=True
+        )
+        return 0
+
+
+def run_vietnamnet_scraper():
+    """Run VietnamNet RSS scraper."""
+    try:
+        logger.info("ingestion_job_started", source="vietnamnet")
+        from scrape_vietnamnet_rss import scrape_vietnamnet_rss
+
+        count = scrape_vietnamnet_rss(dry_run=False)
+
+        logger.info(
+            "ingestion_job_completed",
+            source="vietnamnet",
+            reports_created=count,
+            status="success"
+        )
+
+        return count
+
+    except Exception as e:
+        logger.error(
+            "ingestion_job_failed",
+            source="vietnamnet",
+            error=str(e),
+            exc_info=True
+        )
+        return 0
+
+
+def run_zing_scraper():
+    """Run Zing News RSS scraper."""
+    try:
+        logger.info("ingestion_job_started", source="zing")
+        from scrape_zing_rss import scrape_zing_rss
+
+        count = scrape_zing_rss(dry_run=False)
+
+        logger.info(
+            "ingestion_job_completed",
+            source="zing",
+            reports_created=count,
+            status="success"
+        )
+
+        return count
+
+    except Exception as e:
+        logger.error(
+            "ingestion_job_failed",
+            source="zing",
+            error=str(e),
+            exc_info=True
+        )
+        return 0
+
+
+def run_ai_news_bulletin():
+    """Run AI News Bulletin generation (summary + audio)."""
+    try:
+        logger.info("ai_news_bulletin_job_started")
+
+        # Import here to avoid circular imports
+        from app.database import get_db
+        from app.services.news_summary_engine import get_news_summary_engine
+        from app.services.audio_generator import get_audio_generator
+
+        # Get database session
+        db = next(get_db())
+
+        try:
+            # Get services
+            summary_engine = get_news_summary_engine()
+            audio_generator = get_audio_generator()
+
+            # Generate summary from last 60 minutes of data
+            # Note: Matches the data window used in API endpoint
+            summary = summary_engine.generate_summary(db, minutes=60)
+
+            if not summary:
+                logger.warning("ai_news_bulletin_no_summary", message="No summary generated")
+                return False
+
+            # Generate and upload audio
+            summary_text = summary.get('summary_text', '')
+            audio_url, generated_at = audio_generator.generate_bulletin_audio(
+                summary_text=summary_text,
+                language='vi'
+            )
+
+            logger.info(
+                "ai_news_bulletin_job_completed",
+                audio_url=audio_url,
+                priority=summary.get('priority_level'),
+                status="success"
+            )
+
+            return True
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(
+            "ai_news_bulletin_job_failed",
+            error=str(e),
+            exc_info=True
+        )
+        return False
+
+
 def start_scheduler():
     """
     Start the APScheduler for automated ingestion.
@@ -246,9 +381,13 @@ def start_scheduler():
     - Tuổi Trẻ RSS: Every 30 minutes
     - Thanh Niên RSS: Every 30 minutes
     - VTC News RSS: Every 30 minutes
+    - Dantri RSS: Every 30 minutes
+    - VietnamNet RSS: Every 30 minutes
+    - Zing News RSS: Every 30 minutes
     - Baomoi HTML: Every 45 minutes
     - KTTV HTML: Every 60 minutes
     - PCTT HTML: Every 120 minutes (2 hours - less frequent government updates)
+    - AI News Bulletin: Every 15 minutes (only 5:00-23:59)
     """
     global scheduler
 
@@ -343,6 +482,57 @@ def start_scheduler():
         replace_existing=True,
         max_instances=1,
         misfire_grace_time=300
+    )
+
+    # Dantri: Run every 30 minutes (major news source)
+    scheduler.add_job(
+        run_dantri_scraper,
+        trigger='interval',
+        minutes=30,
+        id='scraper_dantri',
+        name='Dantri RSS Scraper',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=300
+    )
+
+    # VietnamNet: Run every 30 minutes (major news source)
+    scheduler.add_job(
+        run_vietnamnet_scraper,
+        trigger='interval',
+        minutes=30,
+        id='scraper_vietnamnet',
+        name='VietnamNet RSS Scraper',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=300
+    )
+
+    # Zing News: Run every 30 minutes (popular news source)
+    scheduler.add_job(
+        run_zing_scraper,
+        trigger='interval',
+        minutes=30,
+        id='scraper_zing',
+        name='Zing News RSS Scraper',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=300
+    )
+
+    # AI News Bulletin: Run every 15 minutes, only between 5:00 AM and 11:59 PM
+    scheduler.add_job(
+        run_ai_news_bulletin,
+        trigger=CronTrigger(
+            minute='*/15',  # Every 15 minutes
+            hour='5-23',    # Only between 5 AM and 11 PM
+            timezone='Asia/Ho_Chi_Minh'
+        ),
+        id='ai_news_bulletin',
+        name='AI News Bulletin Generator (5:00-23:59)',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=120  # 2 minutes grace period (bulletin is time-sensitive)
     )
 
     # Chinhphu.vn: Disabled (needs HTML selector improvements)

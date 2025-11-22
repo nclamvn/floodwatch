@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useLocation } from '@/contexts/LocationContext'
+import { Siren, Check, AlertTriangle, Ambulance, Baby, User } from 'lucide-react'
 
 interface ReportDistressFormProps {
   isOpen: boolean
@@ -130,19 +131,21 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-[#171717] border border-neutral-700 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
+          className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-lg max-w-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-6 py-5 border-b border-neutral-700 flex items-start justify-between">
+          <div className="px-6 py-5 border-b border-neutral-200/50 dark:border-neutral-700 flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">🆘</span>
-                <h2 className="text-xl font-bold text-white">
+                <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
+                  <Siren className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   Báo cáo tình huống khẩn cấp
                 </h2>
               </div>
-              <p className="text-sm text-neutral-400">
+              <p className="text-sm text-gray-600 dark:text-neutral-400">
                 Điền thông tin để yêu cầu hỗ trợ khẩn cấp
               </p>
             </div>
@@ -150,7 +153,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
             {/* Close button */}
             <button
               onClick={onClose}
-              className="ml-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-neutral-800 active:bg-neutral-700 transition-colors text-neutral-400 hover:text-white"
+              className="ml-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-800 active:bg-gray-300 dark:active:bg-neutral-700 transition-colors text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
               aria-label="Đóng"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +168,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
             {success && (
               <div className="mb-6 p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-400">
                 <div className="flex items-center gap-2">
-                  <span>✓</span>
+                  <Check className="w-5 h-5" />
                   <span className="font-semibold">{success}</span>
                 </div>
               </div>
@@ -175,7 +178,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
             {error && (
               <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-400">
                 <div className="flex items-center gap-2">
-                  <span>⚠</span>
+                  <AlertTriangle className="w-5 h-5" />
                   <span className="font-semibold">{error}</span>
                 </div>
               </div>
@@ -183,7 +186,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
 
             {/* Urgency level */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-3">
                 Mức độ khẩn cấp *
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -195,13 +198,13 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                     className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
                       formData.urgency === level
                         ? getUrgencyColor(level)
-                        : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:border-neutral-600'
+                        : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-400 border-gray-300 dark:border-neutral-700 hover:border-gray-400 dark:hover:border-neutral-600'
                     }`}
                   >
-                    {level === 'critical' && '🔴 Nguy hiểm nghiêm trọng'}
-                    {level === 'high' && '🟠 Khẩn cấp'}
-                    {level === 'medium' && '🟡 Cần hỗ trợ'}
-                    {level === 'low' && '🟢 Không khẩn cấp'}
+                    {level === 'critical' && 'Nguy hiểm nghiêm trọng'}
+                    {level === 'high' && 'Khẩn cấp'}
+                    {level === 'medium' && 'Cần hỗ trợ'}
+                    {level === 'low' && 'Không khẩn cấp'}
                   </button>
                 ))}
               </div>
@@ -209,7 +212,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
 
             {/* Description */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
                 Mô tả tình huống *
               </label>
               <textarea
@@ -217,7 +220,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                 minLength={10}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={4}
                 placeholder="Ví dụ: Nhà bị ngập sâu 1.5m, không thể di chuyển, cần cứu hộ khẩn cấp..."
               />
@@ -225,7 +228,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
 
             {/* Number of people */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
                 Số người cần hỗ trợ
               </label>
               <input
@@ -234,13 +237,13 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                 max={100}
                 value={formData.num_people}
                 onChange={(e) => setFormData({ ...formData, num_people: parseInt(e.target.value) || 1 })}
-                className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             {/* Priority checkboxes */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-3">
                 Thông tin ưu tiên
               </label>
               <div className="space-y-3">
@@ -249,10 +252,11 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                     type="checkbox"
                     checked={formData.has_injuries}
                     onChange={(e) => setFormData({ ...formData, has_injuries: e.target.checked })}
-                    className="w-5 h-5 rounded border-neutral-600 bg-neutral-800 text-red-500 focus:ring-2 focus:ring-red-500 focus:ring-offset-0"
+                    className="w-5 h-5 rounded border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-red-500 focus:ring-2 focus:ring-red-500 focus:ring-offset-0"
                   />
-                  <span className="text-white group-hover:text-red-400 transition-colors">
-                    🚑 Có người bị thương
+                  <Ambulance className="w-5 h-5 text-red-500" />
+                  <span className="text-gray-900 dark:text-white group-hover:text-red-500 transition-colors">
+                    Có người bị thương
                   </span>
                 </label>
 
@@ -261,10 +265,11 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                     type="checkbox"
                     checked={formData.has_children}
                     onChange={(e) => setFormData({ ...formData, has_children: e.target.checked })}
-                    className="w-5 h-5 rounded border-neutral-600 bg-neutral-800 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                    className="w-5 h-5 rounded border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                   />
-                  <span className="text-white group-hover:text-blue-400 transition-colors">
-                    👶 Có trẻ em
+                  <Baby className="w-5 h-5 text-blue-500" />
+                  <span className="text-gray-900 dark:text-white group-hover:text-blue-500 transition-colors">
+                    Có trẻ em
                   </span>
                 </label>
 
@@ -273,10 +278,11 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                     type="checkbox"
                     checked={formData.has_elderly}
                     onChange={(e) => setFormData({ ...formData, has_elderly: e.target.checked })}
-                    className="w-5 h-5 rounded border-neutral-600 bg-neutral-800 text-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0"
+                    className="w-5 h-5 rounded border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0"
                   />
-                  <span className="text-white group-hover:text-purple-400 transition-colors">
-                    👴 Có người già
+                  <User className="w-5 h-5 text-purple-500" />
+                  <span className="text-gray-900 dark:text-white group-hover:text-purple-500 transition-colors">
+                    Có người già
                   </span>
                 </label>
               </div>
@@ -285,20 +291,20 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
             {/* Contact info */}
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
                   Tên liên hệ
                 </label>
                 <input
                   type="text"
                   value={formData.contact_name}
                   onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
-                  className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Tùy chọn"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
                   Số điện thoại
                 </label>
                 <input
@@ -306,7 +312,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                   pattern="0\d{9}"
                   value={formData.contact_phone}
                   onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                  className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ví dụ: 0901234567"
                 />
               </div>
@@ -314,22 +320,22 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
 
             {/* Location info */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
                 Vị trí hiện tại
               </label>
-              <div className="px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white font-mono text-sm">
+              <div className="px-4 py-3 bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white font-mono text-sm">
                 {formData.lat.toFixed(6)}, {formData.lon.toFixed(6)}
               </div>
-              <p className="text-xs text-neutral-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-neutral-500 mt-1">
                 Vị trí được lấy tự động từ thiết bị của bạn
               </p>
             </div>
           </form>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-neutral-700 flex items-center justify-between bg-neutral-900/50">
-            <p className="text-sm text-neutral-400">
-              Số khẩn cấp: <span className="font-semibold text-white">113, 114, 115</span>
+          <div className="px-6 py-4 border-t border-neutral-200/50 dark:border-neutral-700 flex items-center justify-between bg-gray-50/50 dark:bg-neutral-900/50">
+            <p className="text-sm text-gray-600 dark:text-neutral-400">
+              Số khẩn cấp: <span className="font-semibold text-gray-900 dark:text-white">113, 114, 115</span>
             </p>
 
             <div className="flex gap-3">
@@ -337,7 +343,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 text-gray-900 dark:text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Hủy
               </button>
@@ -357,7 +363,7 @@ export default function ReportDistressForm({ isOpen, onClose, onSuccess }: Repor
                   </>
                 ) : (
                   <>
-                    <span>🆘</span>
+                    <Siren className="w-5 h-5" />
                     <span>Gửi yêu cầu khẩn cấp</span>
                   </>
                 )}

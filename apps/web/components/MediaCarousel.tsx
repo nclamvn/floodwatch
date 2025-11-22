@@ -33,16 +33,19 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       // Must have media
       if (!r.media || r.media.length === 0) return false
 
-      const textToCheck = `${r.title} ${r.description || ''}`.toLowerCase()
+      // Decode HTML entities before filtering to ensure keyword matching works
+      const decodedTitle = decodeHTML(r.title)
+      const decodedDescription = r.description ? decodeHTML(r.description) : ''
+      const textToCheck = `${decodedTitle} ${decodedDescription}`.toLowerCase()
 
       // Exclude very short titles (likely spam or incomplete)
-      if (r.title.length < 10) return false  // Lowered from 15 to 10
+      if (decodedTitle.length < 10) return false  // Lowered from 15 to 10
 
       // Exclude English-only titles (check if mostly English characters)
       const vietnameseChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
-      const hasVietnamese = vietnameseChars.test(r.title)
-      const englishWordCount = r.title.split(/\s+/).filter(word => /^[a-zA-Z]+$/.test(word)).length
-      const totalWordCount = r.title.split(/\s+/).length
+      const hasVietnamese = vietnameseChars.test(decodedTitle)
+      const englishWordCount = decodedTitle.split(/\s+/).filter(word => /^[a-zA-Z]+$/.test(word)).length
+      const totalWordCount = decodedTitle.split(/\s+/).length
       const isEnglishOnly = !hasVietnamese && englishWordCount > totalWordCount * 0.7
       if (isEnglishOnly) return false
 
@@ -60,14 +63,17 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       const consequenceKeywords = ['thiệt hại', 'thiet hai', 'ngập úng', 'ngap ung', 'cô lập', 'co lap', 'sơ tán', 'so tan', 'di dời', 'di doi', 'thiệt mạng', 'thiet mang', 'mất tích', 'mat tich', 'cứu hộ', 'cuu ho', 'cứu nạn', 'cuu nan', 'hậu quả', 'hau qua', 'ảnh hưởng', 'anh huong', 'sập', 'sap', 'vùi lấp', 'vui lap']
       const hasConsequenceKeyword = consequenceKeywords.some(keyword => textToCheck.includes(keyword))
 
-      // Show disaster-related reports with lower threshold for consequence news
+      // Show disaster-related reports with lower threshold for more content
       if (r.type === 'ALERT' || r.type === 'SOS') {
-        return r.trust_score >= 0.3  // Lowered from 0.4/0.5
+        return r.trust_score >= 0.2  // Lowered from 0.3 to show more content
       }
       if (r.type === 'RAIN') {
-        return r.trust_score >= 0.4  // Lowered from 0.5/0.6, allow all RAIN with media
+        return r.trust_score >= 0.25  // Lowered from 0.4 to show more content
       }
-      // Exclude ROAD and NEEDS - not disaster-related
+      if (r.type === 'ROAD') {
+        return r.trust_score >= 0.3  // Now included - road conditions are relevant
+      }
+      // Exclude only NEEDS - not disaster-related
       return false
     })
     .sort((a, b) => {
@@ -77,9 +83,9 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       if (hasDescA && !hasDescB) return -1
       if (!hasDescA && hasDescB) return 1
 
-      // Boost priority for consequence news
-      const textA = `${a.title} ${a.description || ''}`.toLowerCase()
-      const textB = `${b.title} ${b.description || ''}`.toLowerCase()
+      // Boost priority for consequence news - decode HTML before checking
+      const textA = `${decodeHTML(a.title)} ${a.description ? decodeHTML(a.description) : ''}`.toLowerCase()
+      const textB = `${decodeHTML(b.title)} ${b.description ? decodeHTML(b.description) : ''}`.toLowerCase()
       const consequenceKeywords = ['thiệt hại', 'thiet hai', 'ngập úng', 'ngap ung', 'cô lập', 'co lap', 'sơ tán', 'so tan', 'thiệt mạng', 'thiet mang', 'cứu hộ', 'cuu ho', 'cứu nạn', 'cuu nan']
       const hasConsequenceA = consequenceKeywords.some(kw => textA.includes(kw))
       const hasConsequenceB = consequenceKeywords.some(kw => textB.includes(kw))

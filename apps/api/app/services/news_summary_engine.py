@@ -8,6 +8,7 @@ import os
 import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+import pytz
 import openai
 import structlog
 from sqlalchemy.orm import Session
@@ -17,6 +18,29 @@ logger = structlog.get_logger(__name__)
 
 # Initialize OpenAI
 openai.api_key = os.getenv('OPENAI_API_KEY')
+
+
+def format_vietnamese_time() -> str:
+    """Format current time in Vietnamese style (sáng/trưa/chiều/tối/khuya)"""
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    now = datetime.now(vn_tz)
+    hour = now.hour
+
+    # Determine period based on Vietnamese time conventions
+    if 5 <= hour < 11:
+        period = "sáng"
+    elif 11 <= hour < 13:
+        period = "trưa"
+    elif 13 <= hour < 18:
+        period = "chiều"
+    elif 18 <= hour < 22:
+        period = "tối"
+    else:
+        period = "khuya"
+
+    # Convert to 12-hour format
+    display_hour = hour % 12 or 12
+    return f"{display_hour} giờ {period}"
 
 
 class AINewsSummaryEngine:
@@ -112,15 +136,21 @@ class AINewsSummaryEngine:
 
         # Build prompt
         prompt = f"""Bạn là hệ thống AI tạo bản tin thiên tai cho người dân Việt Nam.
-Nhiệm vụ: Tạo bản tin âm thanh 1 phút (45-60 giây) từ dữ liệu thời gian thực.
+Nhiệm vụ: Tạo bản tin âm thanh ĐẦY ĐỦ 1 PHÚT (60 giây) từ dữ liệu thời gian thực.
+
+⚠️ YÊU CẦU BẮT BUỘC VỀ ĐỘ DÀI:
+- TUYỆT ĐỐI: Bản tin PHẢI có từ 200-250 TỪ để đủ 60 giây khi đọc
+- KHÔNG được viết ngắn hơn 200 từ dù cho dữ liệu ít
+- Nếu thiếu tin thiên tai: mở rộng phần khuyến nghị, dự báo thời tiết, lời nhắc an toàn
 
 NGUYÊN TẮC QUAN TRỌNG:
 - Giọng điệu: Bình tĩnh, rõ ràng, không gây hoảng loạn
 - Ngôn ngữ: Tiếng Việt đơn giản, dễ hiểu
-- Độ dài: 150-200 từ (khi đọc mất 45-60 giây)
-- Cấu trúc: Mở đầu → Tình hình → Khuyến nghị
+- Cấu trúc: Mở đầu → Tình hình → Khuyến nghị → Kết thúc
+- QUAN TRỌNG: BẮT ĐẦU bản tin bằng "Bản tin lúc {{current_time}}"
+- CHỈ BÁO CÁO THIÊN TAI: Bỏ qua tin về bạo lực, tai nạn giao thông, chính trị, kinh tế
 
-DỮ LIỆU ĐẦU VÀO (10 phút gần nhất):
+DỮ LIỆU ĐẦU VÀO (60 phút gần nhất):
 Số lượng báo cáo: {reports_count}
 
 """
@@ -135,55 +165,66 @@ Số lượng báo cáo: {reports_count}
 
         prompt += """
 
-YÊU CẦU BẢN TIN:
+YÊU CẦU BẢN TIN (TỔNG 200-250 TỪ - BẮT BUỘC):
 
-1. MỞ ĐẦU (10-15 từ):
-   - Thời điểm hiện tại
-   - Tình hình tổng quan
+1. MỞ ĐẦU (15-20 từ):
+   - BẮT ĐẦU BẰNG: "Bản tin lúc {{current_time}}"
+   - Sau đó: Tình hình tổng quan
 
-2. CHI TIẾT (80-100 từ):
-   - Khu vực nào đang có tình huống đáng chú ý
-   - Mức độ nghiêm trọng (nếu có)
-   - Số liệu cụ thể (nếu có: lượng mưa, mực nước, diện tích ngập)
+2. CHI TIẾT (120-150 từ):
+   - CHỈ báo cáo THIÊN TAI: mưa, lũ, bão, sạt lở, ngập lụt, hạn hán
+   - BỎ QUA: tai nạn giao thông, bạo lực, chính trị, kinh tế, logistics
+   - Khu vực đang có tình huống thiên tai
+   - Mức độ nghiêm trọng, số liệu cụ thể (lượng mưa, mực nước, diện tích ngập)
+   - Dự báo thời tiết, xu hướng diễn biến
+   - Nếu thiếu tin: mở rộng dự báo thời tiết, lịch sử thiên tai gần đây
 
-3. KHUYẾN NGHỊ (30-40 từ):
+3. KHUYẾN NGHỊ (50-60 từ):
    - Hành động cụ thể cho người dân
-   - Lưu ý an toàn
-   - Theo dõi cập nhật
+   - Lưu ý an toàn chi tiết
+   - Chuẩn bị đồ dùng thiết yếu
+   - Theo dõi cập nhật từ cơ quan chức năng
+   - Số điện thoại khẩn cấp nếu cần
 
-4. KẾT THÚC (10-15 từ):
-   - Lời kết chuyên nghiệp
-   - Cập nhật lần sau
+4. KẾT THÚC (15-20 từ):
+   - Lời kết chuyên nghiệp, trấn an
+   - Nhắc nhở cập nhật lần sau
+   - Chúc an toàn
 
 ĐỊNH DẠNG OUTPUT:
 Trả về JSON với cấu trúc sau:
 ```json
-{
-  "title": "Bản tin 1 phút - [Thời gian]",
-  "summary_text": "Văn bản bản tin đầy đủ 150-200 từ...",
+{{
+  "title": "Bản tin cập nhật mới nhất",
+  "summary_text": "Văn bản bản tin đầy đủ 200-250 TỪ (BẮT BUỘC)...",
   "priority_level": "low/medium/high/critical",
   "regions_affected": ["Miền Bắc", "Miền Trung", "Miền Nam"],
   "key_points": [
-    "Điểm chính 1",
-    "Điểm chính 2",
-    "Điểm chính 3"
+    "Điểm chính 1 về thiên tai",
+    "Điểm chính 2 về thiên tai",
+    "Điểm chính 3 về thiên tai"
   ],
   "recommended_actions": [
-    "Khuyến nghị 1",
-    "Khuyến nghị 2"
+    "Khuyến nghị an toàn chi tiết 1",
+    "Khuyến nghị an toàn chi tiết 2",
+    "Khuyến nghị an toàn chi tiết 3"
   ]
-}
+}}
 ```
 
-LƯU Ý QUAN TRỌNG:
-- Nếu KHÔNG có tin nghiêm trọng → Báo cáo "Tình hình ổn định"
-- Nếu có cảnh báo → Nhấn mạnh khu vực và thời gian
-- Luôn kết thúc bằng lời khuyên an toàn
+⚠️ LƯU Ý BẮT BUỘC:
+- summary_text PHẢI có ít nhất 200 từ, tốt nhất 220-250 từ để đủ 60 giây
+- CHỈ báo cáo thiên tai thực sự (mưa, lũ, bão, sạt lở, ngập, hạn hán)
+- BỎ QUA hoàn toàn: tai nạn giao thông, bạo lực gia đình, chính trị, kinh tế
+- Nếu ít tin nghiêm trọng: mở rộng dự báo thời tiết, khuyến nghị phòng tránh chi tiết
+- Luôn kết thúc bằng lời trấn an và khuyên an toàn
 - Tránh thuật ngữ kỹ thuật phức tạp
 
-Hãy tạo bản tin bây giờ."""
+Hãy tạo bản tin ĐẦY ĐỦ 200-250 từ bây giờ."""
 
-        return prompt
+        # Inject current time into prompt
+        current_time = format_vietnamese_time()
+        return prompt.format(current_time=current_time)
 
     def generate_summary(
         self,
@@ -252,6 +293,64 @@ Hãy tạo bản tin bây giờ."""
             logger.error("ai_summary_generation_failed", error=str(e))
             return None
 
+    def generate_article_summary(
+        self,
+        title: str,
+        source_url: str
+    ) -> Optional[str]:
+        """
+        Generate AI summary for an article that has no description.
+        Uses title and attempts to generate context-aware summary.
+
+        Args:
+            title: Article title
+            source_url: Source URL of the article
+
+        Returns:
+            Generated summary text or None if failed
+        """
+        try:
+            logger.info("generating_article_summary", title=title[:50])
+
+            prompt = f"""Dựa trên tiêu đề tin tức này, hãy tạo một đoạn tóm tắt ngắn gọn (2-3 câu) về nội dung có thể của bài báo:
+
+Tiêu đề: {title}
+Nguồn: {source_url}
+
+YÊU CẦU:
+- Viết 2-3 câu tóm tắt nội dung chính dựa trên tiêu đề
+- Sử dụng ngôn ngữ tự nhiên, dễ hiểu
+- Nếu liên quan đến thiên tai: nêu rõ khu vực, mức độ nghiêm trọng
+- Tránh thông tin sai lệch, chỉ suy luận hợp lý từ tiêu đề
+- KHÔNG viết "Bài báo này...", chỉ viết nội dung trực tiếp
+
+Hãy tạo tóm tắt bây giờ (CHỈ trả về text tóm tắt, không format)."""
+
+            response = openai.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Bạn là AI trợ lý tóm tắt tin tức thiên tai cho người dân Việt Nam. Viết ngắn gọn, chính xác, dễ hiểu."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                max_tokens=200,  # Short summary
+                temperature=0.7
+            )
+
+            summary = response.choices[0].message.content.strip()
+
+            logger.info("article_summary_generated", summary_length=len(summary))
+            return summary
+
+        except Exception as e:
+            logger.error("article_summary_generation_failed", error=str(e), title=title[:50])
+            return None
+
     def _generate_stable_situation_bulletin(self) -> Dict[str, Any]:
         """
         Generate bulletin for when no significant events are happening
@@ -259,13 +358,11 @@ Hãy tạo bản tin bây giờ."""
         Returns:
             Stable situation bulletin dictionary
         """
-        current_time = datetime.utcnow()
-        time_str = current_time.strftime("%H:%M")
-
+        current_time = format_vietnamese_time()
         return {
-            "title": f"Bản tin 1 phút - {time_str}",
+            "title": "Bản tin cập nhật mới nhất",
             "summary_text": (
-                f"Đây là bản tin cảnh báo thiên tai lúc {time_str}. "
+                f"Bản tin lúc {current_time}. "
                 "Hiện tại tình hình cả nước đang ổn định, không có cảnh báo thiên tai nghiêm trọng. "
                 "Một số khu vực có mưa nhẹ đến vừa, không ảnh hưởng đến giao thông và sinh hoạt. "
                 "Người dân vui lòng theo dõi các bản tin cập nhật tiếp theo. "

@@ -12,7 +12,6 @@ import DistressLayer from './DistressLayer'
 import TrafficLayer from './TrafficLayer'
 import AIForecastLayer from './AIForecastLayer'
 import LayerControlPanel, { LayerVisibility } from './LayerControlPanel'
-import DisasterLegend from './DisasterLegend'
 import { MapControlsGroup } from './MapControlsGroup'
 import { WindyModal } from './WindyModal'
 import { useHazards } from '@/hooks/useHazards'
@@ -38,15 +37,41 @@ interface MapViewProps {
   onViewportChange?: () => void
   onMapClick?: (lat: number, lng: number) => void
   onClearRadius?: () => void
+  onExpandArticle?: (report: Report) => void
+  onLegendClick?: () => void
+  legendActive?: boolean
 }
 
-export default function MapViewClustered({ reports, radiusFilter, targetViewport, onViewportChange, onMapClick, onClearRadius }: MapViewProps) {
+// Helper function to truncate description for popup preview
+function truncateDescription(text: string, maxLength: number = 150): string {
+  if (!text || text.length <= maxLength) return text
+
+  // Try to cut at sentence end
+  const truncated = text.substring(0, maxLength)
+  const lastPeriod = truncated.lastIndexOf('.')
+  const lastComma = truncated.lastIndexOf(',')
+  const lastSpace = truncated.lastIndexOf(' ')
+
+  // Prefer cutting at sentence end, then comma, then space
+  const cutPoint = lastPeriod > maxLength * 0.7 ? lastPeriod + 1 :
+                   lastComma > maxLength * 0.8 ? lastComma + 1 :
+                   lastSpace > 0 ? lastSpace : maxLength
+
+  return text.substring(0, cutPoint).trim() + '...'
+}
+
+export default function MapViewClustered({ reports, radiusFilter, targetViewport, onViewportChange, onMapClick, onClearRadius, onExpandArticle, onLegendClick, legendActive }: MapViewProps) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [viewState, setViewState] = useState({
     longitude: 107.5,
     latitude: 16.5,
     zoom: 7
   })
+  const [previousViewState, setPreviousViewState] = useState<{
+    longitude: number
+    latitude: number
+    zoom: number
+  } | null>(null)
   const [baseMapStyle, setBaseMapStyle] = useState<BaseMapStyleId>('streets')
   const [windyModalOpen, setWindyModalOpen] = useState(false)
   const [layerControlOpen, setLayerControlOpen] = useState(false)
@@ -132,6 +157,17 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
     active_only: true,
     refreshInterval: 300000, // Refresh every 5 minutes (forecasts change slower)
   })
+
+  // Debug logging for AI forecasts
+  useEffect(() => {
+    console.log('🗺️ AI Forecasts Status:', {
+      userLocation: userLocation ? `${userLocation.latitude}, ${userLocation.longitude}` : 'NOT SET',
+      forecastCount: aiForecasts.length,
+      isLoading: forecastsLoading,
+      toggleState: aiForecastOpen,
+      message: !userLocation ? '⚠️ Need to click "Locate Me" button' : aiForecasts.length === 0 ? '⚠️ No forecasts in database' : '✅ Forecasts available'
+    })
+  }, [userLocation, aiForecasts, forecastsLoading, aiForecastOpen])
 
   // Update last data update timestamp when hazards change
   useEffect(() => {
@@ -347,15 +383,15 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       {/* User location tracking */}
       <UserLocationMarker />
 
-      {/* Map controls group - includes map styles, location, windy, and layer control buttons */}
+      {/* Map controls group - includes map styles, location, windy, AI forecast, and legend buttons */}
       <MapControlsGroup
         baseMapStyle={baseMapStyle}
         onStyleChange={setBaseMapStyle}
         onWindyClick={() => setWindyModalOpen(true)}
-        onLayerControlClick={() => setLayerControlOpen(!layerControlOpen)}
-        layerControlActive={layerControlOpen}
         onAIForecastClick={() => setAiForecastOpen(!aiForecastOpen)}
         aiForecastActive={aiForecastOpen}
+        onLegendClick={() => onLegendClick?.()}
+        legendActive={legendActive}
       />
 
       {/* Hazard events visualization */}
@@ -508,6 +544,13 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
                   boxShadow: style.shadow,
                 }}
                 onClick={() => {
+                  // Save current position before zooming to cluster
+                  setPreviousViewState({
+                    longitude: viewState.longitude,
+                    latitude: viewState.latitude,
+                    zoom: viewState.zoom
+                  })
+
                   // Always zoom in to expand cluster into smaller clusters or individual markers
                   const expansionZoom = Math.min(
                     supercluster.getClusterExpansionZoom(cluster.id),
@@ -543,7 +586,19 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
               anchor="bottom"
               onClick={(e) => {
                 e.originalEvent.stopPropagation()
-                setSelectedReport(report)
+
+                // Check if clicking the same pin that already has popup open
+                if (selectedReport?.id === report.id) {
+                  // Second click on same pin - zoom out to position before cluster click
+                  if (previousViewState) {
+                    setViewState(previousViewState)
+                    setPreviousViewState(null)
+                  }
+                  setSelectedReport(null)
+                } else {
+                  // First click on pin - just show popup (no zoom)
+                  setSelectedReport(report)
+                }
               }}
             >
               <div
@@ -593,7 +648,28 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
           closeOnClick={true}
           className="modern-popup"
         >
-          <div className="p-3 sm:p-4 max-w-[260px] sm:max-w-xs min-w-[240px] sm:min-w-[280px]">
+          <div className="p-3 sm:p-4 max-w-[260px] sm:max-w-xs min-w-[240px] sm:min-w-[280px] relative">
+            {/* Expand button - Top right */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onExpandArticle?.(selectedReport)
+              }}
+              className="absolute top-2 right-2 p-1.5 rounded-lg hover:bg-neutral-100 active:bg-neutral-200 transition-colors group"
+              title="Mở chế độ đọc đầy đủ"
+              aria-label="Expand article"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-neutral-600 group-hover:text-neutral-900"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+            </button>
+
             {/* Badge & Trust Score */}
             <div className="flex items-center gap-2 mb-3">
               <span className={`px-2.5 py-1 text-xs font-medium rounded ${
@@ -614,11 +690,16 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
               {selectedReport.title}
             </h3>
 
-            {/* Description */}
+            {/* Description - Truncated preview */}
             {selectedReport.description && (
-              <p className="text-sm text-neutral-700 mb-3 leading-relaxed">
-                {selectedReport.description}
-              </p>
+              <>
+                <p className="text-sm text-neutral-700 mb-2 leading-relaxed line-clamp-3">
+                  {truncateDescription(selectedReport.description, 150)}
+                </p>
+                <p className="text-[10px] text-neutral-500 italic mb-3">
+                  Nhấn icon ↗️ để xem đầy đủ
+                </p>
+              </>
             )}
 
             {/* Meta Info */}
@@ -637,6 +718,11 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
                 </time>
               </div>
             </div>
+
+            {/* Copyright Footer */}
+            <div className="text-[10px] text-neutral-300 text-left pt-2 mt-2 border-t border-neutral-100">
+              © Thông tin mưa lũ - Lâm Nguyễn
+            </div>
           </div>
         </Popup>
       )}
@@ -648,11 +734,6 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
           onChange={setLayerVisibility}
         />
       )}
-
-      {/* Disaster Legend - Icon and color guide */}
-      <DisasterLegend
-        lastUpdated={lastDataUpdate}
-      />
     </Map>
 
     {/* Windy Weather Modal */}

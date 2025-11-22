@@ -26,7 +26,13 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-development}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3002}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3002,http://localhost:3003}
+      # AI Voice News
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-dy4bgtjqq}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-863741882762283}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      TTS_ALTERNATING_VOICES: ${TTS_ALTERNATING_VOICES:-true}
     depends_on:
       db:
         condition: service_healthy

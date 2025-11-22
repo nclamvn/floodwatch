@@ -128,6 +128,11 @@ class Report(Base):
     status = Column(String(50), default="new", nullable=False)
     duplicate_of = Column(UUID(as_uuid=True), nullable=True)  # Reference to original report if this is a duplicate
 
+    # Audio (for AI voice news feature)
+    audio_url = Column(String(500), nullable=True)  # Cloudinary MP3 URL
+    audio_generated_at = Column(DateTime(timezone=True), nullable=True)  # When audio was generated
+    audio_language = Column(String(10), default='vi', nullable=True)  # Language code (vi, en, etc.)
+
     # Constraints
     __table_args__ = (
         CheckConstraint('trust_score >= 0.0 AND trust_score <= 1.0', name='check_trust_score'),
@@ -662,4 +667,196 @@ class TrafficDisruption(Base):
             "hazard_event_id": str(self.hazard_event_id) if self.hazard_event_id else None,
             "media_urls": self.media_urls,
             "admin_notes": self.admin_notes
+        }
+
+
+class NeedsType(str, enum.Enum):
+    """Help request needs type enum"""
+    FOOD = "food"
+    WATER = "water"
+    SHELTER = "shelter"
+    MEDICAL = "medical"
+    CLOTHING = "clothing"
+    TRANSPORT = "transport"
+    OTHER = "other"
+
+
+class ServiceType(str, enum.Enum):
+    """Help offer service type enum"""
+    RESCUE = "rescue"
+    TRANSPORTATION = "transportation"
+    MEDICAL = "medical"
+    SHELTER = "shelter"
+    FOOD_WATER = "food_water"
+    SUPPLIES = "supplies"
+    VOLUNTEER = "volunteer"
+    DONATION = "donation"
+    OTHER = "other"
+
+
+class HelpStatus(str, enum.Enum):
+    """Help connection status enum"""
+    ACTIVE = "active"
+    IN_PROGRESS = "in_progress"
+    FULFILLED = "fulfilled"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+
+
+class HelpUrgency(str, enum.Enum):
+    """Help request urgency enum"""
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class HelpRequest(Base):
+    """
+    Help Request model - people requesting assistance during disasters
+    """
+    __tablename__ = "help_requests"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Request details
+    needs_type = Column(SQLEnum(NeedsType, name="needs_type", values_callable=lambda x: [e.value for e in x]), nullable=False)
+    urgency = Column(SQLEnum(HelpUrgency, name="help_urgency", values_callable=lambda x: [e.value for e in x]), nullable=False)
+    status = Column(SQLEnum(HelpStatus, name="help_status", values_callable=lambda x: [e.value for e in x]), nullable=False, server_default="active")
+    description = Column(Text, nullable=False)
+    people_count = Column(Integer, nullable=True)
+
+    # Spatial data (PostGIS)
+    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    address = Column(String(500), nullable=True)
+
+    # Contact information
+    contact_name = Column(String(255), nullable=False)
+    contact_phone = Column(String(50), nullable=False)
+    contact_method = Column(String(50), nullable=True)
+
+    # Verification
+    is_verified = Column(Boolean, nullable=False, server_default="false")
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    verified_by = Column(UUID(as_uuid=True), nullable=True)
+
+    # Expiration
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Metadata
+    notes = Column(Text, nullable=True)
+    images = Column(JSONB, nullable=True)
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('people_count IS NULL OR people_count > 0', name='check_positive_people_count'),
+    )
+
+    def __repr__(self):
+        return f"<HelpRequest {self.id} [{self.needs_type.value}] urgency={self.urgency.value}>"
+
+    def to_dict(self):
+        """Convert to dictionary for API response"""
+        return {
+            "id": str(self.id),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "needs_type": self.needs_type.value if isinstance(self.needs_type, enum.Enum) else self.needs_type,
+            "urgency": self.urgency.value if isinstance(self.urgency, enum.Enum) else self.urgency,
+            "status": self.status.value if isinstance(self.status, enum.Enum) else self.status,
+            "description": self.description,
+            "people_count": self.people_count,
+            "lat": self.lat,
+            "lon": self.lon,
+            "address": self.address,
+            "contact_name": self.contact_name,
+            "contact_phone": self.contact_phone,
+            "contact_method": self.contact_method,
+            "is_verified": self.is_verified,
+            "verified_at": self.verified_at.isoformat() if self.verified_at else None,
+            "verified_by": str(self.verified_by) if self.verified_by else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "notes": self.notes,
+            "images": self.images
+        }
+
+
+class HelpOffer(Base):
+    """
+    Help Offer model - people/organizations offering assistance during disasters
+    """
+    __tablename__ = "help_offers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Offer details
+    service_type = Column(SQLEnum(ServiceType, name="service_type", values_callable=lambda x: [e.value for e in x]), nullable=False)
+    status = Column(SQLEnum(HelpStatus, name="help_status", values_callable=lambda x: [e.value for e in x]), nullable=False, server_default="active")
+    description = Column(Text, nullable=False)
+    capacity = Column(Integer, nullable=True)
+    availability = Column(String(500), nullable=True)
+
+    # Spatial data (PostGIS)
+    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    address = Column(String(500), nullable=True)
+    coverage_radius_km = Column(Float, nullable=True)
+
+    # Contact information
+    contact_name = Column(String(255), nullable=False)
+    contact_phone = Column(String(50), nullable=False)
+    contact_method = Column(String(50), nullable=True)
+    organization = Column(String(255), nullable=True)
+
+    # Verification
+    is_verified = Column(Boolean, nullable=False, server_default="false")
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    verified_by = Column(UUID(as_uuid=True), nullable=True)
+
+    # Expiration
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Metadata
+    notes = Column(Text, nullable=True)
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('capacity IS NULL OR capacity > 0', name='check_positive_capacity'),
+        CheckConstraint('coverage_radius_km IS NULL OR coverage_radius_km > 0', name='check_positive_coverage_radius'),
+    )
+
+    def __repr__(self):
+        return f"<HelpOffer {self.id} [{self.service_type.value}] status={self.status.value}>"
+
+    def to_dict(self):
+        """Convert to dictionary for API response"""
+        return {
+            "id": str(self.id),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "service_type": self.service_type.value if isinstance(self.service_type, enum.Enum) else self.service_type,
+            "status": self.status.value if isinstance(self.status, enum.Enum) else self.status,
+            "description": self.description,
+            "capacity": self.capacity,
+            "availability": self.availability,
+            "lat": self.lat,
+            "lon": self.lon,
+            "address": self.address,
+            "coverage_radius_km": self.coverage_radius_km,
+            "contact_name": self.contact_name,
+            "contact_phone": self.contact_phone,
+            "contact_method": self.contact_method,
+            "organization": self.organization,
+            "is_verified": self.is_verified,
+            "verified_at": self.verified_at.isoformat() if self.verified_at else None,
+            "verified_by": str(self.verified_by) if self.verified_by else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "notes": self.notes
         }

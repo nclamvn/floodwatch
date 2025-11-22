@@ -31,9 +31,9 @@ export function WindyModal({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-6xl mx-4 h-[80vh] bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full max-w-6xl mx-4 h-[80vh] bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md rounded-2xl shadow-lg border border-white/30 dark:border-neutral-700/30 overflow-hidden animate-in fade-in zoom-in duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-950 dark:to-blue-950">
+        <div className="flex items-center justify-between p-4 border-b border-neutral-200/50 dark:border-gray-700 bg-gradient-to-r from-emerald-100/80 to-blue-100/80 dark:from-emerald-950 dark:to-blue-950">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center">
               <Wind className="w-6 h-6 text-white" />
@@ -51,10 +51,10 @@ export function WindyModal({
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center justify-center shadow-sm"
+            className="w-10 h-10 rounded-full bg-white/80 hover:bg-white/95 dark:bg-gray-800/80 dark:hover:bg-gray-700 border border-white/30 dark:border-white/10 text-gray-900 dark:text-gray-300 hover:text-black dark:hover:text-white transition-all flex items-center justify-center shadow-sm backdrop-blur-md hover:scale-105 active:scale-95"
             aria-label="Đóng"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

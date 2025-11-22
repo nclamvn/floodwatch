@@ -3,10 +3,16 @@
 import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import axios from 'axios'
+import Link from 'next/link'
 import CustomDropdown from '@/components/CustomDropdown'
 import NewsTicker from '@/components/NewsTicker'
 import MediaCarousel from '@/components/MediaCarousel'
-import ReportDetailModal from '@/components/ReportDetailModal'
+import { ArticleReadModal } from '@/components/ArticleReadModal'
+import { HeaderVoicePlayer } from '@/components/HeaderVoicePlayer'
+import RegionalSummaryInput from '@/components/RegionalSummaryInput'
+import RegionalSummaryModal from '@/components/RegionalSummaryModal'
+import DisasterLegend from '@/components/DisasterLegend'
+import { SidebarHotlineTicker } from '@/components/SidebarHotlineTicker'
 import { LocationProvider } from '@/contexts/LocationContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { getReportTypeLabel } from '@/types/report'
@@ -77,6 +83,14 @@ export default function MapPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [lastPinnedUpdate, setLastPinnedUpdate] = useState(Date.now())
   const [targetViewport, setTargetViewport] = useState<{ latitude: number; longitude: number; zoom: number } | null>(null)
+
+  // Regional Summary state
+  const [summaryData, setSummaryData] = useState<any | null>(null)
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false)
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false)
+
+  // Legend state
+  const [isLegendOpen, setIsLegendOpen] = useState(false)
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -255,6 +269,31 @@ export default function MapPage() {
     return R * c
   }
 
+  // Handle regional summary search
+  const handleRegionalSearch = async (province: string) => {
+    setIsLoadingSummary(true)
+    try {
+      const response = await axios.get(`${API_URL}/api/v1/regional-summary`, {
+        params: {
+          province,
+          hours: 24
+        }
+      })
+      setSummaryData(response.data)
+      setIsSummaryModalOpen(true)
+    } catch (error: any) {
+      console.error('Error fetching regional summary:', error)
+      // Show error message to user
+      if (error.response?.data?.detail) {
+        alert(error.response.data.detail.message || 'Không thể tải tình hình khu vực. Vui lòng thử lại.')
+      } else {
+        alert('Không thể tải tình hình khu vực. Vui lòng kiểm tra kết nối và thử lại.')
+      }
+    } finally {
+      setIsLoadingSummary(false)
+    }
+  }
+
   const provinces = ['ALL', 'Đà Nẵng', 'Quảng Nam', 'Quảng Trị', 'Thừa Thiên Huế', 'Quảng Bình']
 
   // Province coordinates for auto-pan
@@ -284,41 +323,65 @@ export default function MapPage() {
     <ErrorBoundary>
       <LocationProvider>
         <div className="relative h-[100dvh] w-full overflow-hidden">
-      {/* Header overlay - Filter controls only */}
+      {/* Header overlay - Voice Player + Filter controls */}
       <header
-        className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-start justify-end p-3 sm:p-4"
+        className="pointer-events-none absolute inset-x-0 top-0 z-50 p-3 sm:p-4"
         aria-label="Site header"
       >
-        {/* Right: Filter controls */}
-        <div className="pointer-events-auto flex items-center gap-2">
-          {/* Desktop filters - Custom dropdowns with glass effect */}
-          <div className="hidden sm:flex items-center gap-2">
-            <CustomDropdown
-              value={filter}
-              onChange={setFilter}
-              options={filterOptions}
-              className="min-w-[130px]"
-            />
-            <CustomDropdown
-              value={selectedProvince}
-              onChange={setSelectedProvince}
-              options={provinceOptions}
-              className="min-w-[160px]"
-            />
+        {/* Layout container */}
+        <div className="relative flex items-start justify-end">
+          {/* Filter controls */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            {/* Desktop filters - Custom dropdowns with glass effect */}
+            <div className="hidden sm:flex items-center gap-2">
+              <CustomDropdown
+                value={filter}
+                onChange={setFilter}
+                options={filterOptions}
+              />
+              <CustomDropdown
+                value={selectedProvince}
+                onChange={setSelectedProvince}
+                options={provinceOptions}
+              />
+              {/* Help Connection Button */}
+              <Link
+                href="/help"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg transition-all hover:shadow-xl hover:scale-105 backdrop-blur-sm border border-blue-500"
+              >
+                <span className="whitespace-nowrap">Cứu trợ</span>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile: News toggle button - Top right to balance with left controls */}
-      <button
-        onClick={() => setSheetOpen(!sheetOpen)}
-        className="sm:hidden fixed top-3 right-3 z-[70] w-14 h-14 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-bold flex flex-col items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500"
-      >
-        <span className="text-lg">📋</span>
-        {filteredReports.length > 0 && (
-          <span className="text-[10px] leading-none mt-0.5">{filteredReports.length}</span>
-        )}
-      </button>
+      {/* Mobile: Voice Player + News button - Top right */}
+      <div className="sm:hidden fixed top-3 right-3 z-[70] flex flex-col gap-2">
+        {/* Voice News Player (Mobile - compact) */}
+        <div className="pointer-events-auto">
+          <HeaderVoicePlayer key="header-voice-mobile-v2" />
+        </div>
+
+        {/* News Toggle Button */}
+        <button
+          onClick={() => setSheetOpen(!sheetOpen)}
+          className="w-14 h-14 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-bold flex flex-col items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500"
+        >
+          <span className="text-lg">📋</span>
+          {filteredReports.length > 0 && (
+            <span className="text-[10px] leading-none mt-0.5">{filteredReports.length}</span>
+          )}
+        </button>
+
+        {/* Help Connection Button (Mobile) */}
+        <Link
+          href="/help"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-blue-500 text-sm"
+        >
+          Cứu trợ
+        </Link>
+      </div>
 
       {/* Gradient overlay for readability */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 h-16 sm:h-20 bg-gradient-to-b from-black/10 to-transparent" />
@@ -349,7 +412,7 @@ export default function MapPage() {
             // Expanded: Show title and collapse button
             <>
               <div>
-                <h2 className="text-lg font-bold">Tin cập nhật</h2>
+                <h2 className="text-lg font-bold">Bảng tin</h2>
               </div>
               <button
                 onClick={() => setSidebarCollapsed(true)}
@@ -365,102 +428,8 @@ export default function MapPage() {
           )}
         </div>
 
-        {/* Pinned Important News - Only when expanded */}
-        {!sidebarCollapsed && pinnedReport && (
-          <div
-            onClick={() => {
-              setSelectedReport(pinnedReport)
-              setIsModalOpen(true)
-            }}
-            className="mx-4 mt-4 mb-2 p-3 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30 border-2 border-red-500/50 dark:border-red-500/40 rounded-lg cursor-pointer hover:shadow-lg transition-all duration-300 group relative overflow-hidden"
-          >
-            {/* Animated background pulse */}
-            <div className="absolute inset-0 bg-red-500/5 animate-pulse" />
-
-            {/* Content */}
-            <div className="relative z-10">
-              {/* Header with icon and badge */}
-              <div className="flex items-start gap-2 mb-2">
-                {/* Red pin icon */}
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-red-600 dark:bg-red-500 flex items-center justify-center animate-bounce">
-                  <span className="text-white text-xs">📍</span>
-                </div>
-
-                {/* Title */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-red-600 text-white rounded">
-                      QUAN TRỌNG
-                    </span>
-                    {/* NEW badge if < 5 minutes old */}
-                    {new Date().getTime() - new Date(pinnedReport.created_at).getTime() < 300000 && (
-                      <span className="inline-flex px-1.5 py-0.5 text-[9px] font-bold uppercase bg-yellow-400 text-yellow-900 rounded animate-pulse">
-                        MỚI
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-sm font-bold text-red-900 dark:text-red-100 line-clamp-2 leading-tight group-hover:text-red-700 dark:group-hover:text-red-200 transition-colors">
-                    {decodeHTML(pinnedReport.title)}
-                  </h3>
-                </div>
-              </div>
-
-              {/* Meta info */}
-              <div className="flex items-center justify-between text-xs text-red-700 dark:text-red-300">
-                <span className="flex items-center gap-1">
-                  <span>📍</span>
-                  {pinnedReport.province ? decodeHTML(pinnedReport.province) : 'Không rõ'}
-                </span>
-                <span className="font-mono text-[10px]">
-                  {new Date(pinnedReport.created_at).toLocaleString('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    day: '2-digit',
-                    month: '2-digit'
-                  })}
-                </span>
-              </div>
-
-              {/* Trust score bar */}
-              <div className="mt-2 flex items-center gap-2">
-                <div className="flex-1 h-1 bg-red-200 dark:bg-red-900/50 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600 dark:bg-red-500 transition-all duration-500"
-                    style={{ width: `${pinnedReport.trust_score * 100}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-semibold text-red-700 dark:text-red-300 tabular-nums">
-                  {(pinnedReport.trust_score * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-
-            {/* Hover indicator */}
-            <div className="absolute bottom-1 right-2 text-red-400 dark:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile/Collapsed Pinned News - When collapsed, show as icon only */}
-        {sidebarCollapsed && pinnedReport && (
-          <div className="flex flex-col items-center gap-1 py-3 border-b border-neutral-200 dark:border-neutral-700">
-            <button
-              onClick={() => {
-                setSelectedReport(pinnedReport)
-                setIsModalOpen(true)
-              }}
-              className="relative w-10 h-10 flex items-center justify-center rounded-full bg-red-600 dark:bg-red-500 text-white hover:scale-110 active:scale-95 transition-transform animate-bounce shadow-lg"
-              title={pinnedReport.title}
-            >
-              <span className="text-lg">🚨</span>
-              {/* Pulse ring */}
-              <span className="absolute inset-0 rounded-full bg-red-600 animate-ping opacity-30" />
-            </button>
-          </div>
-        )}
+        {/* Emergency Hotline Ticker - Only when expanded */}
+        {!sidebarCollapsed && <SidebarHotlineTicker />}
 
         {/* Reports List */}
         {sidebarCollapsed ? (
@@ -516,8 +485,8 @@ export default function MapPage() {
                     setIsModalOpen(true)
                   }}
                 >
-                  {/* Type Badge & Trust Score */}
-                  <div className="flex items-start justify-between mb-3">
+                  {/* Type Badge */}
+                  <div className="flex items-start justify-between mb-2">
                     <span className={`px-2.5 py-1 text-xs font-medium rounded text-white ${
                       report.type === 'SOS' ? 'bg-red-700 dark:bg-red-800' :
                       report.type === 'ALERT' ? 'bg-red-600 dark:bg-red-700' :
@@ -527,9 +496,6 @@ export default function MapPage() {
                       'bg-gray-600 dark:bg-gray-700'
                     }`}>
                       {getReportTypeLabel(report.type)}
-                    </span>
-                    <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
-                      {(report.trust_score * 100).toFixed(0)}% tin cậy
                     </span>
                   </div>
 
@@ -552,31 +518,16 @@ export default function MapPage() {
                     {/* Text content */}
                     <div className="flex-1 min-w-0">
                       {/* Title */}
-                      <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
                         {decodeHTML(report.title)}
                       </h3>
 
-                      {/* Description */}
-                      {report.description && (
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-3 line-clamp-2 leading-relaxed">
-                          {decodeHTML(report.description)}
-                        </p>
-                      )}
-
-                      {/* Meta Info */}
-                      <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-500">
+                      {/* Province only */}
+                      <div className="flex items-center text-xs text-neutral-500 dark:text-neutral-500">
                         <span className="flex items-center gap-1">
                           <span className="text-sm">📍</span>
                           {report.province ? decodeHTML(report.province) : 'Không rõ'}
                         </span>
-                        <time className="tabular-nums">
-                          {new Date(report.created_at).toLocaleString('vi-VN', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </time>
                       </div>
                     </div>
                   </div>
@@ -644,7 +595,7 @@ export default function MapPage() {
                       }}
                     >
                       {/* Type Badge & Trust */}
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start justify-between mb-2">
                         <span className={`px-3 py-1.5 text-sm font-medium rounded text-white ${
                           report.type === 'SOS' ? 'bg-red-700 dark:bg-red-800' :
                           report.type === 'ALERT' ? 'bg-red-600 dark:bg-red-700' :
@@ -654,9 +605,6 @@ export default function MapPage() {
                           'bg-gray-600 dark:bg-gray-700'
                         }`}>
                           {getReportTypeLabel(report.type)}
-                        </span>
-                        <span className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">
-                          {(report.trust_score * 100).toFixed(0)}%
                         </span>
                       </div>
 
@@ -679,31 +627,16 @@ export default function MapPage() {
                         {/* Text content */}
                         <div className="flex-1 min-w-0">
                           {/* Title */}
-                          <h3 className="font-semibold text-base text-neutral-900 dark:text-neutral-100 mb-2">
+                          <h3 className="font-semibold text-base text-neutral-900 dark:text-neutral-100 mb-1 line-clamp-2">
                             {decodeHTML(report.title)}
                           </h3>
 
-                          {/* Description */}
-                          {report.description && (
-                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-3 line-clamp-2 leading-relaxed">
-                              {decodeHTML(report.description)}
-                            </p>
-                          )}
-
-                          {/* Meta */}
-                          <div className="flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-500">
+                          {/* Province only */}
+                          <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-500">
                             <span className="flex items-center gap-1">
                               <span>📍</span>
                               {report.province ? decodeHTML(report.province) : 'Không rõ'}
                             </span>
-                            <time className="tabular-nums">
-                              {new Date(report.created_at).toLocaleString('vi-VN', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </time>
                           </div>
                         </div>
                       </div>
@@ -728,6 +661,13 @@ export default function MapPage() {
             setRadiusFilter({ lat, lng, radius: 20 })
           }}
           onClearRadius={() => setRadiusFilter(null)}
+          onExpandArticle={(report) => {
+            // Open modal when expand button is clicked
+            setSelectedReport(report)
+            setIsModalOpen(true)
+          }}
+          onLegendClick={() => setIsLegendOpen(!isLegendOpen)}
+          legendActive={isLegendOpen}
         />
       </main>
 
@@ -749,14 +689,46 @@ export default function MapPage() {
         }}
       />
 
-      {/* Report Detail Modal */}
-      <ReportDetailModal
+      {/* Article Read Modal - Premium reading experience */}
+      <ArticleReadModal
         report={selectedReport}
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false)
           setSelectedReport(null)
         }}
+      />
+
+      {/* Regional Summary Input - Bottom-right expandable search */}
+      <RegionalSummaryInput
+        onSearch={handleRegionalSearch}
+        isLoading={isLoadingSummary}
+      />
+
+      {/* Regional Summary Modal - AI-powered regional report */}
+      <RegionalSummaryModal
+        data={summaryData}
+        isOpen={isSummaryModalOpen}
+        onClose={() => {
+          setIsSummaryModalOpen(false)
+          setSummaryData(null)
+        }}
+        onReportClick={(reportId) => {
+          // Find report and open ArticleReadModal
+          const report = reports.find(r => r.id === reportId)
+          if (report) {
+            setSelectedReport(report)
+            setIsModalOpen(true)
+            setIsSummaryModalOpen(false) // Close summary modal
+          }
+        }}
+      />
+
+      {/* Disaster Legend - Controlled from header button */}
+      <DisasterLegend
+        isOpen={isLegendOpen}
+        onClose={() => setIsLegendOpen(false)}
+        lastUpdated={reports.length > 0 ? new Date(reports[0].created_at) : undefined}
       />
       </div>
       </LocationProvider>

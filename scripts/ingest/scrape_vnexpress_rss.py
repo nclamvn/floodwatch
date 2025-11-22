@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from apps.api.app.database import SessionLocal, Report, ReportType
 from apps.api.app.services.province_extractor import extract_location_data
+from apps.api.app.services.article_extractor import extract_article_hybrid
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -199,8 +200,24 @@ def scrape_vnexpress_rss(dry_run: bool = False) -> int:
                 try:
                     # Extract basic data
                     title = clean_html(entry.get('title', ''))
-                    description = clean_html(entry.get('description', entry.get('summary', '')))
                     link = entry.get('link', '')
+
+                    # Get RSS summary as fallback
+                    summary = clean_html(entry.get('description', entry.get('summary', '')))
+
+                    # Try to extract full article content
+                    description = summary  # Default to summary
+                    if link:
+                        try:
+                            article_result = extract_article_hybrid(link, language='vi')
+                            if article_result['success'] and len(article_result['full_text']) > 300:
+                                description = article_result['full_text']
+                                print(f"  ✓ Full article extracted: {len(description)} chars from {link[:50]}...")
+                            else:
+                                print(f"  ✗ Using RSS summary fallback ({len(summary)} chars)")
+                        except Exception as e:
+                            print(f"  ✗ Article extraction failed: {str(e)}, using summary")
+                            description = summary
 
                     # Parse published date
                     published = entry.get('published_parsed') or entry.get('updated_parsed')

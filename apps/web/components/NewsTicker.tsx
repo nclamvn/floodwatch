@@ -21,9 +21,10 @@ interface Report {
 interface NewsTickerProps {
   reports: Report[]
   onReportClick?: (report: Report) => void
+  onVoiceClick?: () => void
 }
 
-export default function NewsTicker({ reports, onReportClick }: NewsTickerProps) {
+export default function NewsTicker({ reports, onReportClick, onVoiceClick }: NewsTickerProps) {
   const tickerRef = useRef<HTMLDivElement>(null)
   const [isPaused, setIsPaused] = useState(false)
 
@@ -144,11 +145,32 @@ export default function NewsTicker({ reports, onReportClick }: NewsTickerProps) 
       onMouseLeave={() => setIsPaused(false)}
     >
       {/* "TIN NÓNG" Label */}
-      <div className="absolute left-0 top-0 bottom-0 flex items-center bg-black/20 px-3 z-10 backdrop-blur-sm">
-        <div className="flex items-center gap-2">
+      <div className="absolute left-0 top-0 bottom-0 flex items-center bg-black/20 px-2 z-10 backdrop-blur-sm gap-2">
+        <div className="flex items-center gap-2 px-1">
           <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
           <span className="text-xs font-bold uppercase tracking-wide">Tin nóng</span>
         </div>
+
+        {/* Voice Button */}
+        {onVoiceClick && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onVoiceClick()
+            }}
+            className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-all"
+            aria-label="Nghe bản tin thoại"
+            title="Nghe bản tin thoại AI"
+          >
+            <svg
+              className="w-3 h-3 text-white"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Ticker content */}
@@ -156,7 +178,7 @@ export default function NewsTicker({ reports, onReportClick }: NewsTickerProps) 
         ref={tickerRef}
         className="flex items-center h-full"
         style={{
-          paddingLeft: '110px', // Space for "HOT NEWS" label
+          paddingLeft: '130px', // Space for "HOT NEWS" label + voice button
           animation: isPaused ? 'none' : 'ticker 25s linear infinite',
           animationPlayState: isPaused ? 'paused' : 'running'
         }}
