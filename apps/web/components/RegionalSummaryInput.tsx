@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, KeyboardEvent, useEffect, useRef } from 'react'
-import { Search, Send } from 'lucide-react'
 
 interface RegionalSummaryInputProps {
   onSearch: (province: string) => void
@@ -50,7 +49,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
     setIsExpanded(true)
   }
 
-  // Collapsed state - Circular glass button with animated border
+  // Collapsed state - Siri-style button with dynamic multicolor waves
   if (!isExpanded) {
     return (
       <div className="fixed left-1/2 -translate-x-1/2 bottom-[26px] z-30">
@@ -59,32 +58,36 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
           className="relative group"
           aria-label="Hỏi AI về tình hình địa phương"
         >
-          {/* Animated glowing border */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-75 blur-sm animate-spin-slow" />
-          <div className="absolute inset-[2px] rounded-full bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-spin-slow" />
+          {/* Outer glow effect */}
+          <div className="absolute inset-[-8px] rounded-full bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 blur-xl animate-pulse-glow opacity-60" />
 
-          {/* Glass button */}
-          <div className="relative w-[38px] h-[38px] rounded-full backdrop-blur-xl bg-white/30 dark:bg-white/10 border border-white/50 flex items-center justify-center shadow-2xl">
-            <span className="text-xs font-bold text-gray-900">
-              Hỏi
-            </span>
+          {/* Main button container */}
+          <div className="relative w-[46px] h-[46px] rounded-full overflow-hidden backdrop-blur-xl bg-black/40 border border-white/20 shadow-2xl">
+            {/* Siri-style animated gradient waves - Layer 1 */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 opacity-70 animate-siri-wave-1" />
+
+            {/* Siri-style animated gradient waves - Layer 2 */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 opacity-60 animate-siri-wave-2" />
+
+            {/* Siri-style animated gradient waves - Layer 3 */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-pink-400 via-red-500 to-orange-500 opacity-50 animate-siri-wave-3" />
+
+            {/* Subtle radial gradient overlay for depth */}
+            <div className="absolute inset-0 bg-gradient-radial from-white/20 via-transparent to-black/30" />
           </div>
         </button>
       </div>
     )
   }
 
-  // Expanded state - Horizontal glass input
+  // Expanded state - Horizontal glass input (120% larger, no icons, white text)
   return (
-    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-[26px] z-30 w-[54%] max-w-[270px]">
+    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-[26px] z-30 w-[65%] max-w-[324px]">
       <div className="relative">
         {/* Glass container */}
         <div className="relative backdrop-blur-xl bg-white/30 dark:bg-white/10 rounded-full border border-white/50 shadow-2xl overflow-hidden">
-          <div className="flex items-center gap-1.5 px-3 py-2">
-            {/* Search icon */}
-            <Search className="w-3 h-3 text-gray-700 flex-shrink-0" />
-
-            {/* Input field with shimmer effect on text */}
+          <div className="flex items-center px-4 py-2.5">
+            {/* Input field - No icons, white text */}
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -94,7 +97,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
                 placeholder="VD: Đà Nẵng"
                 disabled={isLoading}
                 autoFocus
-                className="w-full bg-transparent outline-none border-none text-gray-900 placeholder-gray-700 text-xs disabled:opacity-50"
+                className="w-full bg-transparent outline-none border-none text-white placeholder-white text-sm disabled:opacity-50"
               />
               {/* Loading shimmer effect on input text */}
               {isLoading && inputValue && (
@@ -103,29 +106,65 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
                 </div>
               )}
             </div>
-
-            {/* Send button (only show when not loading and has text) */}
-            {!isLoading && inputValue.trim() && (
-              <button
-                onClick={handleSearch}
-                className="p-1 rounded-full text-gray-700 flex-shrink-0"
-                aria-label="Tìm kiếm"
-              >
-                <Send className="w-3 h-3" />
-              </button>
-            )}
           </div>
         </div>
       </div>
 
       {/* Custom animations */}
       <style jsx>{`
-        @keyframes spin-slow {
-          from {
-            transform: rotate(0deg);
+        @keyframes siri-wave-1 {
+          0%, 100% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 0.7;
           }
-          to {
-            transform: rotate(360deg);
+          33% {
+            transform: translate(-30%, -40%) scale(1.3) rotate(120deg);
+            opacity: 0.5;
+          }
+          66% {
+            transform: translate(-70%, -60%) scale(0.9) rotate(240deg);
+            opacity: 0.8;
+          }
+        }
+
+        @keyframes siri-wave-2 {
+          0%, 100% {
+            transform: translate(0%, 0%) scale(1.2) rotate(0deg);
+            opacity: 0.6;
+          }
+          33% {
+            transform: translate(20%, 30%) scale(0.8) rotate(-90deg);
+            opacity: 0.7;
+          }
+          66% {
+            transform: translate(-20%, 20%) scale(1.1) rotate(-180deg);
+            opacity: 0.4;
+          }
+        }
+
+        @keyframes siri-wave-3 {
+          0%, 100% {
+            transform: translate(50%, 50%) scale(0.9) rotate(180deg);
+            opacity: 0.5;
+          }
+          33% {
+            transform: translate(60%, 40%) scale(1.2) rotate(60deg);
+            opacity: 0.6;
+          }
+          66% {
+            transform: translate(30%, 60%) scale(1) rotate(-60deg);
+            opacity: 0.4;
+          }
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% {
+            opacity: 0.4;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.1);
           }
         }
 
@@ -138,12 +177,28 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
           }
         }
 
-        .animate-spin-slow {
-          animation: spin-slow 3s linear infinite;
+        .animate-siri-wave-1 {
+          animation: siri-wave-1 4s ease-in-out infinite;
+        }
+
+        .animate-siri-wave-2 {
+          animation: siri-wave-2 5s ease-in-out infinite;
+        }
+
+        .animate-siri-wave-3 {
+          animation: siri-wave-3 6s ease-in-out infinite;
+        }
+
+        .animate-pulse-glow {
+          animation: pulse-glow 3s ease-in-out infinite;
         }
 
         .animate-shimmer-fast {
           animation: shimmer-fast 1.5s ease-in-out infinite;
+        }
+
+        .bg-gradient-radial {
+          background: radial-gradient(circle, var(--tw-gradient-stops));
         }
       `}</style>
     </div>
