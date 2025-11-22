@@ -118,7 +118,7 @@ export default function RoutesPage() {
                   <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
                     Tuyến đường An toàn
                   </h1>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  <p className="hidden sm:block text-sm text-neutral-600 dark:text-neutral-400">
                     Cập nhật tình trạng giao thông thời gian thực
                   </p>
                 </div>
