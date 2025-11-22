@@ -2886,11 +2886,19 @@ async def get_ai_forecast_accuracy_stats(
 
 # ==================== AI NEWS BULLETIN ====================
 
+# In-memory cache for AI news bulletin
+_bulletin_cache = {
+    "data": None,
+    "generated_at": None,
+    "cache_duration_minutes": 10
+}
+
 @app.get("/ai-news/latest")
 @limiter.limit("100/minute")
 async def get_latest_ai_news_bulletin(
     request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    force_refresh: bool = False
 ):
     """
     Get the latest AI-generated news bulletin
@@ -2902,11 +2910,29 @@ async def get_latest_ai_news_bulletin(
     - Priority level and affected regions
     - Key points and recommended actions
 
-    The bulletin is automatically regenerated every 15 minutes (5:00-23:59).
-    If no bulletin exists, triggers generation of a new one.
+    The bulletin is cached for 10 minutes to improve performance.
+    Use ?force_refresh=true to bypass cache and regenerate immediately.
     """
     try:
+        from datetime import datetime, timezone, timedelta
+
         logger.info("fetching_latest_ai_news_bulletin")
+
+        # Check if we have valid cached data
+        if not force_refresh and _bulletin_cache["data"] and _bulletin_cache["generated_at"]:
+            cache_age = datetime.now(timezone.utc) - _bulletin_cache["generated_at"]
+            cache_valid_duration = timedelta(minutes=_bulletin_cache["cache_duration_minutes"])
+
+            if cache_age < cache_valid_duration:
+                logger.info(
+                    "serving_cached_bulletin",
+                    cache_age_minutes=cache_age.total_seconds() / 60,
+                    cache_remaining_minutes=(cache_valid_duration - cache_age).total_seconds() / 60
+                )
+                return _bulletin_cache["data"]
+
+        # Cache miss or expired - generate new bulletin
+        logger.info("generating_new_bulletin", force_refresh=force_refresh)
 
         # Get services
         summary_engine = get_news_summary_engine()
@@ -2932,12 +2958,12 @@ async def get_latest_ai_news_bulletin(
         )
 
         logger.info(
-            "ai_news_bulletin_served",
+            "ai_news_bulletin_generated",
             audio_url=audio_url,
             priority=summary.get('priority_level')
         )
 
-        return {
+        response_data = {
             "data": {
                 "title": summary.get('title'),
                 "summary_text": summary_text,
@@ -2951,9 +2977,16 @@ async def get_latest_ai_news_bulletin(
             "meta": {
                 "bulletin_duration_seconds": 60,
                 "refresh_interval_minutes": 10,
-                "language": "vi"
+                "language": "vi",
+                "cached": False
             }
         }
+
+        # Update cache
+        _bulletin_cache["data"] = response_data
+        _bulletin_cache["generated_at"] = generated_at
+
+        return response_data
 
     except HTTPException:
         raise
