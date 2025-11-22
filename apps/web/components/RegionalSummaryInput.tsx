@@ -91,7 +91,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="VD: Hỏi: Đà Nẵng"
+                placeholder="VD: Đà Nẵng"
                 disabled={isLoading}
                 autoFocus
                 className="w-full bg-transparent outline-none border-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base disabled:opacity-50"

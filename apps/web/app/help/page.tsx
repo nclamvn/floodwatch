@@ -52,16 +52,37 @@ export default function HelpConnectionPage() {
 
             {/* Centered Titles and Slogan */}
             <div className="flex flex-col items-center gap-4 mb-6">
-              <h1 className="text-4xl font-bold text-red-600 dark:text-red-500">
-                Giúp tôi
+              <h1 className="text-4xl font-bold text-center">
+                <span className="text-red-600 dark:text-red-500">Giúp tôi</span>
+                <span className="text-neutral-600 dark:text-neutral-400">, </span>
+                <span className="text-green-600 dark:text-green-500">tôi giúp</span>
               </h1>
-              <h1 className="text-4xl font-bold text-green-600 dark:text-green-500">
-                Tôi giúp
-              </h1>
-              <p className="text-lg text-neutral-600 dark:text-neutral-400 text-center italic">
-                Thương người như thể thương thân
-              </p>
+              <div className="relative">
+                <p className="text-lg text-neutral-600 dark:text-neutral-400 text-center italic">
+                  Thương người như thể thương thân
+                </p>
+                {/* Pink shimmer effect */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute inset-0 -translate-x-full animate-shimmer-slogan bg-gradient-to-r from-transparent via-pink-400/40 to-transparent" />
+                </div>
+              </div>
             </div>
+
+            {/* Custom animation for slogan */}
+            <style jsx>{`
+              @keyframes shimmer-slogan {
+                0% {
+                  transform: translateX(-100%);
+                }
+                100% {
+                  transform: translateX(100%);
+                }
+              }
+
+              .animate-shimmer-slogan {
+                animation: shimmer-slogan 3s ease-in-out infinite;
+              }
+            `}</style>
 
             {/* Tab Buttons */}
             <div className="flex gap-3">
