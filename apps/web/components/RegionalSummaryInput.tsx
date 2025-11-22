@@ -82,7 +82,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Xem tình hình chung hôm nay... Bạn ở đâu?"
+            placeholder="Nhập địa phương"
             disabled={isLoading}
             className={`
               w-full bg-transparent

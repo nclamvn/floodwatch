@@ -378,8 +378,10 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       cursor={viewState.zoom > 8 ? 'crosshair' : 'grab'}
       attributionControl={false}
     >
-      {/* Navigation controls - positioned to avoid overlap */}
-      <NavigationControl position="bottom-right" showCompass={false} />
+      {/* Navigation controls - positioned to avoid overlap, hidden on mobile */}
+      <div className="hidden sm:block">
+        <NavigationControl position="bottom-right" showCompass={false} />
+      </div>
       <ScaleControl position="bottom-left" />
 
       {/* User location tracking */}

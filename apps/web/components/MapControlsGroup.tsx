@@ -105,14 +105,14 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
         <LocationInfoPopup />
       </div>
 
-      {/* Mobile: Two rows - better organization */}
+      {/* Mobile: Three rows - better organization */}
       <div className="sm:hidden absolute top-3 left-3 right-20 z-40 flex flex-col gap-2">
         {/* Row 1: Map Styles (4 buttons) */}
         <div className="flex flex-row gap-2 justify-start">
           <MapStyleSwitcher value={baseMapStyle} onChange={onStyleChange} />
         </div>
 
-        {/* Row 2: Action buttons (4 buttons evenly spaced) */}
+        {/* Row 2: Action buttons (4 buttons) */}
         <div className="flex flex-row gap-2 justify-start">
           {/* Legend - Frosted Glass (MOVED TO FAR LEFT) */}
           <button
@@ -184,12 +184,14 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
           >
             <span className="text-xs font-bold">AI</span>
           </button>
-
-          {/* Audio News Player */}
-          <HeaderVoicePlayer key="map-controls-audio-mobile" />
         </div>
 
-        {/* Location Info Popup - below buttons on mobile */}
+        {/* Row 3: Audio News Player - Pill shape, full width */}
+        <div className="flex justify-start w-[168px]">
+          <HeaderVoicePlayer key="map-controls-audio-mobile" className="!w-full !rounded-full !px-3 !py-1.5" showLabel={true} />
+        </div>
+
+        {/* Location Info Popup - below audio player on mobile */}
         <div className="flex justify-start">
           <LocationInfoPopup />
         </div>

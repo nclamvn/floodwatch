@@ -3,7 +3,12 @@
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
 import { Play, Pause } from 'lucide-react'
 
-export function HeaderVoicePlayer() {
+interface HeaderVoicePlayerProps {
+  className?: string
+  showLabel?: boolean
+}
+
+export function HeaderVoicePlayer({ className = '', showLabel = false }: HeaderVoicePlayerProps = {}) {
   const {
     isPlaying,
     isLoading,
@@ -31,7 +36,7 @@ export function HeaderVoicePlayer() {
       <button
         onClick={handleToggle}
         disabled={isLoading || !bulletin}
-        className="relative flex items-center gap-2 px-3 py-1.5 rounded-full overflow-hidden backdrop-blur-md bg-gray-200/30 border border-white/20 hover:bg-gray-200/40 active:bg-gray-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 w-[290px] group"
+        className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full overflow-hidden backdrop-blur-md bg-gray-200/30 border border-white/20 hover:bg-gray-200/40 active:bg-gray-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 w-[290px] group ${className}`}
         aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
       >
         {/* Water filling animation - behind everything */}
@@ -65,18 +70,20 @@ export function HeaderVoicePlayer() {
         )}
       </button>
 
-      {/* Mobile: Hide text, show only icon */}
-      <style jsx>{`
-        @media (max-width: 640px) {
-          button span {
-            display: none;
+      {/* Mobile: Hide text, show only icon (unless showLabel is true) */}
+      {!showLabel && (
+        <style jsx>{`
+          @media (max-width: 640px) {
+            button span {
+              display: none;
+            }
+            button {
+              width: 40px;
+              padding: 0.375rem;
+            }
           }
-          button {
-            width: 40px;
-            padding: 0.375rem;
-          }
-        }
-      `}</style>
+        `}</style>
+      )}
     </div>
   )
 }
