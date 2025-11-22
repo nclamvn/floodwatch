@@ -281,10 +281,10 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
 
           {/* Article Content */}
           <article
-            className="prose prose-neutral dark:prose-invert prose-sm sm:prose-base max-w-none prose-headings:text-white prose-p:text-zinc-100 prose-p:leading-relaxed prose-a:text-zinc-400 prose-a:no-underline prose-a:hover:underline prose-strong:text-white prose-strong:font-semibold prose-ul:text-zinc-100 prose-ol:text-zinc-100 prose-li:text-zinc-100 prose-blockquote:text-zinc-200 prose-blockquote:border-zinc-700"
+            className="prose prose-invert prose-sm sm:prose-base max-w-none prose-headings:!text-white prose-p:!text-zinc-100 prose-p:leading-relaxed prose-a:!text-zinc-400 prose-a:no-underline prose-a:hover:underline prose-strong:!text-white prose-strong:font-semibold prose-ul:!text-zinc-100 prose-ol:!text-zinc-100 prose-li:!text-zinc-100 prose-blockquote:!text-zinc-200 prose-blockquote:border-zinc-700"
           >
             {loadingSummary ? (
-              <div className="flex items-center gap-2 text-neutral-400 italic">
+              <div className="flex items-center gap-2 text-zinc-100 italic">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Đang tạo tóm tắt bằng AI...</span>
               </div>
@@ -292,20 +292,20 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
               <>
                 {!report.description && aiSummary && (
                   <div className="mb-4 p-3 rounded-lg bg-zinc-800/40 border border-zinc-700/40">
-                    <p className="text-xs text-zinc-400 mb-2 flex items-center gap-1">
+                    <p className="text-xs !text-zinc-400 mb-2 flex items-center gap-1">
                       <Volume2 className="w-3 h-3" />
                       Tóm tắt được tạo bởi AI
                     </p>
                   </div>
                 )}
                 {paragraphs.map((paragraph, idx) => (
-                  <p key={idx} className="mb-4">
+                  <p key={idx} className="mb-4 !text-zinc-100">
                     {decodeHTML(paragraph)}
                   </p>
                 ))}
               </>
             ) : (
-              <p className="text-neutral-400 italic">
+              <p className="!text-zinc-100 italic">
                 Nội dung chi tiết không khả dụng. Vui lòng xem bài gốc để đọc đầy đủ.
               </p>
             )}
