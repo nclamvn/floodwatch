@@ -14,11 +14,11 @@ export default function Home() {
               Hệ thống Giám sát Thời gian Thực
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 dark:from-neutral-100 dark:via-neutral-300 dark:to-neutral-100 bg-clip-text text-transparent leading-tight">
+            <h1 className="text-3xl md:text-7xl font-bold bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 dark:from-neutral-100 dark:via-neutral-300 dark:to-neutral-100 bg-clip-text text-transparent leading-tight">
               Theo dõi mưa lũ
             </h1>
 
-            <p className="text-lg md:text-xl text-gray-600 dark:text-neutral-400 max-w-2xl mx-auto font-light">
+            <p className="text-sm md:text-xl text-gray-600 dark:text-neutral-400 max-w-2xl mx-auto font-light">
               Cảnh báo mưa lũ từ KTTV và cộng đồng, cập nhật tình trạng giao thông, kết nối cứu trợ
             </p>
           </div>
@@ -101,8 +101,8 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Feature Highlights */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8">
+          {/* Feature Highlights - Hidden on mobile */}
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8 pt-8">
             <div className="flex flex-col items-center text-center space-y-3">
               <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
                 <Bell className="w-6 h-6" />

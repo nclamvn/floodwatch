@@ -155,7 +155,7 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-300"
+      className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-300"
       role="dialog"
       aria-modal="true"
       aria-labelledby="article-modal-title"

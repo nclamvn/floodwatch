@@ -117,7 +117,7 @@ export default function RegionalSummaryModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-300 bg-black/75 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-300 bg-black/75 backdrop-blur-md"
       onClick={onClose}
     >
       {/* Modal Container */}
