@@ -2982,9 +2982,14 @@ async def get_latest_ai_news_bulletin(
             }
         }
 
-        # Update cache
+        # Update cache with timezone-aware datetime
         _bulletin_cache["data"] = response_data
-        _bulletin_cache["generated_at"] = generated_at
+        # Ensure generated_at is timezone-aware for cache comparison
+        if generated_at.tzinfo is None:
+            # If naive, assume UTC
+            _bulletin_cache["generated_at"] = generated_at.replace(tzinfo=timezone.utc)
+        else:
+            _bulletin_cache["generated_at"] = generated_at
 
         return response_data
 
