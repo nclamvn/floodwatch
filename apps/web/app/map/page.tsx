@@ -361,17 +361,16 @@ export default function MapPage() {
         {/* Help Connection Button (Mobile) - Now on top */}
         <Link
           href="/help"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-blue-500 text-sm"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-blue-500 text-sm h-[36px]"
         >
           Cứu trợ
         </Link>
 
-        {/* News Toggle Button - Now below, pill-shaped */}
+        {/* News Toggle Button - Now below, no icon, same height */}
         <button
           onClick={() => setSheetOpen(!sheetOpen)}
-          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-semibold flex items-center justify-center gap-2 shadow-lg transition-all backdrop-blur-sm border border-primary-500 text-sm"
+          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500 text-sm h-[36px]"
         >
-          <List className="w-4 h-4" />
           <span>Tin tức</span>
           {filteredReports.length > 0 && (
             <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{filteredReports.length}</span>

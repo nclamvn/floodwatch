@@ -78,6 +78,15 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
   const [windyModalOpen, setWindyModalOpen] = useState(false)
   const [layerControlOpen, setLayerControlOpen] = useState(false)
   const [aiForecastOpen, setAiForecastOpen] = useState(true)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  // Detect desktop/mobile for zoom controls
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 640)
+    checkDesktop()
+    window.addEventListener('resize', checkDesktop)
+    return () => window.removeEventListener('resize', checkDesktop)
+  }, [])
 
   // Layer visibility state - all enabled by default
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
@@ -378,10 +387,8 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       cursor={viewState.zoom > 8 ? 'crosshair' : 'grab'}
       attributionControl={false}
     >
-      {/* Navigation controls - positioned to avoid overlap, hidden on mobile */}
-      <div className="hidden sm:block">
-        <NavigationControl position="bottom-right" showCompass={false} />
-      </div>
+      {/* Navigation controls - ONLY rendered on desktop, not mobile */}
+      {isDesktop && <NavigationControl position="bottom-right" showCompass={false} />}
       <ScaleControl position="bottom-left" />
 
       {/* User location tracking */}
