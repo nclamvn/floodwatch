@@ -8,7 +8,6 @@ import CustomDropdown from '@/components/CustomDropdown'
 import NewsTicker from '@/components/NewsTicker'
 import MediaCarousel from '@/components/MediaCarousel'
 import { ArticleReadModal } from '@/components/ArticleReadModal'
-import { HeaderVoicePlayer } from '@/components/HeaderVoicePlayer'
 import RegionalSummaryInput from '@/components/RegionalSummaryInput'
 import RegionalSummaryModal from '@/components/RegionalSummaryModal'
 import DisasterLegend from '@/components/DisasterLegend'
@@ -356,13 +355,8 @@ export default function MapPage() {
         </div>
       </header>
 
-      {/* Mobile: Voice Player + News button - Top right */}
+      {/* Mobile: News button - Top right */}
       <div className="sm:hidden fixed top-3 right-3 z-[70] flex flex-col gap-2">
-        {/* Voice News Player (Mobile - compact) */}
-        <div className="pointer-events-auto">
-          <HeaderVoicePlayer key="header-voice-mobile-v2" />
-        </div>
-
         {/* News Toggle Button */}
         <button
           onClick={() => setSheetOpen(!sheetOpen)}
