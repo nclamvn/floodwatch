@@ -49,31 +49,31 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
     setIsExpanded(true)
   }
 
-  // Collapsed state - Siri-style button with dynamic multicolor waves
+  // Collapsed state - Enhanced Siri-style button with vibrant dynamic waves
   if (!isExpanded) {
     return (
       <div className="fixed left-1/2 -translate-x-1/2 bottom-[26px] z-30">
         <button
           onClick={handleExpand}
-          className="relative group"
+          className="relative group animate-button-breathe"
           aria-label="Hỏi AI về tình hình địa phương"
         >
-          {/* Outer glow effect */}
-          <div className="absolute inset-[-8px] rounded-full bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 blur-xl animate-pulse-glow opacity-60" />
+          {/* Outer glow effect - ENHANCED: Brighter, larger, more visible */}
+          <div className="absolute inset-[-12px] rounded-full bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-pink-500/50 blur-2xl animate-pulse-glow-enhanced opacity-90" />
 
           {/* Main button container */}
-          <div className="relative w-[46px] h-[46px] rounded-full overflow-hidden backdrop-blur-xl bg-black/40 border border-white/20 shadow-2xl">
-            {/* Siri-style animated gradient waves - Layer 1 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 opacity-70 animate-siri-wave-1" />
+          <div className="relative w-[46px] h-[46px] rounded-full overflow-hidden backdrop-blur-xl bg-black/50 border border-white/30 shadow-2xl">
+            {/* Siri-style animated gradient waves - Layer 1 - BRIGHTER & FASTER */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600 opacity-85 animate-siri-wave-1-fast" />
 
-            {/* Siri-style animated gradient waves - Layer 2 */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 opacity-60 animate-siri-wave-2" />
+            {/* Siri-style animated gradient waves - Layer 2 - BRIGHTER & FASTER */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500 via-blue-600 to-purple-700 opacity-75 animate-siri-wave-2-fast" />
 
-            {/* Siri-style animated gradient waves - Layer 3 */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-pink-400 via-red-500 to-orange-500 opacity-50 animate-siri-wave-3" />
+            {/* Siri-style animated gradient waves - Layer 3 - BRIGHTER & FASTER */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-pink-500 via-red-600 to-orange-600 opacity-65 animate-siri-wave-3-fast" />
 
             {/* Subtle radial gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-radial from-white/20 via-transparent to-black/30" />
+            <div className="absolute inset-0 bg-gradient-radial from-white/30 via-transparent to-black/40" />
           </div>
         </button>
       </div>
@@ -112,59 +112,68 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
 
       {/* Custom animations */}
       <style jsx>{`
-        @keyframes siri-wave-1 {
+        @keyframes siri-wave-1-fast {
           0%, 100% {
             transform: translate(-50%, -50%) scale(1) rotate(0deg);
-            opacity: 0.7;
+            opacity: 0.85;
           }
           33% {
-            transform: translate(-30%, -40%) scale(1.3) rotate(120deg);
-            opacity: 0.5;
+            transform: translate(-30%, -40%) scale(1.4) rotate(120deg);
+            opacity: 0.7;
           }
           66% {
             transform: translate(-70%, -60%) scale(0.9) rotate(240deg);
-            opacity: 0.8;
+            opacity: 0.95;
           }
         }
 
-        @keyframes siri-wave-2 {
+        @keyframes siri-wave-2-fast {
           0%, 100% {
             transform: translate(0%, 0%) scale(1.2) rotate(0deg);
-            opacity: 0.6;
+            opacity: 0.75;
           }
           33% {
             transform: translate(20%, 30%) scale(0.8) rotate(-90deg);
-            opacity: 0.7;
+            opacity: 0.85;
           }
           66% {
             transform: translate(-20%, 20%) scale(1.1) rotate(-180deg);
-            opacity: 0.4;
+            opacity: 0.6;
           }
         }
 
-        @keyframes siri-wave-3 {
+        @keyframes siri-wave-3-fast {
           0%, 100% {
             transform: translate(50%, 50%) scale(0.9) rotate(180deg);
-            opacity: 0.5;
+            opacity: 0.65;
           }
           33% {
-            transform: translate(60%, 40%) scale(1.2) rotate(60deg);
-            opacity: 0.6;
+            transform: translate(60%, 40%) scale(1.3) rotate(60deg);
+            opacity: 0.75;
           }
           66% {
             transform: translate(30%, 60%) scale(1) rotate(-60deg);
-            opacity: 0.4;
+            opacity: 0.5;
           }
         }
 
-        @keyframes pulse-glow {
+        @keyframes pulse-glow-enhanced {
           0%, 100% {
-            opacity: 0.4;
+            opacity: 0.7;
             transform: scale(1);
           }
           50% {
-            opacity: 0.8;
-            transform: scale(1.1);
+            opacity: 1;
+            transform: scale(1.15);
+          }
+        }
+
+        @keyframes button-breathe {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
           }
         }
 
@@ -177,20 +186,24 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
           }
         }
 
-        .animate-siri-wave-1 {
-          animation: siri-wave-1 4s ease-in-out infinite;
+        .animate-siri-wave-1-fast {
+          animation: siri-wave-1-fast 2s ease-in-out infinite;
         }
 
-        .animate-siri-wave-2 {
-          animation: siri-wave-2 5s ease-in-out infinite;
+        .animate-siri-wave-2-fast {
+          animation: siri-wave-2-fast 2.5s ease-in-out infinite;
         }
 
-        .animate-siri-wave-3 {
-          animation: siri-wave-3 6s ease-in-out infinite;
+        .animate-siri-wave-3-fast {
+          animation: siri-wave-3-fast 3s ease-in-out infinite;
         }
 
-        .animate-pulse-glow {
-          animation: pulse-glow 3s ease-in-out infinite;
+        .animate-pulse-glow-enhanced {
+          animation: pulse-glow-enhanced 2s ease-in-out infinite;
+        }
+
+        .animate-button-breathe {
+          animation: button-breathe 3s ease-in-out infinite;
         }
 
         .animate-shimmer-fast {

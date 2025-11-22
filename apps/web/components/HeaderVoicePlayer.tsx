@@ -32,11 +32,11 @@ export function HeaderVoicePlayer({ className = '', showLabel = false }: HeaderV
 
   return (
     <div className="relative">
-      {/* Main pill-shaped container - Slim 32px height, 290px width */}
+      {/* Main pill-shaped container - Auto width to fit content */}
       <button
         onClick={handleToggle}
         disabled={isLoading || !bulletin}
-        className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full overflow-hidden backdrop-blur-md bg-gray-200/30 border border-white/20 hover:bg-gray-200/40 active:bg-gray-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 w-[290px] group ${className}`}
+        className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full overflow-hidden backdrop-blur-md bg-gray-200/30 border border-white/20 hover:bg-gray-200/40 active:bg-gray-200/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 w-auto group ${className}`}
         aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
       >
         {/* Water filling animation - behind everything */}
