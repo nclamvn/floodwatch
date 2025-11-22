@@ -49,38 +49,37 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
     setIsExpanded(true)
   }
 
-  // Collapsed state - Enhanced Siri-style button with vibrant dynamic waves
+  // Collapsed state - 3D Frosted Glass Sphere with "?" - Apple Premium Design
   if (!isExpanded) {
     return (
       <div className="fixed left-1/2 -translate-x-1/2 bottom-[26px] z-30">
         <button
           onClick={handleExpand}
-          className="relative group animate-button-breathe"
+          className="relative group"
           aria-label="Hỏi AI về tình hình địa phương"
         >
-          {/* Outer glow effect - ENHANCED: Brighter, larger, more visible */}
-          <div className="absolute inset-[-12px] rounded-full bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-pink-500/50 blur-2xl animate-pulse-glow-enhanced opacity-90" />
+          {/* 3D Frosted Glass Sphere - Premium Apple Style */}
+          <div className="relative w-[46px] h-[46px] rounded-full overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-white/40 via-gray-100/30 to-gray-200/40 border border-white/60 shadow-2xl">
+            {/* Top highlight for 3D effect */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-transparent to-transparent" />
 
-          {/* Main button container */}
-          <div className="relative w-[46px] h-[46px] rounded-full overflow-hidden backdrop-blur-xl bg-black/50 border border-white/30 shadow-2xl">
-            {/* Siri-style animated gradient waves - Layer 1 - BRIGHTER & FASTER */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-600 to-pink-600 opacity-85 animate-siri-wave-1-fast" />
+            {/* Bottom shadow for 3D depth */}
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-400/20 via-transparent to-transparent" />
 
-            {/* Siri-style animated gradient waves - Layer 2 - BRIGHTER & FASTER */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500 via-blue-600 to-purple-700 opacity-75 animate-siri-wave-2-fast" />
+            {/* Question Mark - Bold Black */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl font-black text-gray-900 select-none">?</span>
+            </div>
 
-            {/* Siri-style animated gradient waves - Layer 3 - BRIGHTER & FASTER */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-pink-500 via-red-600 to-orange-600 opacity-65 animate-siri-wave-3-fast" />
-
-            {/* Subtle radial gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-radial from-white/30 via-transparent to-black/40" />
+            {/* Subtle inner shadow */}
+            <div className="absolute inset-[1px] rounded-full shadow-inner" />
           </div>
         </button>
       </div>
     )
   }
 
-  // Expanded state - Horizontal glass input (120% larger, no icons, white text)
+  // Expanded state - Horizontal glass input (no icons, white text)
   return (
     <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-[26px] z-30 w-[65%] max-w-[324px]">
       <div className="relative">
@@ -112,71 +111,6 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
 
       {/* Custom animations */}
       <style jsx>{`
-        @keyframes siri-wave-1-fast {
-          0%, 100% {
-            transform: translate(-50%, -50%) scale(1) rotate(0deg);
-            opacity: 0.85;
-          }
-          33% {
-            transform: translate(-30%, -40%) scale(1.4) rotate(120deg);
-            opacity: 0.7;
-          }
-          66% {
-            transform: translate(-70%, -60%) scale(0.9) rotate(240deg);
-            opacity: 0.95;
-          }
-        }
-
-        @keyframes siri-wave-2-fast {
-          0%, 100% {
-            transform: translate(0%, 0%) scale(1.2) rotate(0deg);
-            opacity: 0.75;
-          }
-          33% {
-            transform: translate(20%, 30%) scale(0.8) rotate(-90deg);
-            opacity: 0.85;
-          }
-          66% {
-            transform: translate(-20%, 20%) scale(1.1) rotate(-180deg);
-            opacity: 0.6;
-          }
-        }
-
-        @keyframes siri-wave-3-fast {
-          0%, 100% {
-            transform: translate(50%, 50%) scale(0.9) rotate(180deg);
-            opacity: 0.65;
-          }
-          33% {
-            transform: translate(60%, 40%) scale(1.3) rotate(60deg);
-            opacity: 0.75;
-          }
-          66% {
-            transform: translate(30%, 60%) scale(1) rotate(-60deg);
-            opacity: 0.5;
-          }
-        }
-
-        @keyframes pulse-glow-enhanced {
-          0%, 100% {
-            opacity: 0.7;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.15);
-          }
-        }
-
-        @keyframes button-breathe {
-          0%, 100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.05);
-          }
-        }
-
         @keyframes shimmer-fast {
           0% {
             transform: translateX(-100%);
@@ -186,32 +120,8 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
           }
         }
 
-        .animate-siri-wave-1-fast {
-          animation: siri-wave-1-fast 2s ease-in-out infinite;
-        }
-
-        .animate-siri-wave-2-fast {
-          animation: siri-wave-2-fast 2.5s ease-in-out infinite;
-        }
-
-        .animate-siri-wave-3-fast {
-          animation: siri-wave-3-fast 3s ease-in-out infinite;
-        }
-
-        .animate-pulse-glow-enhanced {
-          animation: pulse-glow-enhanced 2s ease-in-out infinite;
-        }
-
-        .animate-button-breathe {
-          animation: button-breathe 3s ease-in-out infinite;
-        }
-
         .animate-shimmer-fast {
           animation: shimmer-fast 1.5s ease-in-out infinite;
-        }
-
-        .bg-gradient-radial {
-          background: radial-gradient(circle, var(--tw-gradient-stops));
         }
       `}</style>
     </div>

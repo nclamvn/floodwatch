@@ -347,7 +347,7 @@ export default function MapPage() {
               {/* Help Connection Button */}
               <Link
                 href="/help"
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg transition-all hover:shadow-xl hover:scale-105 backdrop-blur-sm border border-blue-500"
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-full shadow-lg transition-all hover:shadow-xl hover:scale-105 backdrop-blur-sm border border-purple-500"
               >
                 <span className="whitespace-nowrap">Cứu trợ</span>
               </Link>
@@ -361,7 +361,7 @@ export default function MapPage() {
         {/* Help Connection Button (Mobile) - Now on top */}
         <Link
           href="/help"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-blue-500 text-sm h-[36px]"
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-purple-500 text-sm h-[36px]"
         >
           Cứu trợ
         </Link>
