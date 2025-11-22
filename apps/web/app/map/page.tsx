@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import axios from 'axios'
 import Link from 'next/link'
+import { List } from 'lucide-react'
 import CustomDropdown from '@/components/CustomDropdown'
 import NewsTicker from '@/components/NewsTicker'
 import MediaCarousel from '@/components/MediaCarousel'
@@ -355,26 +356,27 @@ export default function MapPage() {
         </div>
       </header>
 
-      {/* Mobile: News button - Top right */}
+      {/* Mobile: Help and News buttons - Top right */}
       <div className="sm:hidden fixed top-3 right-3 z-[70] flex flex-col gap-2">
-        {/* News Toggle Button */}
-        <button
-          onClick={() => setSheetOpen(!sheetOpen)}
-          className="w-14 h-14 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-bold flex flex-col items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500"
-        >
-          <span className="text-lg">📋</span>
-          {filteredReports.length > 0 && (
-            <span className="text-[10px] leading-none mt-0.5">{filteredReports.length}</span>
-          )}
-        </button>
-
-        {/* Help Connection Button (Mobile) */}
+        {/* Help Connection Button (Mobile) - Now on top */}
         <Link
           href="/help"
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-blue-500 text-sm"
         >
           Cứu trợ
         </Link>
+
+        {/* News Toggle Button - Now below, pill-shaped */}
+        <button
+          onClick={() => setSheetOpen(!sheetOpen)}
+          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-semibold flex items-center justify-center gap-2 shadow-lg transition-all backdrop-blur-sm border border-primary-500 text-sm"
+        >
+          <List className="w-4 h-4" />
+          <span>Tin tức</span>
+          {filteredReports.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{filteredReports.length}</span>
+          )}
+        </button>
       </div>
 
       {/* Gradient overlay for readability */}
