@@ -64,7 +64,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
           <div className="absolute inset-[2px] rounded-full bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-spin-slow" />
 
           {/* Glass button */}
-          <div className="relative w-16 h-16 rounded-full backdrop-blur-xl bg-white/30 dark:bg-white/10 border border-white/50 flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-transform">
+          <div className="relative w-16 h-16 rounded-full backdrop-blur-xl bg-white/30 dark:bg-white/10 border border-white/50 flex items-center justify-center shadow-2xl">
             <span className="text-lg font-bold text-gray-900">
               Hỏi
             </span>
@@ -108,7 +108,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
             {!isLoading && inputValue.trim() && (
               <button
                 onClick={handleSearch}
-                className="p-2 rounded-full hover:bg-white/30 text-gray-700 transition-colors flex-shrink-0"
+                className="p-2 rounded-full text-gray-700 flex-shrink-0"
                 aria-label="Tìm kiếm"
               >
                 <Send className="w-5 h-5" />
