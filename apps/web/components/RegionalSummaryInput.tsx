@@ -53,7 +53,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
   // Collapsed state - Circular glass button with animated border
   if (!isExpanded) {
     return (
-      <div className="fixed left-1/2 -translate-x-1/2 bottom-32 z-30">
+      <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-30">
         <button
           onClick={handleExpand}
           className="relative group"
@@ -76,39 +76,36 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
 
   // Expanded state - Horizontal glass input
   return (
-    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-32 z-30 w-[90%] max-w-md">
+    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-24 z-30 w-[90%] max-w-md">
       <div className="relative">
         {/* Glass container */}
         <div className="relative backdrop-blur-xl bg-white/30 dark:bg-white/10 rounded-full border border-white/50 shadow-2xl overflow-hidden">
-          {/* Loading shimmer effect */}
-          {isLoading && (
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            </div>
-          )}
-
           <div className="flex items-center gap-2 px-6 py-4">
             {/* Search icon */}
             <Search className="w-5 h-5 text-gray-700 dark:text-gray-300 flex-shrink-0" />
 
-            {/* Input field */}
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="VD: Tình hình Đà Nẵng"
-              disabled={isLoading}
-              autoFocus
-              className="flex-1 bg-transparent outline-none border-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base disabled:opacity-50"
-            />
+            {/* Input field with shimmer effect on text */}
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="VD: Hỏi: Đà Nẵng"
+                disabled={isLoading}
+                autoFocus
+                className="w-full bg-transparent outline-none border-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base disabled:opacity-50"
+              />
+              {/* Loading shimmer effect on input text */}
+              {isLoading && inputValue && (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute inset-0 -translate-x-full animate-shimmer-fast bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                </div>
+              )}
+            </div>
 
-            {/* Loading text or Send button */}
-            {isLoading ? (
-              <span className="text-sm text-gray-700 dark:text-gray-300 font-medium flex-shrink-0 animate-pulse">
-                Đang nghĩ...
-              </span>
-            ) : inputValue.trim() ? (
+            {/* Send button (only show when not loading and has text) */}
+            {!isLoading && inputValue.trim() && (
               <button
                 onClick={handleSearch}
                 className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-700 dark:text-gray-300 transition-colors flex-shrink-0"
@@ -116,7 +113,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
               >
                 <Send className="w-5 h-5" />
               </button>
-            ) : null}
+            )}
           </div>
         </div>
       </div>
@@ -132,7 +129,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
           }
         }
 
-        @keyframes shimmer {
+        @keyframes shimmer-fast {
           0% {
             transform: translateX(-100%);
           }
@@ -145,8 +142,8 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
           animation: spin-slow 3s linear infinite;
         }
 
-        .animate-shimmer {
-          animation: shimmer 2s ease-in-out infinite;
+        .animate-shimmer-fast {
+          animation: shimmer-fast 1.5s ease-in-out infinite;
         }
       `}</style>
     </div>
