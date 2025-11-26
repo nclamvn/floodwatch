@@ -77,7 +77,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-lg max-w-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
+          className="bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-lg max-w-2xl w-full max-h-[calc(100dvh-32px)] sm:max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200 mx-2 sm:mx-4"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -100,10 +100,10 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
               </h2>
             </div>
 
-            {/* Close button */}
+            {/* Close button - 44px on mobile */}
             <button
               onClick={onClose}
-              className="ml-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-700 transition-colors text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+              className="ml-4 w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-700 transition-colors text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
               aria-label="Đóng"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,8 +112,8 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
             </button>
           </div>
 
-          {/* Content */}
-          <div className="px-6 py-5 overflow-y-auto max-h-[calc(85vh-180px)] custom-scrollbar">
+          {/* Content - responsive height */}
+          <div className="px-4 sm:px-6 py-5 overflow-y-auto max-h-[calc(100dvh-200px)] sm:max-h-[calc(85vh-180px)] custom-scrollbar">
             {/* Description */}
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">

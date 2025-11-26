@@ -8,12 +8,12 @@ export default function LocateMeButton() {
 
   return (
     <div className="absolute top-[calc(50%+60px)] right-4 z-30 flex flex-col gap-2">
-      {/* Main Locate Button */}
+      {/* Main Locate Button - 44px on mobile, 36px on desktop */}
       <button
         onClick={requestLocation}
         disabled={isLocating}
         className={`
-          w-9 h-9 rounded-full shadow-soft-lg
+          w-11 h-11 sm:w-9 sm:h-9 rounded-full shadow-soft-lg
           flex items-center justify-center
           transition-all duration-200
           ${
@@ -72,12 +72,12 @@ export default function LocateMeButton() {
         )}
       </button>
 
-      {/* Clear location button (when active) */}
+      {/* Clear location button (when active) - 44px on mobile, 36px on desktop */}
       {userLocation && !isLocating && (
         <button
           onClick={clearLocation}
           className="
-            w-9 h-9 rounded-full shadow-soft-lg
+            w-11 h-11 sm:w-9 sm:h-9 rounded-full shadow-soft-lg
             bg-white/90 hover:bg-white text-neutral-600 hover:text-red-600
             flex items-center justify-center
             transition-all duration-200

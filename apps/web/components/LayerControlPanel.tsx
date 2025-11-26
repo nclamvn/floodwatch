@@ -60,7 +60,7 @@ export default function LayerControlPanel({ visibility, onChange }: LayerControl
   }
 
   return (
-    <div className="absolute top-20 left-4 z-40 w-72 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md rounded-lg shadow-sm border border-white/30 dark:border-neutral-700/30 overflow-hidden">
+    <div className="absolute top-20 left-4 z-40 w-[calc(100vw-32px)] sm:w-72 max-w-72 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-md rounded-lg shadow-sm border border-white/30 dark:border-neutral-700/30 overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export default function LayerControlPanel({ visibility, onChange }: LayerControl
         {/* Toggle All */}
         <button
           onClick={toggleAll}
-          className="w-full px-3 py-2 bg-neutral-100/80 dark:bg-neutral-900/20 hover:bg-neutral-200/80 dark:hover:bg-neutral-900/30 rounded-md text-sm font-medium text-neutral-800 dark:text-neutral-400 transition-colors flex items-center justify-between"
+          className="w-full px-3 py-2.5 sm:py-2 min-h-[44px] sm:min-h-0 bg-neutral-100/80 dark:bg-neutral-900/20 hover:bg-neutral-200/80 dark:hover:bg-neutral-900/30 rounded-md text-sm font-medium text-neutral-800 dark:text-neutral-400 transition-colors flex items-center justify-between"
         >
           <span>{Object.values(visibility).every(v => v) ? 'Tắt tất cả' : 'Bật tất cả'}</span>
           <span>{Object.values(visibility).filter(v => v).length}/{layers.length}</span>
@@ -86,7 +86,7 @@ export default function LayerControlPanel({ visibility, onChange }: LayerControl
           return (
             <label
               key={layer.key}
-              className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-900/50 cursor-pointer transition-colors group"
+              className="flex items-center gap-2 p-2.5 sm:p-2 min-h-[44px] sm:min-h-0 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-900/50 cursor-pointer transition-colors group"
             >
               <input
                 type="checkbox"

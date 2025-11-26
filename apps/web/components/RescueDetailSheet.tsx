@@ -151,7 +151,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              className="w-11 h-11 sm:w-10 sm:h-10 p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center"
               aria-label="Đóng"
             >
               <X className="w-6 h-6 text-neutral-700 dark:text-neutral-300" />

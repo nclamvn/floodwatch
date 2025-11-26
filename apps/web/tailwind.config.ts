@@ -148,6 +148,31 @@ const config: Config = {
       spacing: {
         '18': '4.5rem',  // 72px
         '22': '5.5rem',  // 88px
+        // Safe area insets for notched devices (iPhone X+)
+        'safe-t': 'env(safe-area-inset-top)',
+        'safe-b': 'env(safe-area-inset-bottom)',
+        'safe-l': 'env(safe-area-inset-left)',
+        'safe-r': 'env(safe-area-inset-right)',
+      },
+
+      // ===== MIN HEIGHT/WIDTH for touch targets =====
+      minHeight: {
+        'touch': '44px',  // WCAG AA minimum touch target
+      },
+      minWidth: {
+        'touch': '44px',  // WCAG AA minimum touch target
+      },
+
+      // ===== HEIGHT for dynamic viewport =====
+      height: {
+        'dvh': '100dvh',  // Dynamic viewport height (accounts for mobile browser chrome)
+        'svh': '100svh',  // Small viewport height
+        'lvh': '100lvh',  // Large viewport height
+      },
+      maxHeight: {
+        'dvh': '100dvh',
+        'svh': '100svh',
+        'lvh': '100lvh',
       },
 
       // ===== ANIMATION TIMING =====

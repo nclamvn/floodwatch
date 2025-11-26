@@ -23,14 +23,14 @@ export default function CustomDropdown({
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: Event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('pointerdown', handleClickOutside, { passive: true })
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
   }, [])
 
   const selectedOption = options.find(opt => opt.value === value)
@@ -60,7 +60,7 @@ export default function CustomDropdown({
                     onChange(option.value)
                     setIsOpen(false)
                   }}
-                  className={`w-full px-4 py-2.5 text-left text-body-2 transition-all duration-ui ease-smooth ${
+                  className={`w-full px-4 py-3 sm:py-2.5 min-h-[44px] sm:min-h-0 text-left text-body-2 transition-all duration-ui ease-smooth ${
                     option.value === value
                       ? 'bg-neutral-500/20 text-neutral-700 dark:text-neutral-400 font-semibold'
                       : 'text-slate-900 dark:text-neutral-300 hover:bg-white/60 dark:hover:bg-white/10'

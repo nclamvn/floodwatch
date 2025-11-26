@@ -224,7 +224,7 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
 
       {/* Modal Container - Desktop Premium / Mobile Bottom Sheet */}
       <div
-        className="relative w-full mx-4 flex flex-col max-h-[92vh] rounded-t-2xl sm:rounded-3xl sm:max-w-[920px] sm:max-h-[85vh] sm:mx-auto bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl supports-[backdrop-filter]:backdrop-blur-3xl border border-neutral-300/50 dark:border-zinc-700/50 shadow-[0_24px_60px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 p-4 sm:p-7"
+        className="relative w-full mx-2 sm:mx-4 flex flex-col max-h-[calc(100dvh-32px)] rounded-2xl sm:rounded-3xl sm:max-w-[920px] sm:max-h-[85vh] sm:mx-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur-3xl supports-[backdrop-filter]:backdrop-blur-3xl border border-neutral-300/50 dark:border-zinc-700/50 shadow-[0_24px_60px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 p-4 sm:p-7 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-4 sm:mb-5">
@@ -245,13 +245,13 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
             </div>
           </div>
 
-          {/* Right: Close button */}
+          {/* Right: Close button - 44px minimum touch target on mobile */}
           <button
             onClick={onClose}
-            className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-200/70 dark:bg-zinc-800/70 hover:bg-neutral-300/80 dark:hover:bg-zinc-700/80 active:bg-neutral-400/80 dark:active:bg-zinc-600/80 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50 flex items-center justify-center transition-all duration-200 group"
+            className="flex-shrink-0 w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-neutral-200/70 dark:bg-zinc-800/70 hover:bg-neutral-300/80 dark:hover:bg-zinc-700/80 active:bg-neutral-400/80 dark:active:bg-zinc-600/80 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50 flex items-center justify-center transition-all duration-200 group"
             aria-label="Đóng"
           >
-            <X className="w-5 h-5 text-neutral-700 dark:text-zinc-300 group-hover:text-neutral-900 dark:text-white transition-colors" />
+            <X className="w-5 h-5 sm:w-5 sm:h-5 text-neutral-700 dark:text-zinc-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
           </button>
         </div>
 
@@ -360,15 +360,6 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
         </div>
       </div>
 
-      {/* Mobile: Bottom sheet slide-up animation */}
-      <style jsx>{`
-        @media (max-width: 640px) {
-          [role="dialog"] > div:last-of-type {
-            align-self: flex-end;
-            margin-bottom: 0;
-          }
-        }
-      `}</style>
     </div>
   )
 }

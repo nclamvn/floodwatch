@@ -54,7 +54,7 @@ export default function RootLayout({
   const mapCssUrl = getMapCssUrl()
 
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
       <head>
         <link href={mapCssUrl} rel='stylesheet' />
         {/* Dark mode script - runs before React hydration to prevent FOUC */}

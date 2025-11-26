@@ -14,7 +14,7 @@ import { LocationProvider } from '@/contexts/LocationContext'
 // Dynamically import RescueMap to avoid SSR issues
 const RescueMap = dynamic(() => import('@/components/RescueMap'), {
   ssr: false,
-  loading: () => <div className="w-full h-screen flex items-center justify-center">Đang tải bản đồ cứu trợ...</div>
+  loading: () => <div className="w-full h-dvh flex items-center justify-center">Đang tải bản đồ cứu trợ...</div>
 })
 
 /**
@@ -312,7 +312,7 @@ export default function HelpConnectionPage() {
           </div>
         ) : (
           /* Rescue Map - Full Screen */
-          <div className="w-full h-[calc(100vh-64px)]">
+          <div className="w-full h-[calc(100dvh-64px)]">
             <LocationProvider>
               <RescueMap />
             </LocationProvider>

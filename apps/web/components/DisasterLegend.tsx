@@ -32,7 +32,7 @@ export default function DisasterLegend({ lastUpdated, isOpen, onClose }: Disaste
   useEffect(() => {
     if (collapsed) return
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: Event) => {
       if (legendRef.current && !legendRef.current.contains(event.target as Node)) {
         if (onClose) {
           onClose()
@@ -42,8 +42,8 @@ export default function DisasterLegend({ lastUpdated, isOpen, onClose }: Disaste
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('pointerdown', handleClickOutside, { passive: true })
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
   }, [collapsed, onClose])
 
   const severityLevels = [
@@ -96,7 +96,7 @@ export default function DisasterLegend({ lastUpdated, isOpen, onClose }: Disaste
               setInternalCollapsed(true)
             }
           }}
-          className="w-7 h-7 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
+          className="w-11 h-11 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
           title="Đóng"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

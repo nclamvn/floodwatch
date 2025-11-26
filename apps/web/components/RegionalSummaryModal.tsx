@@ -120,12 +120,12 @@ export default function RegionalSummaryModal({
       className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-300 bg-black/75 backdrop-blur-md"
       onClick={onClose}
     >
-      {/* Modal Container */}
+      {/* Modal Container - mobile optimized */}
       <div
         className="
-          relative w-full mx-4 flex flex-col
-          max-h-[92vh] sm:max-h-[85vh]
-          rounded-t-2xl sm:rounded-3xl
+          relative w-full mx-2 sm:mx-4 flex flex-col
+          max-h-[calc(100dvh-32px)] sm:max-h-[85vh]
+          rounded-2xl sm:rounded-3xl
           sm:max-w-[920px]
           bg-white/90 dark:bg-gray-900/90
           backdrop-blur-xl
@@ -133,6 +133,7 @@ export default function RegionalSummaryModal({
           shadow-[0_24px_60px_rgba(0,0,0,0.3)]
           animate-in zoom-in-95 duration-300
           p-4 sm:p-7
+          pb-[max(1rem,env(safe-area-inset-bottom))]
         "
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -152,15 +153,16 @@ export default function RegionalSummaryModal({
             </p>
           </div>
 
-          {/* Close Button */}
+          {/* Close Button - 44px on mobile */}
           <button
             onClick={onClose}
             className="
-              ml-4 p-2 rounded-full
+              ml-4 w-11 h-11 sm:w-10 sm:h-10 p-2 rounded-full
               bg-neutral-200 dark:bg-white/10
               hover:bg-neutral-300 dark:hover:bg-white/20
               transition-colors
               text-neutral-700 dark:text-neutral-50
+              flex items-center justify-center
             "
             aria-label="Close"
           >

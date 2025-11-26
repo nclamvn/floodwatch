@@ -14,6 +14,17 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import create_engine, text
 from datetime import datetime
 
+def convert_value(key, value):
+    """Convert value to appropriate type for PostgreSQL"""
+    if value is None:
+        return None
+
+    # Convert list/array to JSON string for jsonb columns
+    if key == 'images' and isinstance(value, list):
+        return json.dumps(value)
+
+    return value
+
 def main():
     DATABASE_URL = os.getenv("DATABASE_URL")
     if not DATABASE_URL:
@@ -46,7 +57,7 @@ def main():
         conn.execute(text("DELETE FROM help_offers"))
         conn.commit()
 
-        # Import help_requests
+        # Import help_requests one by one with individual transactions
         print("\nImporting help_requests...")
         success_count = 0
         error_count = 0
@@ -58,24 +69,34 @@ def main():
                 values = {}
 
                 for key, value in record.items():
-                    if value is not None:
+                    converted = convert_value(key, value)
+                    if converted is not None:
                         columns.append(key)
-                        values[key] = value
+                        # For images column, cast to jsonb
+                        if key == 'images':
+                            values[key] = converted
+                        else:
+                            values[key] = converted
 
                 if columns:
                     cols_str = ", ".join(columns)
-                    placeholders = ", ".join(f":{col}" for col in columns)
+                    # Use ::jsonb cast for images column
+                    placeholders = ", ".join(
+                        f":{col}::jsonb" if col == 'images' else f":{col}"
+                        for col in columns
+                    )
 
                     sql = f"INSERT INTO help_requests ({cols_str}) VALUES ({placeholders})"
                     conn.execute(text(sql), values)
+                    conn.commit()  # Commit each record individually
                     success_count += 1
 
             except Exception as e:
+                conn.rollback()  # Rollback failed transaction
                 error_count += 1
                 if error_count <= 5:
                     print(f"  Error inserting request {record.get('id', 'unknown')}: {str(e)[:100]}")
 
-        conn.commit()
         print(f"  Imported {success_count} help_requests ({error_count} errors)")
 
         # Import help_offers
@@ -89,24 +110,29 @@ def main():
                 values = {}
 
                 for key, value in record.items():
-                    if value is not None:
+                    converted = convert_value(key, value)
+                    if converted is not None:
                         columns.append(key)
-                        values[key] = value
+                        values[key] = converted
 
                 if columns:
                     cols_str = ", ".join(columns)
-                    placeholders = ", ".join(f":{col}" for col in columns)
+                    placeholders = ", ".join(
+                        f":{col}::jsonb" if col == 'images' else f":{col}"
+                        for col in columns
+                    )
 
                     sql = f"INSERT INTO help_offers ({cols_str}) VALUES ({placeholders})"
                     conn.execute(text(sql), values)
+                    conn.commit()  # Commit each record individually
                     success_count += 1
 
             except Exception as e:
+                conn.rollback()  # Rollback failed transaction
                 error_count += 1
                 if error_count <= 5:
                     print(f"  Error inserting offer {record.get('id', 'unknown')}: {str(e)[:100]}")
 
-        conn.commit()
         print(f"  Imported {success_count} help_offers ({error_count} errors)")
 
         # Verify counts
