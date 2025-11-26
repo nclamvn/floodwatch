@@ -109,44 +109,6 @@ export default function HelpConnectionPage() {
               <DarkModeToggle />
             </div>
 
-            {/* Centered Titles and Slogan */}
-            <div className="flex flex-col items-center gap-4 mb-6">
-              <h1 className="text-4xl font-bold text-center">
-                <span className="text-danger">Giúp tôi</span>
-                <span className="text-neutral-600 dark:text-neutral-400">, </span>
-                <span className="text-success">tôi giúp</span>
-              </h1>
-              <div className="relative">
-                <p className="text-body-1 text-neutral-700 dark:text-neutral-200 text-center italic">
-                  {activeTab === 'need-help'
-                    ? 'Bầu ơi thương lấy bí cùng'
-                    : activeTab === 'can-help'
-                    ? 'Tuy rằng khác giống nhưng chung một giàn'
-                    : 'Thương người như thể thương thân'}
-                </p>
-                {/* White/Silver shimmer effect */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <div className="absolute inset-0 -translate-x-full animate-shimmer-slogan bg-gradient-to-r from-transparent via-white/50 dark:via-neutral-300/50 to-transparent" />
-                </div>
-              </div>
-            </div>
-
-            {/* Custom animation for slogan */}
-            <style jsx>{`
-              @keyframes shimmer-slogan {
-                0% {
-                  transform: translateX(-100%);
-                }
-                100% {
-                  transform: translateX(100%);
-                }
-              }
-
-              .animate-shimmer-slogan {
-                animation: shimmer-slogan 3s ease-in-out infinite;
-              }
-            `}</style>
-
             {/* Tab Buttons - Design System 2025 */}
             <div className="flex gap-2">
               <button

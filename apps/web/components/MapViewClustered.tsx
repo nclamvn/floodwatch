@@ -13,6 +13,7 @@ import TrafficLayer from './TrafficLayer'
 import OptimizedAIForecastLayer from './OptimizedAIForecastLayer'
 import LayerControlPanel, { LayerVisibility } from './LayerControlPanel'
 import { MapControlsGroup } from './MapControlsGroup'
+import { MobileMapControls } from './MobileMapControls'
 import { WindyModal } from './WindyModal'
 import { useHazards } from '@/hooks/useHazards'
 import { useAIForecasts } from '@/hooks/useAIForecasts'
@@ -562,11 +563,24 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       {/* User location tracking */}
       <UserLocationMarker />
 
-      {/* Map controls group - includes map styles, location, windy, AI forecast, and legend buttons */}
-      <MapControlsGroup
+      {/* Map controls group - Desktop only - includes map styles, location, windy, AI forecast, and legend buttons */}
+      <div className="hidden sm:block">
+        <MapControlsGroup
+          baseMapStyle={baseMapStyle}
+          onStyleChange={setBaseMapStyle}
+          onWindyClick={() => setWindyModalOpen(true)}
+          onAIForecastClick={() => setAiForecastOpen(!aiForecastOpen)}
+          aiForecastActive={aiForecastOpen}
+          onLegendClick={() => onLegendClick?.()}
+          legendActive={legendActive}
+          onLocationClick={handleLocationClick}
+        />
+      </div>
+
+      {/* Mobile Map Controls - Left side vertical layout */}
+      <MobileMapControls
         baseMapStyle={baseMapStyle}
         onStyleChange={setBaseMapStyle}
-        onWindyClick={() => setWindyModalOpen(true)}
         onAIForecastClick={() => setAiForecastOpen(!aiForecastOpen)}
         aiForecastActive={aiForecastOpen}
         onLegendClick={() => onLegendClick?.()}

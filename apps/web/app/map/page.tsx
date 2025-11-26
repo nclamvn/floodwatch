@@ -548,20 +548,9 @@ export default function MapPage() {
         </div>
       </header>
 
-      {/* Mobile: Back button - Top left with 3D shadow effect */}
-      <Link
-        href="/"
-        className="sm:hidden fixed top-4 left-4 z-50 flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-xl border shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),0_1px_4px_rgba(0,0,0,0.2)] transition-all duration-ui ease-smooth hover:scale-105 active:scale-95 bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-800/70 dark:text-gray-200 dark:hover:bg-gray-700/80 dark:border-neutral-700/50"
-        aria-label="Quay về trang chủ"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </Link>
-
-      {/* Mobile: Help and News buttons - Top right - Design System 2025 */}
+      {/* Mobile: Action buttons - Top right - Design System 2025 */}
+      {/* Note: Back button, Theme toggle, and Map controls are now in MobileMapControls component */}
       <div className="sm:hidden fixed top-3 right-3 z-[70] flex flex-col gap-2">
-        {/* Dark Mode Toggle (Mobile) */}
-        <DarkModeToggle />
-
         {/* Weather Button (Mobile) */}
         <button
           onClick={() => setWindyModalOpen(true)}
