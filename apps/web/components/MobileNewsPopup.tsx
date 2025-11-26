@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Radio, Play, Pause, Loader2 } from 'lucide-react'
 import { useGlobalAudioPlayer } from '@/contexts/AudioPlayerContext'
 
@@ -84,11 +85,19 @@ export default function MobileNewsPopup({ isOpen, onClose }: MobileNewsPopupProp
     }
   }
 
-  if (!isVisible) return null
+  // State for portal mounting
+  const [mounted, setMounted] = useState(false)
 
-  return (
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!isVisible || !mounted) return null
+
+  // Use Portal to render at document.body level, escaping parent z-index stacking context
+  return createPortal(
     <div
-      className={`fixed inset-0 z-[100] transition-all duration-300 ${
+      className={`fixed inset-0 z-[9999] transition-all duration-300 ${
         isAnimating ? 'opacity-100' : 'opacity-0'
       }`}
     >
@@ -249,6 +258,7 @@ export default function MobileNewsPopup({ isOpen, onClose }: MobileNewsPopupProp
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
