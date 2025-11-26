@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Phone, Mail, MapPin, Users, Clock, AlertTriangle, Heart, X, Building2, Navigation } from 'lucide-react'
 import { HelpRequest } from '@/hooks/useHelpRequests'
 import { HelpOffer } from '@/hooks/useHelpOffers'
@@ -72,6 +72,28 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
 
   // Directions modal state (Phase 6.2)
   const [showDirectionsModal, setShowDirectionsModal] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile on mount
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768)
+  }, [])
+
+  // Handle directions click - auto-open Google Maps on mobile, show modal on desktop
+  const handleDirectionsClick = () => {
+    if (isMobile) {
+      // On mobile: auto-open Google Maps app (or fallback to web)
+      // Using comgooglemaps:// for iOS, geo: for Android, fallback to web
+      const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${data.lat},${data.lon}`
+
+      // Try to open in Google Maps app, fallback to web browser
+      // This URL scheme works on both iOS and Android
+      window.location.href = webUrl
+    } else {
+      // On desktop: show the directions modal with embedded map
+      setShowDirectionsModal(true)
+    }
+  }
 
   // Clean JCI ID and [STATION] prefix from description
   const cleanDescription = data.description
@@ -305,7 +327,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                   </a>
 
                   <button
-                    onClick={() => setShowDirectionsModal(true)}
+                    onClick={handleDirectionsClick}
                     className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium rounded-lg transition-colors"
                   >
                     <Navigation className="w-5 h-5" />
