@@ -98,7 +98,7 @@ export default function HelpConnectionPage() {
         <div className="container mx-auto px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
           {/* Mobile Header - New Design */}
           <div className="lg:hidden">
-            {/* Back Button and Dark Mode Toggle */}
+            {/* Back Button, Slogan, and Dark Mode Toggle */}
             <div className="flex justify-between items-center mb-4">
               <Link
                 href="/map"
@@ -106,6 +106,10 @@ export default function HelpConnectionPage() {
               >
                 <ArrowLeft className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
               </Link>
+              {/* Slogan - Centered */}
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 italic">
+                Lá lành đùm lá rách
+              </span>
               <DarkModeToggle />
             </div>
 

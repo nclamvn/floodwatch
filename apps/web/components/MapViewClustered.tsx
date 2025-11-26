@@ -15,6 +15,7 @@ import LayerControlPanel, { LayerVisibility } from './LayerControlPanel'
 import { MapControlsGroup } from './MapControlsGroup'
 import { MobileMapControls } from './MobileMapControls'
 import { WindyModal } from './WindyModal'
+import MobilePinPopup from './MobilePinPopup'
 import { useHazards } from '@/hooks/useHazards'
 import { useAIForecasts } from '@/hooks/useAIForecasts'
 
@@ -783,8 +784,8 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
         }
       })}
 
-      {/* Popup for selected marker - Modern styling */}
-      {selectedReport && selectedReport.lat && selectedReport.lon && (
+      {/* Popup for selected marker - Desktop only */}
+      {isDesktop && selectedReport && selectedReport.lat && selectedReport.lon && (
         <Popup
           longitude={selectedReport.lon}
           latitude={selectedReport.lat}
@@ -890,6 +891,15 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       initialLon={viewState.longitude}
       initialZoom={viewState.zoom}
     />
+
+    {/* Mobile Pin Popup - Fixed position at center X, 2/3 Y */}
+    {!isDesktop && (
+      <MobilePinPopup
+        report={selectedReport}
+        onClose={() => setSelectedReport(null)}
+        onExpand={onExpandArticle}
+      />
+    )}
   </>
   )
 }
