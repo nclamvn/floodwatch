@@ -4,7 +4,7 @@ FastAPI backend for flood monitoring system
 """
 from fastapi import FastAPI, Query, HTTPException, Depends, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 from datetime import datetime, timedelta
@@ -422,7 +422,13 @@ async def get_reports(
     }
 
     # Scrub PII from public endpoint
-    return scrub_response_data(response_data, request.url.path)
+    scrubbed_data = scrub_response_data(response_data, request.url.path)
+
+    # Add Cache-Control header for performance (30 seconds)
+    return JSONResponse(
+        content=scrubbed_data,
+        headers={"Cache-Control": "public, max-age=30, stale-while-revalidate=60"}
+    )
 
 
 @app.post("/ingest/alerts")
@@ -2148,15 +2154,19 @@ async def get_hazards(
             hazard_dict['distance_km'] = round(distances[i], 2)
         data.append(hazard_dict)
 
-    return {
-        "data": data,
-        "pagination": {
-            "page": (offset // limit) + 1,
-            "limit": limit,
-            "total": total,
-            "total_pages": (total + limit - 1) // limit
-        }
-    }
+    # Add Cache-Control header for performance (60 seconds)
+    return JSONResponse(
+        content={
+            "data": data,
+            "pagination": {
+                "page": (offset // limit) + 1,
+                "limit": limit,
+                "total": total,
+                "total_pages": (total + limit - 1) // limit
+            }
+        },
+        headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=120"}
+    )
 
 
 @app.get("/hazards/{hazard_id}")
@@ -3479,20 +3489,24 @@ async def get_ai_forecasts(
             forecast_dict['distance_km'] = round(distances[i], 2)
         data.append(forecast_dict)
 
-    return {
-        "data": data,
-        "pagination": {
-            "total": total,
-            "limit": limit,
-            "offset": offset,
-            "total_pages": (total + limit - 1) // limit
+    # Add Cache-Control header for performance (120 seconds - forecasts change slower)
+    return JSONResponse(
+        content={
+            "data": data,
+            "pagination": {
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+                "total_pages": (total + limit - 1) // limit
+            },
+            "meta": {
+                "min_confidence": min_confidence,
+                "active_only": active_only,
+                "forecast_horizon_hours": 48
+            }
         },
-        "meta": {
-            "min_confidence": min_confidence,
-            "active_only": active_only,
-            "forecast_horizon_hours": 48
-        }
-    }
+        headers={"Cache-Control": "public, max-age=120, stale-while-revalidate=300"}
+    )
 
 
 @app.post("/ai-forecasts")

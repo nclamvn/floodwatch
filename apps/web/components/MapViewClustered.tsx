@@ -252,11 +252,16 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
   // Get user location from context
   const { userLocation } = useLocation()
 
-  // Fetch hazards near user location
+  // Default location (Vietnam center) for initial data fetch
+  // This allows hazards/forecasts to load immediately without waiting for GPS
+  const DEFAULT_LOCATION = { latitude: 16.0, longitude: 106.0 }
+  const effectiveLocation = userLocation || DEFAULT_LOCATION
+
+  // Fetch hazards using effective location (default or GPS)
   const { hazards: allHazards, isLoading: hazardsLoading } = useHazards({
-    lat: userLocation?.latitude,
-    lng: userLocation?.longitude,
-    radius_km: 50,
+    lat: effectiveLocation.latitude,
+    lng: effectiveLocation.longitude,
+    radius_km: 100, // Larger radius for default center
     active_only: true,
     refreshInterval: 60000, // Refresh every minute
   })
@@ -274,11 +279,11 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
     })
   }, [allHazards, layerVisibility])
 
-  // Fetch AI forecasts near user location
+  // Fetch AI forecasts using effective location (default or GPS)
   const { forecasts: aiForecasts, isLoading: forecastsLoading } = useAIForecasts({
-    lat: userLocation?.latitude,
-    lng: userLocation?.longitude,
-    radius_km: 50,
+    lat: effectiveLocation.latitude,
+    lng: effectiveLocation.longitude,
+    radius_km: 100, // Larger radius for default center
     min_confidence: 0.6,
     active_only: true,
     refreshInterval: 300000, // Refresh every 5 minutes (forecasts change slower)
@@ -379,7 +384,23 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
 
   // OSM tiles don't need token, so skip this check
 
-  // Memoized cluster levels - compute once per cluster set, not on each render
+  // Pre-compute report urgency levels in O(n) - single pass through reports
+  const reportUrgencyMap = useMemo(() => {
+    const urgencyMap = new Map<string, { isUrgent: boolean; isAlertSos: boolean; hasRain: boolean }>()
+
+    for (const report of reports) {
+      const isUrgent = (report.type === 'ALERT' || report.type === 'SOS') && report.trust_score >= 0.7
+      const isAlertSos = report.type === 'ALERT' || report.type === 'SOS'
+      const hasRain = report.type === 'RAIN' && report.trust_score >= 0.6
+
+      urgencyMap.set(report.id, { isUrgent, isAlertSos, hasRain })
+    }
+
+    return urgencyMap
+  }, [reports])
+
+  // Optimized cluster levels - O(n) instead of O(n²)
+  // Uses pre-computed urgency map and limits getLeaves to max 20 samples
   const clusterLevels = useMemo(() => {
     const levels: Record<number, string> = {}
 
@@ -392,27 +413,37 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       if (typeof clusterId !== 'number') continue
 
       try {
-        const leaves = supercluster.getLeaves(clusterId, Infinity)
-        const clusterReports = leaves.map((leaf: any) => leaf.properties.report).filter(Boolean)
+        // OPTIMIZATION: Only sample up to 20 leaves instead of all (Infinity)
+        // This gives statistically similar results with O(1) per cluster
+        const sampleSize = Math.min(20, pointCount)
+        const leaves = supercluster.getLeaves(clusterId, sampleSize)
 
-        if (clusterReports.length === 0) {
-          levels[clusterId] = 'low'
-          continue
+        let urgentCount = 0
+        let alertSosCount = 0
+        let hasRain = false
+
+        for (const leaf of leaves) {
+          const report = leaf.properties?.report
+          if (!report) continue
+
+          const urgency = reportUrgencyMap.get(report.id)
+          if (urgency) {
+            if (urgency.isUrgent) urgentCount++
+            if (urgency.isAlertSos) alertSosCount++
+            if (urgency.hasRain) hasRain = true
+          }
         }
 
-        const urgentCount = clusterReports.filter((r: Report) =>
-          (r.type === 'ALERT' || r.type === 'SOS') && r.trust_score >= 0.7
-        ).length
+        // Scale counts based on sample ratio for clusters with many points
+        const scaleFactor = pointCount / sampleSize
+        const scaledUrgent = Math.round(urgentCount * scaleFactor)
+        const scaledAlertSos = Math.round(alertSosCount * scaleFactor)
 
-        const alertSosCount = clusterReports.filter((r: Report) =>
-          r.type === 'ALERT' || r.type === 'SOS'
-        ).length
-
-        if (urgentCount >= 3 || alertSosCount >= 5) {
+        if (scaledUrgent >= 3 || scaledAlertSos >= 5) {
           levels[clusterId] = 'critical'
-        } else if (urgentCount >= 1 || alertSosCount >= 2) {
+        } else if (scaledUrgent >= 1 || scaledAlertSos >= 2) {
           levels[clusterId] = 'high'
-        } else if (clusterReports.some((r: Report) => r.type === 'RAIN' && r.trust_score >= 0.6) || pointCount >= 10) {
+        } else if (hasRain || pointCount >= 10) {
           levels[clusterId] = 'medium'
         } else {
           levels[clusterId] = 'low'
@@ -423,7 +454,7 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
     }
 
     return levels
-  }, [clusters, supercluster])
+  }, [clusters, supercluster, reportUrgencyMap])
 
   const getClusterStyle = (level: string) => {
     const baseSize = 30

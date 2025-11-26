@@ -30,6 +30,7 @@ import {
   getRegionalSummaryCacheAge,
   getStormSummaryCacheAge
 } from '@/lib/aiSearchCache'
+import { getCachedResponse, setCachedResponse } from '@/lib/apiCache'
 import { ArrowLeft } from 'lucide-react'
 
 // Dynamically import Map to avoid SSR issues with Mapbox
@@ -265,15 +266,25 @@ export default function MapPage() {
   }, [filter, selectedProvince, radiusFilter])
 
   const fetchReports = async () => {
-    try {
-      // Always fetch ALL reports (no filtering at API level)
-      // Filtering will be done client-side for map and sidebar only
-      const params: any = { limit: 200 }
+    const CACHE_TTL_MS = 30 * 1000 // 30 seconds cache for reports
+    const cacheKey = `${API_URL}/reports?limit=200`
 
-      const response = await axios.get(`${API_URL}/reports`, { params })
+    try {
+      // Check cache first
+      const cached = getCachedResponse<{ data: Report[] }>(cacheKey)
+      if (cached) {
+        setReports(cached.data || [])
+        setLoading(false)
+        return
+      }
+
+      // Fetch from API
+      const response = await axios.get(`${API_URL}/reports`, { params: { limit: 200 } })
       const fetchedReports = response.data.data || []
 
-      // No filtering here - all filtering done client-side in mapReports
+      // Cache the response
+      setCachedResponse(cacheKey, response.data, CACHE_TTL_MS)
+
       setReports(fetchedReports)
     } catch (error) {
       console.error('Error fetching reports:', error)

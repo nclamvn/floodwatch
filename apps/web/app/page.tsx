@@ -4,13 +4,35 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { MapPin, Route, HandHeart, Bell, Navigation, Users } from 'lucide-react'
 import DarkModeToggle from '@/components/DarkModeToggle'
+import { useCallback, useRef } from 'react'
 
 // Dynamic import for client-side rain effect
 const RainEffect = dynamic(() => import('@/components/RainEffect'), {
   ssr: false,
 })
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.thongtinmualu.live'
+
 export default function Home() {
+  // Prefetch flag to avoid multiple fetches
+  const prefetchedRef = useRef(false)
+
+  // Prefetch map data when hovering over the map card
+  const handleMapHover = useCallback(() => {
+    if (prefetchedRef.current) return
+    prefetchedRef.current = true
+
+    // Prefetch main APIs used by /map page in parallel
+    // These will be cached by browser and by our API's Cache-Control headers
+    Promise.all([
+      fetch(`${API_URL}/reports?limit=200`),
+      fetch(`${API_URL}/hazards?lat=16&lng=106&radius_km=500`),
+      fetch(`${API_URL}/ai-forecasts?lat=16&lng=106&radius_km=500`),
+    ]).catch(() => {
+      // Silently ignore prefetch errors - not critical
+      prefetchedRef.current = false
+    })
+  }, [])
   return (
     <main className="relative min-h-screen bg-white dark:bg-neutral-950 overflow-hidden">
       {/* Rain Effect Background */}
@@ -66,6 +88,7 @@ export default function Home() {
             {/* Map Card - Minimal Blue */}
             <Link
               href="/map"
+              onMouseEnter={handleMapHover}
               className="group relative overflow-hidden rounded-3xl bg-white dark:bg-neutral-900 p-10 border border-slate-200 dark:border-neutral-800 hover:border-slate-300 dark:hover:border-neutral-700 transition-all duration-500 hover:shadow-xl hover:-translate-y-1"
             >
               {/* Subtle Gradient on Hover */}
