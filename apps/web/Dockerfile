@@ -25,6 +25,9 @@ ENV NEXT_PUBLIC_MAPTILER_KEY=$NEXT_PUBLIC_MAPTILER_KEY
 ENV NEXT_PUBLIC_MAP_PROVIDER=$NEXT_PUBLIC_MAP_PROVIDER
 ENV NODE_ENV=$NODE_ENV
 
+# Increase Node.js memory limit for build (Render free tier has limited RAM)
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+
 # Build Next.js
 RUN npm run build
 
