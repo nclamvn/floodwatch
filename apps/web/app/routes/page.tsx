@@ -1,305 +1,299 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import axios from 'axios'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Route, Home, Map, MapPin, Clock, Info, CheckCircle, XCircle, AlertTriangle, ArrowLeft, Filter, Eye } from 'lucide-react'
-
-interface RoadEvent {
-  id: string
-  segment_name: string
-  status: 'OPEN' | 'CLOSED' | 'RESTRICTED'
-  reason?: string
-  province?: string
-  district?: string
-  lat?: number
-  lon?: number
-  last_verified?: string
-  source: string
-}
+import { Route, Map, ArrowLeft, Info, Search, Loader2 } from 'lucide-react'
+import DarkModeToggle from '@/components/DarkModeToggle'
+import RouteCard, { RouteSegment, RouteStatus, normalizeStatus } from '@/components/RouteCard'
+import RouteSummaryBar, { RouteSummary } from '@/components/RouteSummaryBar'
+import RouteFilterPanel, { RouteFilters } from '@/components/RouteFilterPanel'
+import RouteDetailModal from '@/components/RouteDetailModal'
+import { useRoutes, DEFAULT_ROUTE_FILTERS } from '@/hooks/useRoutes'
 
 export default function RoutesPage() {
-  const [roads, setRoads] = useState<RoadEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filterProvince, setFilterProvince] = useState<string>('ALL')
-  const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  // Filter state
+  const [filters, setFilters] = useState<RouteFilters>(DEFAULT_ROUTE_FILTERS)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedRoute, setSelectedRoute] = useState<RouteSegment | null>(null)
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+  // Fetch routes with SWR
+  const { routes, total, isLoading, isValidating, mutate } = useRoutes(filters, {
+    refreshInterval: 30000 // 30 seconds
+  })
 
-  const provinces = [
-    'ALL',
-    'Quảng Bình',
-    'Quảng Trị',
-    'Thừa Thiên Huế',
-    'Đà Nẵng',
-    'Quảng Nam',
-    'Quảng Ngãi'
-  ]
+  // Compute summary from routes
+  const summary: RouteSummary | null = useMemo(() => {
+    if (routes.length === 0 && isLoading) return null
 
-  useEffect(() => {
-    fetchRoads()
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(fetchRoads, 300000)
-    return () => clearInterval(interval)
-  }, [filterProvince, filterStatus])
+    const byStatus: Record<RouteStatus, number> = {
+      OPEN: 0,
+      LIMITED: 0,
+      DANGEROUS: 0,
+      CLOSED: 0
+    }
 
-  const fetchRoads = async () => {
-    try {
-      const params: any = {}
-      if (filterProvince !== 'ALL') params.province = filterProvince
-      if (filterStatus !== 'ALL') params.status = filterStatus
+    routes.forEach(route => {
+      byStatus[route.status]++
+    })
 
-      const response = await axios.get(`${API_URL}/road-events`, { params })
-      setRoads(response.data.data || [])
-    } catch (error) {
-      console.error('Error fetching roads:', error)
-    } finally {
-      setLoading(false)
+    return {
+      total: routes.length,
+      by_status: byStatus,
+      last_updated: new Date().toISOString()
+    }
+  }, [routes, isLoading])
+
+  // Handle status filter from summary bar
+  const handleStatusFilter = (status: RouteStatus | null) => {
+    if (status === null) {
+      setFilters(prev => ({ ...prev, status: [] }))
+    } else {
+      setFilters(prev => ({ ...prev, status: [status] }))
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-      case 'CLOSED':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-      case 'RESTRICTED':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
-      default:
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800'
-    }
-  }
+  // Filter routes by search query
+  const filteredRoutes = useMemo(() => {
+    if (!searchQuery.trim()) return routes
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return <CheckCircle className="w-4 h-4" />
-      case 'CLOSED':
-        return <XCircle className="w-4 h-4" />
-      case 'RESTRICTED':
-        return <AlertTriangle className="w-4 h-4" />
-      default:
-        return <Info className="w-4 h-4" />
-    }
-  }
+    const query = searchQuery.toLowerCase()
+    return routes.filter(route =>
+      route.segment_name.toLowerCase().includes(query) ||
+      route.province?.toLowerCase().includes(query) ||
+      route.district?.toLowerCase().includes(query) ||
+      route.status_reason?.toLowerCase().includes(query)
+    )
+  }, [routes, searchQuery])
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return 'Thông thoáng'
-      case 'CLOSED':
-        return 'Đóng/Chia cắt'
-      case 'RESTRICTED':
-        return 'Hạn chế'
-      default:
-        return status
+  // Sort routes
+  const sortedRoutes = useMemo(() => {
+    const sorted = [...filteredRoutes]
+
+    switch (filters.sortBy) {
+      case 'risk_score':
+        // Sort by risk: CLOSED > DANGEROUS > LIMITED > OPEN, then by risk_score
+        sorted.sort((a, b) => {
+          const statusOrder: Record<RouteStatus, number> = { CLOSED: 0, DANGEROUS: 1, LIMITED: 2, OPEN: 3 }
+          const statusDiff = statusOrder[a.status] - statusOrder[b.status]
+          if (statusDiff !== 0) return statusDiff
+          return (b.risk_score ?? 0) - (a.risk_score ?? 0)
+        })
+        break
+
+      case 'created_at':
+        sorted.sort((a, b) => {
+          const dateA = new Date(a.verified_at || a.created_at || 0).getTime()
+          const dateB = new Date(b.verified_at || b.created_at || 0).getTime()
+          return dateB - dateA
+        })
+        break
+
+      case 'status':
+        sorted.sort((a, b) => {
+          const statusOrder: Record<RouteStatus, number> = { CLOSED: 0, DANGEROUS: 1, LIMITED: 2, OPEN: 3 }
+          return statusOrder[a.status] - statusOrder[b.status]
+        })
+        break
     }
-  }
+
+    return sorted
+  }, [filteredRoutes, filters.sortBy])
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       {/* Header */}
-      <div className="relative border-b border-gray-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <header className="sticky top-0 z-50 border-b border-neutral-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            {/* Left: Back + Title */}
+            <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                aria-label="Quay lại trang chủ"
               >
                 <ArrowLeft className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
               </Link>
+
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300">
-                  <Route className="w-6 h-6" />
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+                  <Route className="w-5 h-5" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                  <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-100">
                     Tuyến đường An toàn
                   </h1>
-                  <p className="hidden sm:block text-sm text-neutral-600 dark:text-neutral-400">
+                  <p className="hidden sm:block text-sm text-neutral-500 dark:text-neutral-400">
                     Cập nhật tình trạng giao thông thời gian thực
                   </p>
                 </div>
               </div>
             </div>
-            <Link
-              href="/map"
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 text-sm font-medium transition-all shadow-lg"
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2">
+              <DarkModeToggle />
+              <Link
+                href="/map"
+                className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white text-sm font-medium transition-colors shadow-lg"
+              >
+                <Map className="w-4 h-4" />
+                Xem bản đồ
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Summary Bar */}
+        <RouteSummaryBar
+          summary={summary}
+          isLoading={isLoading}
+          onStatusClick={handleStatusFilter}
+          activeStatus={filters.status.length === 1 ? filters.status[0] : null}
+          onRefresh={() => mutate()}
+        />
+
+        {/* Filter Panel */}
+        <RouteFilterPanel
+          filters={filters}
+          onChange={setFilters}
+          isCollapsible={true}
+          defaultExpanded={false}
+        />
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm kiếm theo tên đường, tỉnh, quận/huyện..."
+            className="w-full pl-12 pr-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
             >
-              <Map className="w-4 h-4" />
-              Xem bản đồ
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-6 mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
-            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Bộ lọc</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Tỉnh/Thành phố
-              </label>
-              <select
-                value={filterProvince}
-                onChange={(e) => setFilterProvince(e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600 focus:border-transparent transition-all"
-              >
-                {provinces.map(p => (
-                  <option key={p} value={p}>{p === 'ALL' ? 'Tất cả' : p}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Trạng thái
-              </label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-400 dark:focus:ring-neutral-600 focus:border-transparent transition-all"
-              >
-                <option value="ALL">Tất cả</option>
-                <option value="OPEN">Thông thoáng</option>
-                <option value="RESTRICTED">Hạn chế</option>
-                <option value="CLOSED">Đóng/Chia cắt</option>
-              </select>
-            </div>
-          </div>
+              Xóa
+            </button>
+          )}
         </div>
 
-        {/* Results */}
-        {loading ? (
+        {/* Results Count */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+            <span className="px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium">
+              {sortedRoutes.length} tuyến đường
+            </span>
+            {searchQuery && (
+              <span className="text-neutral-500">
+                (tìm kiếm: "{searchQuery}")
+              </span>
+            )}
+          </div>
+
+          {/* Loading indicator */}
+          {isValidating && !isLoading && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Đang cập nhật...</span>
+            </div>
+          )}
+        </div>
+
+        {/* Routes Grid */}
+        {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-neutral-200 dark:border-neutral-700 border-t-neutral-900 dark:border-t-neutral-100 rounded-full animate-spin mb-4"></div>
-            <div className="text-neutral-600 dark:text-neutral-400">Đang tải dữ liệu...</div>
+            <div className="w-12 h-12 border-4 border-neutral-200 dark:border-neutral-700 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mb-4" />
+            <p className="text-neutral-600 dark:text-neutral-400">Đang tải dữ liệu...</p>
           </div>
-        ) : roads.length === 0 ? (
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-12 text-center">
-            <div className="inline-flex p-4 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400 mb-4">
+        ) : sortedRoutes.length === 0 ? (
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-12 text-center">
+            <div className="inline-flex p-4 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 mb-4">
               <Route className="w-8 h-8" />
             </div>
-            <div className="text-neutral-400 dark:text-neutral-500 text-lg font-medium mb-2">Không có dữ liệu</div>
-            <p className="text-sm text-neutral-500 dark:text-neutral-600">
-              Thử thay đổi bộ lọc hoặc quay lại sau
+            <h3 className="text-lg font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+              {searchQuery ? 'Không tìm thấy tuyến đường' : 'Tình hình giao thông ổn định'}
+            </h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-500 max-w-md mx-auto">
+              {searchQuery
+                ? `Không có kết quả cho "${searchQuery}". Thử tìm kiếm khác hoặc xóa bộ lọc.`
+                : 'Không có cảnh báo đường bộ nào được xác minh trong 3 ngày qua. Hệ thống chỉ hiển thị thông tin có nguồn kiểm chứng để đảm bảo độ tin cậy.'}
             </p>
+            {(searchQuery || filters.status.length > 0 || filters.province !== 'Tất cả') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('')
+                  setFilters(DEFAULT_ROUTE_FILTERS)
+                }}
+                className="mt-4 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-sm font-medium rounded-xl transition-colors"
+              >
+                Xóa tất cả bộ lọc
+              </button>
+            )}
           </div>
         ) : (
-          <>
-            <div className="mb-6 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-              <div className="px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300 font-medium border border-neutral-200 dark:border-neutral-700">
-                {roads.length} tuyến đường
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {roads.map((road) => (
-                <div
-                  key={road.id}
-                  className="group bg-white dark:bg-neutral-900 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 mb-3 transition-colors">
-                        {road.segment_name}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-600 dark:text-neutral-400">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4" />
-                          <span>{road.province || 'Không rõ'}</span>
-                        </div>
-                        {road.district && (
-                          <>
-                            <span className="text-neutral-300 dark:text-neutral-700">•</span>
-                            <span>{road.district}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border ${getStatusBadge(road.status)} whitespace-nowrap`}>
-                      {getStatusIcon(road.status)}
-                      {getStatusText(road.status)}
-                    </div>
-                  </div>
-
-                  {road.reason && (
-                    <div className="mb-4 p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-200 dark:border-neutral-700">
-                      <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                        <span className="font-semibold">Lý do:</span> {road.reason}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-500 dark:text-neutral-500">
-                      <div className="flex items-center gap-1.5">
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Nguồn: {road.source}</span>
-                      </div>
-                      {road.last_verified && (
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Cập nhật: {new Date(road.last_verified).toLocaleString('vi-VN')}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {road.lat && road.lon && (
-                      <Link
-                        href={`/map?lat=${road.lat}&lon=${road.lon}&zoom=12`}
-                        className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
-                      >
-                        <Map className="w-4 h-4" />
-                        Xem trên bản đồ
-                        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {sortedRoutes.map(route => (
+              <RouteCard
+                key={route.id}
+                route={route}
+                onDetailClick={(r) => setSelectedRoute(r)}
+              />
+            ))}
+          </div>
         )}
-      </div>
 
-      {/* Info */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-12">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl p-6 border border-blue-200 dark:border-blue-900">
+        {/* Warning Box */}
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl p-5 border border-amber-200 dark:border-amber-800/50">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400">
               <Info className="w-5 h-5" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Lưu ý quan trọng</h3>
-              <ul className="text-sm text-neutral-700 dark:text-neutral-300 space-y-2">
+              <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                Lưu ý quan trọng
+              </h3>
+              <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1.5">
                 <li className="flex items-start gap-2">
-                  <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
-                  <span>Thông tin được cập nhật tự động từ báo chí và cộng đồng</span>
+                  <span className="text-amber-500 mt-0.5">⚠</span>
+                  <span><strong>Một số tin chưa có nguồn kiểm chứng:</strong> Các thẻ có nền vàng cần được xác nhận thêm</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
-                  <span>Kiểm tra lại tình hình thực tế trước khi di chuyển</span>
+                  <span className="text-amber-500 mt-0.5">⚠</span>
+                  <span><strong>Chỉ hiển thị tin trong 3 ngày:</strong> Tin cũ hơn đã bị loại bỏ vì có thể không còn chính xác</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
-                  <span>Gọi 113/114 để biết thông tin chính xác nhất</span>
+                  <span className="text-red-500 mt-0.5 font-bold">!</span>
+                  <span><strong>BẮT BUỘC gọi 113/114</strong> để xác nhận tình hình thực tế trước khi di chuyển vào vùng nguy hiểm</span>
                 </li>
               </ul>
             </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Mobile Map FAB */}
+      <Link
+        href="/map"
+        className="sm:hidden fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 rounded-full bg-emerald-600 dark:bg-emerald-600 text-white shadow-xl hover:scale-105 transition-transform"
+        aria-label="Xem bản đồ"
+      >
+        <Map className="w-6 h-6" />
+      </Link>
+
+      {/* Route Detail Modal */}
+      {selectedRoute && (
+        <RouteDetailModal
+          route={selectedRoute}
+          onClose={() => setSelectedRoute(null)}
+        />
+      )}
     </div>
   )
 }

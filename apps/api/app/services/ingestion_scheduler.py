@@ -2,12 +2,14 @@
 Ingestion Scheduler Service
 
 Automatically runs data ingestion scrapers on a schedule using APScheduler.
+Also runs cleanup jobs for dead URLs and old reports.
 """
 
 import os
 import sys
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime
 import structlog
 
@@ -16,6 +18,11 @@ SCRIPTS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../sc
 sys.path.insert(0, SCRIPTS_PATH)
 
 logger = structlog.get_logger(__name__)
+
+# Import cleanup services
+from app.services.url_health_checker import check_dead_urls
+from app.services.report_cleanup import cleanup_old_reports
+from app.services.routes_sync_service import RoutesSyncService
 
 # Scheduler instance (singleton)
 scheduler = None
@@ -318,6 +325,51 @@ def run_zing_scraper():
         return 0
 
 
+def run_routes_sync():
+    """
+    Run Routes sync - sync traffic-related Reports to RoadSegments.
+    This ensures /routes has data with source_url for verification.
+    """
+    try:
+        logger.info("routes_sync_job_started")
+
+        # Import here to avoid circular imports
+        from app.database import get_db
+
+        # Get database session
+        db = next(get_db())
+
+        try:
+            stats = RoutesSyncService.sync_reports_to_segments(
+                db=db,
+                hours=72,  # Last 3 days
+                limit=500,
+                dry_run=False
+            )
+
+            logger.info(
+                "routes_sync_job_completed",
+                reports_checked=stats['total_reports_checked'],
+                road_related=stats['road_related_found'],
+                segments_created=stats['segments_created'],
+                segments_updated=stats['segments_updated'],
+                status="success"
+            )
+
+            return stats
+
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(
+            "routes_sync_job_failed",
+            error=str(e),
+            exc_info=True
+        )
+        return None
+
+
 def run_ai_news_bulletin():
     """Run AI News Bulletin generation (summary + audio)."""
     try:
@@ -546,6 +598,53 @@ def start_scheduler():
     #     max_instances=1,
     #     misfire_grace_time=300
     # )
+
+    # ============================================
+    # CLEANUP JOBS
+    # ============================================
+
+    # URL Health Check - Every 2 hours
+    # Checks if source URLs are still alive and removes dead reports
+    scheduler.add_job(
+        check_dead_urls,
+        trigger='interval',
+        hours=2,
+        id='cleanup_url_health',
+        name='URL Health Checker (Dead Link Removal)',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=600  # 10 minutes grace period
+    )
+
+    # Report Cleanup (TTL 7 days) - Every 6 hours
+    # Deletes reports older than 7 days
+    scheduler.add_job(
+        cleanup_old_reports,
+        trigger='interval',
+        hours=6,
+        id='cleanup_old_reports',
+        name='Report Cleanup (TTL 7 days)',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=600  # 10 minutes grace period
+    )
+
+    # ============================================
+    # ROUTES 2.5 - Sync Reports to RoadSegments
+    # ============================================
+
+    # Routes Sync - Every 30 minutes
+    # Syncs traffic-related Reports to RoadSegments with source_url
+    scheduler.add_job(
+        run_routes_sync,
+        trigger='interval',
+        minutes=30,
+        id='routes_sync',
+        name='Routes Sync (Reports → RoadSegments)',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=300
+    )
 
     # Optional: Run immediately on startup (comment out if not desired)
     scheduler.add_job(

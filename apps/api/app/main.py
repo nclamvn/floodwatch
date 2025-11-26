@@ -7,10 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import csv
 import io
+import json
+import openai
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -28,6 +30,8 @@ from app.services.distress_repo import DistressReportRepository
 from app.services.traffic_repo import TrafficDisruptionRepository
 from app.services.ai_forecast_repo import AIForecastRepository
 from app.services.help_repo import HelpRequestRepository, HelpOfferRepository
+from app.services.road_segment_repo import RoadSegmentRepository, RoadSegmentFilters
+from app.database.models import RoadSegment, RoadSegmentStatus
 
 # Import trust score calculator
 from app.services.trust_score import TrustScoreCalculator
@@ -64,6 +68,9 @@ logger = get_logger(__name__)
 # Admin token for /ops dashboard
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "dev-admin-token-123")
 
+# Initialize OpenAI for storm summary
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
@@ -83,29 +90,36 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS configuration
+# CORS configuration - hardened for production
+# SECURITY: Be specific with origins, avoid wildcards in production
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS if origin.strip()]
+
+# Allowed methods and headers - be explicit
+CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+CORS_HEADERS = [
+    "Content-Type",
+    "Authorization",
+    "X-API-Key",
+    "X-Admin-Token",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=CORS_METHODS,
+    allow_headers=CORS_HEADERS,
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+    max_age=600,  # Cache preflight for 10 minutes
 )
 
-# Security headers middleware
-@app.middleware("http")
-async def add_security_headers(request, call_next):
-    """Add security headers to all responses"""
-    response = await call_next(request)
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # Only add HSTS in production
-    if os.getenv("ENVIRONMENT", "development") == "production":
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    return response
+# Security headers middleware (comprehensive)
+from app.middleware.security_headers import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Metrics middleware (records all HTTP requests)
 app.add_middleware(MetricsMiddleware)
@@ -367,7 +381,8 @@ async def get_reports(
     province: Optional[str] = Query(None, description="Filter by province"),
     since: Optional[str] = Query(None, description="Filter by time (e.g., '6h', '24h', '7d')"),
     limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    dedupe: bool = Query(True, description="Enable cross-source deduplication (default: true)")
 ):
     """
     Get reports with optional filters
@@ -378,6 +393,7 @@ async def get_reports(
     - since: Time filter (e.g., '6h', '24h', '7d')
     - limit: Max results per page
     - offset: Pagination offset
+    - dedupe: Enable cross-source deduplication (default: true)
 
     Note: PII (phone numbers, emails) is scrubbed from public responses
     """
@@ -390,11 +406,19 @@ async def get_reports(
         offset=offset
     )
 
+    report_dicts = [report.to_dict() for report in reports]
+
+    # Apply cross-source deduplication (Layer 2)
+    if dedupe:
+        from app.services.report_dedup import deduplicate_reports
+        report_dicts = deduplicate_reports(report_dicts)
+
     response_data = {
-        "total": total,
+        "total": len(report_dicts) if dedupe else total,
         "limit": limit,
         "offset": offset,
-        "data": [report.to_dict() for report in reports]
+        "dedupe": dedupe,
+        "data": report_dicts
     }
 
     # Scrub PII from public endpoint
@@ -1329,6 +1353,277 @@ async def get_regional_summary(
         )
 
 
+# ==================== STORM SUMMARY ENDPOINT ====================
+
+# Cache for storm summary (5 minutes)
+_storm_summary_cache: dict = {"data": None, "expires_at": None}
+
+@app.get("/api/v1/storm-summary")
+@limiter.limit("20/minute")
+async def get_storm_summary(
+    request: Request,
+    db: Session = Depends(get_db),
+    hours: int = Query(72, ge=1, le=168, description="Time window in hours (default: 72 = 3 days)"),
+    force_refresh: bool = Query(False, description="Force refresh cache")
+):
+    """
+    Get AI-powered summary of Storm #15 (Bão số 15 / Bão Koto) situation
+
+    Searches for reports containing storm-related keywords and generates comprehensive summary
+
+    Rate limit: 20 requests per minute
+
+    Args:
+        hours: Time window in hours (default: 72, max: 168 = 1 week)
+
+    Returns:
+        - summary_text: AI-generated summary in Vietnamese (markdown format)
+        - severity_level: low/moderate/high/critical
+        - statistics: Report counts by type, trust scores
+        - top_reports: List of most important storm reports
+        - key_points: Bullet-point highlights
+        - recommendations: Safety recommendations
+    """
+    global _storm_summary_cache
+
+    try:
+        # Check cache first (5 minute TTL)
+        cache_key = f"storm_summary_{hours}"
+        now = datetime.utcnow()
+        if not force_refresh and _storm_summary_cache.get("data") and _storm_summary_cache.get("expires_at"):
+            if now < _storm_summary_cache["expires_at"] and _storm_summary_cache.get("hours") == hours:
+                logger.info("storm_summary_cache_hit", hours=hours)
+                return _storm_summary_cache["data"]
+
+        logger.info(
+            "storm_summary_requested",
+            hours=hours,
+            ip=request.client.host,
+            cache_miss=True
+        )
+
+        # Define storm keywords
+        storm_keywords = [
+            "bão số 15", "bão 15", "storm 15", "storm #15",
+            "bão koto", "koto", "typhoon koto",
+            "cơn bão số 15", "cơn bão 15"
+        ]
+
+        # Calculate time cutoff
+        time_cutoff = datetime.utcnow() - timedelta(hours=hours)
+
+        # Search for storm-related reports (include both verified and new reports)
+        storm_reports = (
+            db.query(Report)
+            .filter(Report.created_at >= time_cutoff)
+            .filter(Report.status.in_(['verified', 'new']))
+            .all()
+        )
+
+        # Filter reports containing storm keywords (case-insensitive)
+        filtered_reports = []
+        for report in storm_reports:
+            text = f"{report.title} {report.description or ''}".lower()
+            if any(keyword.lower() in text for keyword in storm_keywords):
+                filtered_reports.append(report)
+
+        logger.info(
+            "storm_reports_found",
+            total_searched=len(storm_reports),
+            storm_related=len(filtered_reports)
+        )
+
+        # Calculate statistics
+        stats_by_type = {}
+        total_trust = 0.0
+
+        for report in filtered_reports:
+            type_str = report.type.value if hasattr(report.type, 'value') else str(report.type)
+            stats_by_type[type_str] = stats_by_type.get(type_str, 0) + 1
+            total_trust += report.trust_score
+
+        avg_trust = total_trust / len(filtered_reports) if filtered_reports else 0.0
+
+        # Sort by trust score and get top reports
+        top_reports = sorted(
+            filtered_reports,
+            key=lambda r: r.trust_score,
+            reverse=True
+        )[:10]
+
+        # Prepare data for AI summary - use top 10 reports by trust score for faster processing
+        sorted_by_trust = sorted(filtered_reports, key=lambda r: r.trust_score, reverse=True)
+        reports_data = []
+        for report in sorted_by_trust[:10]:  # Use top 10 for faster AI response
+            reports_data.append({
+                "title": report.title,
+                "description": (report.description or "")[:500],  # Limit description length
+                "type": report.type.value if hasattr(report.type, 'value') else str(report.type),
+                "province": report.province or "Unknown",
+                "created_at": report.created_at.isoformat(),
+                "trust_score": report.trust_score
+            })
+
+        # Default storm info when no user reports found - use real-time AI to get latest info
+        if not filtered_reports:
+            try:
+                # Use AI to generate current storm status based on general knowledge
+                prompt = """Bạn là chuyên gia khí tượng thủy văn. Hãy cung cấp thông tin cập nhật về Bão số 15 (Bão Koto) năm 2024 đang hoạt động trên Biển Đông.
+
+Nếu bão Koto đang hoạt động, hãy cung cấp:
+1. **Vị trí hiện tại**: Tọa độ và khoảng cách so với bờ biển Việt Nam
+2. **Cường độ**: Cấp bão, sức gió mạnh nhất
+3. **Hướng di chuyển**: Hướng và tốc độ di chuyển
+4. **Dự báo**: Đường đi dự kiến trong 24-48h tới
+5. **Cảnh báo**: Các tỉnh cần đề phòng
+
+Nếu không có thông tin về bão Koto hoặc bão đã tan, hãy nói rõ điều đó.
+
+Viết bằng tiếng Việt, định dạng Markdown, ngắn gọn khoảng 200-300 từ."""
+
+                response = openai.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "Bạn là trợ lý dự báo thời tiết, chuyên cung cấp thông tin bão và thiên tai tại Việt Nam. Luôn cung cấp thông tin chính xác, cập nhật từ các nguồn chính thống như KTTV, NCHMF."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=800,
+                    temperature=0.3
+                )
+
+                summary_text = response.choices[0].message.content.strip()
+
+                # Set moderate severity when using AI-generated default info
+                severity = "moderate"
+
+            except Exception as ai_error:
+                logger.error("ai_default_storm_info_failed", error=str(ai_error))
+                # Fallback to static default info
+                summary_text = """# Bão số 15 (Bão Koto) - Cập nhật
+
+**Lưu ý:** Hệ thống đang thu thập thông tin từ các nguồn chính thống.
+
+## Theo dõi bão
+
+Để xem đường đi của bão số 15, vui lòng bấm nút **"Đường đi của bão"** ở góc phải để mở bản đồ Windy.
+
+## Nguồn thông tin chính thức
+
+- [Trung tâm Dự báo KTTV Quốc gia](https://nchmf.gov.vn)
+- [Ban chỉ đạo PCTT Trung ương](http://phongchongthientai.mard.gov.vn)
+
+## Khuyến nghị
+
+- Thường xuyên cập nhật thông tin từ cơ quan chức năng
+- Chuẩn bị sẵn đồ dùng thiết yếu
+- Không ra khơi khi có cảnh báo bão"""
+                severity = "moderate"
+
+        # Generate AI summary if we have reports from users
+        elif filtered_reports:
+            try:
+                prompt = f"""Tóm tắt tình hình Bão số 15 (Bão Koto) dựa trên {len(filtered_reports)} báo cáo:
+
+{json.dumps(reports_data, ensure_ascii=False, indent=2)}
+
+Hãy tạo bản tóm tắt chi tiết bằng tiếng Việt với:
+1. Tình hình tổng quan về bão số 15
+2. Vị trí, hướng di chuyển và cường độ hiện tại
+3. Các khu vực bị ảnh hưởng
+4. Thiệt hại đã ghi nhận (nếu có)
+5. Dự báo diễn biến trong 24-48h tới
+
+Format: Markdown, khoảng 300-400 từ."""
+
+                response = openai.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "You are a disaster management assistant specializing in weather and storm analysis. Provide clear, actionable information in Vietnamese."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.7
+                )
+
+                summary_text = response.choices[0].message.content.strip()
+
+            except Exception as ai_error:
+                logger.error("ai_summary_failed", error=str(ai_error))
+                summary_text = f"""# Bão số 15 (Bão Koto)
+
+Hiện có {len(filtered_reports)} báo cáo về bão số 15 trong {hours} giờ qua.
+
+**Không thể tạo bản tóm tắt AI.** Vui lòng xem danh sách báo cáo chi tiết bên dưới."""
+
+        # Determine severity (only if not already set for no-reports case)
+        if filtered_reports:
+            severity = "unknown"
+        if len(filtered_reports) >= 20:
+            severity = "critical"
+        elif len(filtered_reports) >= 10:
+            severity = "high"
+        elif len(filtered_reports) >= 5:
+            severity = "moderate"
+        elif len(filtered_reports) > 0:
+            severity = "low"
+
+        # Build response
+        result = {
+            "province": "Bão số 15 (Koto)",
+            "summary_text": summary_text,
+            "severity_level": severity,
+            "key_points": [
+                f"Tìm thấy {len(filtered_reports)} báo cáo về bão số 15",
+                f"Độ tin cậy trung bình: {avg_trust * 100:.0f}%",
+                f"Thời gian: {hours} giờ qua"
+            ],
+            "recommendations": [
+                "Theo dõi thường xuyên các bản tin cập nhật từ cơ quan chức năng",
+                "Chuẩn bị đồ dùng thiết yếu và kế hoạch sơ tán nếu cần",
+                "Tránh ra ngoài khi bão đổ bộ, không tự ý vào vùng nguy hiểm"
+            ],
+            "time_range": f"{hours} giờ qua",
+            "statistics": {
+                "total_reports": len(filtered_reports),
+                "by_type": stats_by_type,
+                "avg_trust_score": round(avg_trust, 2)
+            },
+            "top_reports": [
+                {
+                    "id": str(report.id),
+                    "type": report.type.value if hasattr(report.type, 'value') else str(report.type),
+                    "title": report.title,
+                    "description": report.description,
+                    "trust_score": report.trust_score,
+                    "created_at": report.created_at.isoformat(),
+                    "source": report.source or "Unknown"
+                }
+                for report in top_reports
+            ],
+            "generated_at": datetime.utcnow().isoformat()
+        }
+
+        logger.info(
+            "storm_summary_generated",
+            reports_count=len(filtered_reports),
+            severity=severity
+        )
+
+        # Save to cache (5 minute TTL)
+        _storm_summary_cache["data"] = result
+        _storm_summary_cache["expires_at"] = datetime.utcnow() + timedelta(minutes=5)
+        _storm_summary_cache["hours"] = hours
+
+        return result
+
+    except Exception as e:
+        logger.error("storm_summary_failed", error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate storm summary: {str(e)}"
+        )
+
+
 # ==================== LITE MODE & CSV EXPORT ====================
 
 @app.get("/reports/today", response_class=HTMLResponse)
@@ -2056,6 +2351,12 @@ class HelpRequestCreate(BaseModel):
     contact_name: str = Field(min_length=1, max_length=255)
     contact_phone: str = Field(min_length=1, max_length=50)
     contact_method: Optional[str] = Field(None, max_length=50, description="Preferred contact method (phone, sms, zalo, etc.)")
+    contact_email: Optional[str] = Field(None, description="Contact email address")
+    has_children: Optional[bool] = Field(False, description="Are there children among those needing help")
+    has_elderly: Optional[bool] = Field(False, description="Are there elderly among those needing help")
+    has_disabilities: Optional[bool] = Field(False, description="Are there people with disabilities among those needing help")
+    water_level_cm: Optional[int] = Field(None, ge=0, description="Current water level in centimeters at location")
+    building_floor: Optional[int] = Field(None, description="Floor number where people are located (for evacuation planning)")
     notes: Optional[str] = None
     images: Optional[List[str]] = Field(None, description="Array of image URLs")
 
@@ -2073,8 +2374,27 @@ class HelpOfferCreate(BaseModel):
     contact_name: str = Field(min_length=1, max_length=255)
     contact_phone: str = Field(min_length=1, max_length=50)
     contact_method: Optional[str] = Field(None, max_length=50)
+    contact_email: Optional[str] = Field(None, description="Contact email address")
     organization: Optional[str] = Field(None, max_length=255, description="Organization name (if applicable)")
+    vehicle_type: Optional[Literal["boat", "truck", "helicopter", "ambulance", "car", "motorcycle", "other"]] = Field(None, description="Type of vehicle available for rescue/transport")
+    available_capacity: Optional[int] = Field(None, ge=1, description="Current available capacity (separate from total capacity)")
     notes: Optional[str] = None
+
+
+# Phase 2: Assignment Schemas
+class AssignmentCreate(BaseModel):
+    """Model for creating a rescue assignment"""
+    help_request_id: str = Field(description="UUID of the help request")
+    help_offer_id: str = Field(description="UUID of the help offer")
+    assigned_by: Optional[str] = Field(None, description="Who made the assignment (user_id or 'system')")
+    estimated_arrival_minutes: Optional[int] = Field(None, ge=0, description="Estimated arrival time in minutes")
+    notes: Optional[str] = Field(None, description="Assignment notes")
+
+
+class AssignmentStatusUpdate(BaseModel):
+    """Model for updating assignment status"""
+    status: Literal["pending", "accepted", "rejected", "in_progress", "completed", "cancelled"] = Field(description="New status")
+    cancellation_reason: Optional[str] = Field(None, description="Reason for cancellation (required if status=cancelled)")
 
 
 @app.post("/distress")
@@ -2378,6 +2698,7 @@ async def get_help_requests(
     urgency: Optional[str] = Query(None, description="Comma-separated urgency levels"),
     status: Optional[str] = Query(None, description="Comma-separated status values"),
     verified_only: bool = Query(False, description="Only return verified requests"),
+    sort_by: Optional[str] = Query(None, description="Sort by: created_at, urgency, priority, distance"),
     limit: int = Query(50, le=200),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -2390,6 +2711,10 @@ async def get_help_requests(
     urgency_levels = urgency.split(',') if urgency else None
     statuses = status.split(',') if status else None
 
+    # Determine sort_by: default to distance if lat/lon provided, else created_at
+    if sort_by is None:
+        sort_by = 'distance' if (lat is not None and lon is not None) else 'created_at'
+
     if lat is not None and lon is not None:
         # Spatial query
         requests, total, distances = HelpRequestRepository.get_all(
@@ -2400,7 +2725,7 @@ async def get_help_requests(
             verified_only=verified_only,
             limit=limit,
             offset=offset,
-            sort_by='distance'
+            sort_by=sort_by
         )
 
         # Add distance to each request
@@ -2418,7 +2743,8 @@ async def get_help_requests(
             status=statuses,
             verified_only=verified_only,
             limit=limit,
-            offset=offset
+            offset=offset,
+            sort_by=sort_by
         )
         data = [req.to_dict() for req in requests]
 
@@ -2532,6 +2858,452 @@ async def get_help_offers(
             "fulfilled_count": stats['fulfilled']
         }
     }
+
+
+@app.delete("/help/requests/{request_id}")
+@limiter.limit("20/hour")
+async def delete_help_request(
+    request: Request,
+    request_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a help request by ID
+    """
+    from uuid import UUID
+    from app.database.models import HelpRequest
+
+    try:
+        # Validate UUID
+        req_uuid = UUID(request_id)
+
+        # Find the request
+        help_request = db.query(HelpRequest).filter(HelpRequest.id == req_uuid).first()
+
+        if not help_request:
+            raise HTTPException(status_code=404, detail="Help request not found")
+
+        # Delete the request
+        db.delete(help_request)
+        db.commit()
+
+        logger.info(f"Deleted help request: {request_id}")
+
+        return {
+            "message": "Help request deleted successfully",
+            "id": request_id
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID format")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting help request {request_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete help request: {str(e)}")
+
+
+@app.delete("/help/offers/{offer_id}")
+@limiter.limit("20/hour")
+async def delete_help_offer(
+    request: Request,
+    offer_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a help offer by ID
+    """
+    from uuid import UUID
+    from app.database.models import HelpOffer
+
+    try:
+        # Validate UUID
+        off_uuid = UUID(offer_id)
+
+        # Find the offer
+        help_offer = db.query(HelpOffer).filter(HelpOffer.id == off_uuid).first()
+
+        if not help_offer:
+            raise HTTPException(status_code=404, detail="Help offer not found")
+
+        # Delete the offer
+        db.delete(help_offer)
+        db.commit()
+
+        logger.info(f"Deleted help offer: {offer_id}")
+
+        return {
+            "message": "Help offer deleted successfully",
+            "id": offer_id
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid offer ID format")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting help offer {offer_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete help offer: {str(e)}")
+
+
+# Phase 2: Assignment Endpoints
+@app.post("/assignments")
+@limiter.limit("20/hour")
+async def create_assignment(
+    request: Request,
+    assignment_data: AssignmentCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new rescue assignment between a help request and help offer
+    """
+    from uuid import UUID
+    from datetime import datetime, timezone
+    from app.database.models import RescueAssignment, HelpRequest, HelpOffer
+
+    try:
+        # Validate UUIDs
+        request_id = UUID(assignment_data.help_request_id)
+        offer_id = UUID(assignment_data.help_offer_id)
+
+        # Check that both request and offer exist
+        help_request = db.query(HelpRequest).filter(HelpRequest.id == request_id).first()
+        help_offer = db.query(HelpOffer).filter(HelpOffer.id == offer_id).first()
+
+        if not help_request:
+            raise HTTPException(status_code=404, detail="Help request not found")
+        if not help_offer:
+            raise HTTPException(status_code=404, detail="Help offer not found")
+
+        # Check if request is already assigned
+        if help_request.assigned_to_offer_id:
+            raise HTTPException(status_code=400, detail="Help request is already assigned to an offer")
+
+        # Calculate distance and priority at assignment time
+        distance_km = None
+        if help_request.lat and help_request.lon and help_offer.lat and help_offer.lon:
+            from app.services.help_repo import HelpRequestRepository
+            distance_km = HelpRequestRepository._calculate_distance(
+                help_request.lat, help_request.lon,
+                help_offer.lat, help_offer.lon
+            )
+
+        # Create assignment
+        new_assignment = RescueAssignment(
+            help_request_id=request_id,
+            help_offer_id=offer_id,
+            status='pending',
+            assigned_at=datetime.now(timezone.utc),
+            assigned_by=assignment_data.assigned_by or 'system',
+            priority_at_assignment=help_request.priority_score,
+            distance_km_at_assignment=distance_km,
+            estimated_arrival_minutes=assignment_data.estimated_arrival_minutes,
+            notes=assignment_data.notes
+        )
+
+        db.add(new_assignment)
+
+        # Update help_request with assignment
+        help_request.assigned_to_offer_id = offer_id
+        help_request.status = 'assigned'
+
+        # Update help_offer assignment counts
+        help_offer.active_assignments_count = (help_offer.active_assignments_count or 0) + 1
+        help_offer.total_assignments_count = (help_offer.total_assignments_count or 0) + 1
+        help_offer.status = 'assigned'
+
+        db.commit()
+        db.refresh(new_assignment)
+
+        return {
+            "success": True,
+            "message": "Assignment created successfully",
+            "data": new_assignment.to_dict()
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid UUID format: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create assignment: {str(e)}")
+
+
+@app.get("/assignments")
+@limiter.limit("60/minute")
+async def get_assignments(
+    request: Request,
+    help_request_id: Optional[str] = Query(None, description="Filter by help request ID"),
+    help_offer_id: Optional[str] = Query(None, description="Filter by help offer ID"),
+    status: Optional[str] = Query(None, description="Comma-separated status values"),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db)
+):
+    """
+    Get rescue assignments with optional filtering
+    """
+    from uuid import UUID
+    from app.database.models import RescueAssignment
+
+    try:
+        query = db.query(RescueAssignment)
+
+        # Filter by help_request_id
+        if help_request_id:
+            request_uuid = UUID(help_request_id)
+            query = query.filter(RescueAssignment.help_request_id == request_uuid)
+
+        # Filter by help_offer_id
+        if help_offer_id:
+            offer_uuid = UUID(help_offer_id)
+            query = query.filter(RescueAssignment.help_offer_id == offer_uuid)
+
+        # Filter by status
+        if status:
+            statuses = status.split(',')
+            query = query.filter(RescueAssignment.status.in_(statuses))
+
+        # Get total count
+        total = query.count()
+
+        # Order by created_at DESC (newest first)
+        query = query.order_by(RescueAssignment.created_at.desc())
+
+        # Pagination
+        assignments = query.limit(limit).offset(offset).all()
+
+        return {
+            "data": [assignment.to_dict() for assignment in assignments],
+            "pagination": {
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            }
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid UUID format: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch assignments: {str(e)}")
+
+
+@app.patch("/assignments/{assignment_id}/status")
+@limiter.limit("30/hour")
+async def update_assignment_status(
+    request: Request,
+    assignment_id: str,
+    status_data: AssignmentStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Update the status of a rescue assignment
+    """
+    from uuid import UUID
+    from datetime import datetime, timezone
+    from app.database.models import RescueAssignment, HelpRequest, HelpOffer
+
+    try:
+        assignment_uuid = UUID(assignment_id)
+        assignment = db.query(RescueAssignment).filter(RescueAssignment.id == assignment_uuid).first()
+
+        if not assignment:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        # Validate cancellation reason
+        if status_data.status == 'cancelled' and not status_data.cancellation_reason:
+            raise HTTPException(status_code=400, detail="Cancellation reason is required when cancelling an assignment")
+
+        # Update status
+        old_status = assignment.status
+        assignment.status = status_data.status
+
+        # Update timestamp fields based on status
+        now = datetime.now(timezone.utc)
+        if status_data.status == 'accepted':
+            assignment.accepted_at = now
+        elif status_data.status == 'in_progress':
+            assignment.started_at = now
+        elif status_data.status == 'completed':
+            assignment.completed_at = now
+        elif status_data.status == 'cancelled':
+            assignment.cancelled_at = now
+            assignment.cancellation_reason = status_data.cancellation_reason
+
+        # Update related help_request and help_offer
+        help_request = db.query(HelpRequest).filter(HelpRequest.id == assignment.help_request_id).first()
+        help_offer = db.query(HelpOffer).filter(HelpOffer.id == assignment.help_offer_id).first()
+
+        if help_request:
+            if status_data.status == 'in_progress':
+                help_request.status = 'in_progress'
+            elif status_data.status == 'completed':
+                help_request.status = 'rescued'
+            elif status_data.status == 'cancelled':
+                help_request.status = 'active'
+                help_request.assigned_to_offer_id = None
+
+        if help_offer:
+            if status_data.status == 'in_progress':
+                help_offer.status = 'busy'
+            elif status_data.status in ['completed', 'cancelled']:
+                # Decrement active assignments
+                help_offer.active_assignments_count = max(0, (help_offer.active_assignments_count or 1) - 1)
+                # Set status based on remaining assignments
+                if help_offer.active_assignments_count == 0:
+                    help_offer.status = 'active'
+
+        db.commit()
+        db.refresh(assignment)
+
+        return {
+            "success": True,
+            "message": f"Assignment status updated from {old_status} to {status_data.status}",
+            "data": assignment.to_dict()
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid UUID format: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update assignment status: {str(e)}")
+
+
+@app.get("/help/requests/{request_id}/matches")
+@limiter.limit("30/minute")
+async def find_matching_offers(
+    request: Request,
+    request_id: str,
+    max_distance_km: float = Query(50, description="Maximum distance in km"),
+    limit: int = Query(10, le=50, description="Maximum number of matches to return"),
+    db: Session = Depends(get_db)
+):
+    """
+    Find matching help offers for a specific help request
+    Returns offers sorted by suitability score (distance, capacity, type matching)
+    """
+    from uuid import UUID
+    from app.database.models import HelpRequest, HelpOffer
+    from app.services.help_repo import HelpRequestRepository
+    from sqlalchemy import or_, and_
+    from datetime import datetime
+
+    try:
+        request_uuid = UUID(request_id)
+        help_request = db.query(HelpRequest).filter(HelpRequest.id == request_uuid).first()
+
+        if not help_request:
+            raise HTTPException(status_code=404, detail="Help request not found")
+
+        # Get active help offers near the request
+        query = db.query(HelpOffer)
+
+        # Only active offers (not assigned, busy, or offline)
+        query = query.filter(HelpOffer.status == 'active')
+
+        # Not expired
+        now = datetime.utcnow()
+        query = query.filter(
+            or_(
+                HelpOffer.expires_at.is_(None),
+                HelpOffer.expires_at > now
+            )
+        )
+
+        # Get all potential offers
+        all_offers = query.all()
+
+        # Score and filter offers
+        matches = []
+        for offer in all_offers:
+            if not offer.lat or not offer.lon:
+                continue
+
+            # Calculate distance
+            distance_km = HelpRequestRepository._calculate_distance(
+                help_request.lat, help_request.lon,
+                offer.lat, offer.lon
+            )
+
+            # Skip if too far
+            if distance_km > max_distance_km:
+                continue
+
+            # Calculate suitability score (0-100, higher is better)
+            score = 0.0
+
+            # Distance score (50 points max) - closer is better
+            # 0km = 50 points, max_distance_km = 0 points
+            distance_score = max(0, 50 * (1 - (distance_km / max_distance_km)))
+            score += distance_score
+
+            # Service type matching (30 points)
+            # Map needs_type to service_type
+            type_matches = {
+                'food': ['food_water', 'supplies', 'donation'],
+                'water': ['food_water', 'supplies', 'donation'],
+                'shelter': ['shelter'],
+                'medical': ['medical', 'rescue'],
+                'transport': ['transportation', 'rescue'],
+                'rescue': ['rescue', 'transportation']
+            }
+
+            needs_type = help_request.needs_type
+            if needs_type in type_matches and offer.service_type in type_matches[needs_type]:
+                score += 30
+            elif offer.service_type == 'volunteer':
+                score += 15  # Volunteers can help with anything
+
+            # Capacity score (20 points)
+            if offer.available_capacity and help_request.people_count:
+                if offer.available_capacity >= help_request.people_count:
+                    score += 20
+                elif offer.available_capacity > 0:
+                    score += 10  # Partial capacity
+            elif offer.capacity:
+                if help_request.people_count and offer.capacity >= help_request.people_count:
+                    score += 15
+                else:
+                    score += 5
+
+            # Add to matches
+            match_data = offer.to_dict()
+            match_data['distance_km'] = round(distance_km, 2)
+            match_data['suitability_score'] = round(score, 1)
+            match_data['match_reasons'] = []
+
+            if distance_km < 10:
+                match_data['match_reasons'].append('Very close (< 10km)')
+            elif distance_km < 25:
+                match_data['match_reasons'].append('Close (< 25km)')
+
+            if score >= 30:  # Has type match
+                match_data['match_reasons'].append('Service type matches needs')
+
+            if offer.available_capacity and help_request.people_count:
+                if offer.available_capacity >= help_request.people_count:
+                    match_data['match_reasons'].append('Sufficient capacity available')
+
+            matches.append(match_data)
+
+        # Sort by suitability score (highest first)
+        matches.sort(key=lambda x: x['suitability_score'], reverse=True)
+
+        # Limit results
+        matches = matches[:limit]
+
+        return {
+            "data": matches,
+            "meta": {
+                "request_id": request_id,
+                "request_priority": help_request.priority_score,
+                "request_urgency": help_request.urgency,
+                "total_matches": len(matches),
+                "search_radius_km": max_distance_km
+            }
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid UUID format: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to find matches: {str(e)}")
 
 
 @app.get("/check-area")
@@ -3072,6 +3844,605 @@ async def regenerate_ai_news_bulletin(
             status_code=500,
             detail=f"Bulletin regeneration failed: {str(e)}"
         )
+
+
+# ============================================================================
+# ADMIN RESCUE MANAGEMENT ENDPOINTS
+# ============================================================================
+
+# Admin password from environment variable (hash it for production)
+ADMIN_RESCUE_PASSWORD = os.getenv("ADMIN_RESCUE_PASSWORD", "thongtinmualu2025")
+
+# In-memory admin session tokens (for simplicity, use Redis in production)
+admin_sessions: dict = {}
+
+class AdminLoginRequest(BaseModel):
+    password: str
+
+class AdminUpdateRequest(BaseModel):
+    description: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    status: Optional[str] = None
+    is_verified: Optional[bool] = None
+    notes: Optional[str] = None
+
+class BulkActionRequest(BaseModel):
+    type: Literal["requests", "offers"]
+    ids: List[str]
+
+
+def verify_admin_token(request: Request) -> bool:
+    """Verify admin token from header"""
+    token = request.headers.get("X-Admin-Token")
+    if not token:
+        return False
+    return token in admin_sessions and admin_sessions[token] > datetime.utcnow()
+
+
+def require_admin(request: Request):
+    """Dependency to require admin authentication"""
+    if not verify_admin_token(request):
+        raise HTTPException(status_code=401, detail="Admin authentication required")
+
+
+@app.post("/api/v1/admin/verify-password")
+@limiter.limit("5/minute")
+async def admin_verify_password(
+    request: Request,
+    login_data: AdminLoginRequest
+):
+    """
+    Verify admin password and return session token
+
+    Rate limit: 5 attempts per minute
+    """
+    import secrets
+
+    if login_data.password == ADMIN_RESCUE_PASSWORD:
+        # Generate session token
+        token = secrets.token_urlsafe(32)
+        # Token expires in 24 hours
+        admin_sessions[token] = datetime.utcnow() + timedelta(hours=24)
+
+        logger.info("Admin login successful")
+
+        return {
+            "valid": True,
+            "token": token,
+            "expires_in": 86400  # 24 hours in seconds
+        }
+    else:
+        logger.warning("Admin login failed - invalid password")
+        return {
+            "valid": False,
+            "token": None
+        }
+
+
+@app.post("/api/v1/admin/logout")
+async def admin_logout(request: Request):
+    """Logout admin and invalidate session token"""
+    token = request.headers.get("X-Admin-Token")
+    if token and token in admin_sessions:
+        del admin_sessions[token]
+        logger.info("Admin logout successful")
+    return {"message": "Logged out successfully"}
+
+
+@app.patch("/api/v1/help/requests/{request_id}")
+async def admin_update_help_request(
+    request: Request,
+    request_id: str,
+    update_data: AdminUpdateRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    """
+    Update a help request (Admin only)
+    """
+    from uuid import UUID
+    from app.database.models import HelpRequest
+
+    try:
+        req_uuid = UUID(request_id)
+        help_request = db.query(HelpRequest).filter(HelpRequest.id == req_uuid).first()
+
+        if not help_request:
+            raise HTTPException(status_code=404, detail="Help request not found")
+
+        # Update fields if provided
+        update_dict = update_data.dict(exclude_unset=True)
+        for field, value in update_dict.items():
+            if hasattr(help_request, field):
+                setattr(help_request, field, value)
+
+        # If verifying, set verified_at timestamp
+        if update_data.is_verified is True:
+            help_request.verified_at = datetime.utcnow()
+
+        db.commit()
+        db.refresh(help_request)
+
+        logger.info(f"Admin updated help request: {request_id}")
+
+        return {
+            "message": "Help request updated successfully",
+            "data": help_request.to_dict()
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid request ID format")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating help request {request_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update help request: {str(e)}")
+
+
+@app.patch("/api/v1/help/offers/{offer_id}")
+async def admin_update_help_offer(
+    request: Request,
+    offer_id: str,
+    update_data: AdminUpdateRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    """
+    Update a help offer (Admin only)
+    """
+    from uuid import UUID
+    from app.database.models import HelpOffer
+
+    try:
+        off_uuid = UUID(offer_id)
+        help_offer = db.query(HelpOffer).filter(HelpOffer.id == off_uuid).first()
+
+        if not help_offer:
+            raise HTTPException(status_code=404, detail="Help offer not found")
+
+        # Update fields if provided
+        update_dict = update_data.dict(exclude_unset=True)
+        for field, value in update_dict.items():
+            if hasattr(help_offer, field):
+                setattr(help_offer, field, value)
+
+        # If verifying, set verified_at timestamp
+        if update_data.is_verified is True:
+            help_offer.verified_at = datetime.utcnow()
+
+        db.commit()
+        db.refresh(help_offer)
+
+        logger.info(f"Admin updated help offer: {offer_id}")
+
+        return {
+            "message": "Help offer updated successfully",
+            "data": help_offer.to_dict()
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid offer ID format")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating help offer {offer_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update help offer: {str(e)}")
+
+
+@app.post("/api/v1/admin/bulk-delete")
+async def admin_bulk_delete(
+    request: Request,
+    bulk_data: BulkActionRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    """
+    Bulk delete help requests or offers (Admin only)
+    """
+    from uuid import UUID
+    from app.database.models import HelpRequest, HelpOffer
+
+    try:
+        uuids = [UUID(id_str) for id_str in bulk_data.ids]
+
+        if bulk_data.type == "requests":
+            deleted = db.query(HelpRequest).filter(HelpRequest.id.in_(uuids)).delete(synchronize_session=False)
+        else:
+            deleted = db.query(HelpOffer).filter(HelpOffer.id.in_(uuids)).delete(synchronize_session=False)
+
+        db.commit()
+
+        logger.info(f"Admin bulk deleted {deleted} {bulk_data.type}")
+
+        return {
+            "message": f"Successfully deleted {deleted} {bulk_data.type}",
+            "deleted_count": deleted
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ID format in list")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error in bulk delete: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to bulk delete: {str(e)}")
+
+
+@app.post("/api/v1/admin/bulk-verify")
+async def admin_bulk_verify(
+    request: Request,
+    bulk_data: BulkActionRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    """
+    Bulk verify help requests or offers (Admin only)
+    """
+    from uuid import UUID
+    from app.database.models import HelpRequest, HelpOffer
+
+    try:
+        uuids = [UUID(id_str) for id_str in bulk_data.ids]
+
+        if bulk_data.type == "requests":
+            updated = db.query(HelpRequest).filter(HelpRequest.id.in_(uuids)).update(
+                {"is_verified": True, "verified_at": datetime.utcnow()},
+                synchronize_session=False
+            )
+        else:
+            updated = db.query(HelpOffer).filter(HelpOffer.id.in_(uuids)).update(
+                {"is_verified": True, "verified_at": datetime.utcnow()},
+                synchronize_session=False
+            )
+
+        db.commit()
+
+        logger.info(f"Admin bulk verified {updated} {bulk_data.type}")
+
+        return {
+            "message": f"Successfully verified {updated} {bulk_data.type}",
+            "verified_count": updated
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid ID format in list")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error in bulk verify: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to bulk verify: {str(e)}")
+
+
+@app.get("/api/v1/admin/stats")
+async def admin_get_stats(
+    request: Request,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin)
+):
+    """
+    Get admin statistics for rescue management (Admin only)
+    """
+    from app.database.models import HelpRequest, HelpOffer
+    from sqlalchemy import func
+
+    # Request stats
+    request_stats = db.query(
+        func.count(HelpRequest.id).label('total'),
+        func.count(HelpRequest.id).filter(HelpRequest.is_verified == True).label('verified'),
+        func.count(HelpRequest.id).filter(HelpRequest.status == 'active').label('active'),
+        func.count(HelpRequest.id).filter(HelpRequest.urgency.in_(['critical', 'high'])).label('urgent')
+    ).first()
+
+    # Offer stats
+    offer_stats = db.query(
+        func.count(HelpOffer.id).label('total'),
+        func.count(HelpOffer.id).filter(HelpOffer.is_verified == True).label('verified'),
+        func.count(HelpOffer.id).filter(HelpOffer.status == 'active').label('active')
+    ).first()
+
+    return {
+        "requests": {
+            "total": request_stats.total or 0,
+            "verified": request_stats.verified or 0,
+            "active": request_stats.active or 0,
+            "urgent": request_stats.urgent or 0
+        },
+        "offers": {
+            "total": offer_stats.total or 0,
+            "verified": offer_stats.verified or 0,
+            "active": offer_stats.active or 0
+        }
+    }
+
+
+# ============================================================================
+# ROUTES 2.0 - Road Segment Endpoints (Apple Maps style 4-status system)
+# ============================================================================
+
+@app.get("/routes")
+async def get_routes(
+    db: Session = Depends(get_db),
+    province: Optional[str] = Query(None, description="Filter by province"),
+    status: Optional[str] = Query(None, description="Filter by status (comma-separated: OPEN,LIMITED,DANGEROUS,CLOSED)"),
+    hazard_type: Optional[str] = Query(None, description="Filter by hazard type"),
+    since: Optional[str] = Query(None, description="Time filter (e.g., 6h, 24h, 7d)"),
+    sort: Optional[str] = Query("risk_score", description="Sort by: risk_score, created_at, status"),
+    limit: int = Query(100, ge=1, le=500, description="Max results"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    # Verification filters (for public safety)
+    include_unverified: bool = Query(False, description="Admin only: include segments without source_url"),
+    max_age_hours: int = Query(72, ge=1, le=168, description="Max age in hours (default 72h = 3 days)")
+):
+    """
+    Get road segments with filters (Routes 2.0)
+
+    IMPORTANT: By default, only returns VERIFIED data:
+    - Must have source_url (verifiable news source)
+    - Must be within 72 hours (3 days) - older info may be outdated
+
+    This ensures public safety - unverified road alerts can cause harm.
+
+    Status levels (Apple Maps style):
+    - OPEN: Normal traffic flow
+    - LIMITED: Slow, minor obstruction
+    - DANGEROUS: Active hazard, caution
+    - CLOSED: Road impassable
+
+    Example: /routes?province=Quảng Bình&status=CLOSED,DANGEROUS&since=24h
+    """
+    # Parse status filter
+    status_list = []
+    if status:
+        for s in status.split(','):
+            s = s.strip().upper()
+            if s in ['OPEN', 'LIMITED', 'DANGEROUS', 'CLOSED']:
+                status_list.append(RoadSegmentStatus(s))
+
+    filters = RoadSegmentFilters(
+        province=province,
+        status=status_list if status_list else None,
+        hazard_type=hazard_type,
+        since=since,
+        sort_by=sort or "risk_score",
+        # Verification filters - ROUTES 2.5
+        # With sync service, we now have source_url from Reports
+        require_source_url=not include_unverified,  # Require source_url unless admin override
+        max_age_hours=max_age_hours,
+        include_unverified=include_unverified
+    )
+
+    segments, total = RoadSegmentRepository.get_all(
+        db=db,
+        filters=filters,
+        limit=limit,
+        offset=offset
+    )
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": [seg.to_dict() for seg in segments]
+    }
+
+
+@app.get("/routes/summary")
+async def get_routes_summary(
+    db: Session = Depends(get_db),
+    province: Optional[str] = Query(None, description="Filter by province")
+):
+    """
+    Get summary statistics for road segments
+
+    Returns:
+    - Total count
+    - Count by status (OPEN, LIMITED, DANGEROUS, CLOSED)
+    - Count by province
+    - Last updated timestamp
+    """
+    summary = RoadSegmentRepository.get_summary(db=db, province=province)
+
+    return summary
+
+
+@app.get("/routes/risk-index/{province}")
+async def get_province_risk_index(
+    province: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get risk index for a specific province
+
+    Risk index is a weighted average (0.0-1.0) based on:
+    - Status severity
+    - Hazard proximity
+    - Verification recency
+    - Source reliability
+
+    Also returns high-risk segments and status breakdown.
+    """
+    risk_data = RoadSegmentRepository.get_risk_index(db=db, province=province)
+
+    return risk_data
+
+
+@app.get("/routes/nearby")
+async def get_nearby_routes(
+    lat: float = Query(..., description="Latitude"),
+    lon: float = Query(..., description="Longitude"),
+    radius_km: float = Query(50, ge=1, le=200, description="Search radius in km"),
+    limit: int = Query(20, ge=1, le=100, description="Max results"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get road segments within radius of a point
+
+    Uses PostGIS ST_DWithin for efficient spatial query.
+    Results sorted by risk score (highest first).
+    """
+    segments = RoadSegmentRepository.get_nearby(
+        db=db,
+        lat=lat,
+        lon=lon,
+        radius_km=radius_km,
+        limit=limit
+    )
+
+    return {
+        "center": {"lat": lat, "lon": lon},
+        "radius_km": radius_km,
+        "total": len(segments),
+        "data": [seg.to_dict() for seg in segments]
+    }
+
+
+@app.get("/routes/{segment_id}")
+async def get_route_detail(
+    segment_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed information for a specific road segment
+    """
+    from uuid import UUID
+    try:
+        uuid_id = UUID(segment_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid segment ID format")
+
+    segment = RoadSegmentRepository.get_by_id(db=db, segment_id=uuid_id)
+
+    if not segment:
+        raise HTTPException(status_code=404, detail="Road segment not found")
+
+    return segment.to_dict()
+
+
+@app.get("/routes/by-province/{province}")
+async def get_routes_by_province(
+    province: str,
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all road segments for a specific province
+
+    Shorthand for /routes?province={province}
+    Results sorted by risk score (highest first).
+    """
+    segments = RoadSegmentRepository.get_by_province(
+        db=db,
+        province=province,
+        limit=limit
+    )
+
+    return {
+        "province": province,
+        "total": len(segments),
+        "data": [seg.to_dict() for seg in segments]
+    }
+
+
+# ============================================================================
+# ROUTES 2.5 - Sync Reports to RoadSegments
+# ============================================================================
+
+from app.services.routes_sync_service import RoutesSyncService
+
+
+@app.post("/routes/sync")
+async def sync_reports_to_routes(
+    db: Session = Depends(get_db),
+    hours: int = Query(72, ge=1, le=168, description="Hours to look back for reports"),
+    limit: int = Query(500, ge=1, le=2000, description="Max reports to process"),
+    dry_run: bool = Query(False, description="If true, don't actually create segments"),
+    token: Optional[str] = Query(None, description="Admin token for authentication")
+):
+    """
+    Sync traffic-related Reports to RoadSegments (ROUTES 2.5)
+
+    This endpoint:
+    1. Scans recent Reports from /map data
+    2. Uses AI/keyword filtering to identify road-related content
+    3. Creates RoadSegments with source_url for verification
+    4. Deduplicates to avoid duplicates
+
+    Requires admin token for non-dry-run operations.
+    """
+    # Require token for actual operations
+    if not dry_run and token != ADMIN_TOKEN:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin token required for non-dry-run sync"
+        )
+
+    try:
+        stats = RoutesSyncService.sync_reports_to_segments(
+            db=db,
+            hours=hours,
+            limit=limit,
+            dry_run=dry_run
+        )
+
+        return {
+            "status": "success",
+            "message": f"Sync completed: {stats['segments_created']} created, {stats['segments_updated']} updated",
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sync failed: {str(e)}"
+        )
+
+
+@app.get("/routes/sync/status")
+async def get_routes_sync_status(db: Session = Depends(get_db)):
+    """
+    Get status of Routes sync - how many segments have source_url
+    """
+    from sqlalchemy import func
+
+    total = db.query(func.count(RoadSegment.id)).scalar()
+    with_source_url = db.query(func.count(RoadSegment.id)).filter(
+        RoadSegment.source_url.isnot(None),
+        RoadSegment.source_url != ''
+    ).scalar()
+
+    recent_72h = db.query(func.count(RoadSegment.id)).filter(
+        RoadSegment.created_at >= datetime.utcnow() - timedelta(hours=72)
+    ).scalar()
+
+    return {
+        "total_segments": total,
+        "with_source_url": with_source_url,
+        "without_source_url": total - with_source_url,
+        "source_url_percentage": round(with_source_url / total * 100, 1) if total > 0 else 0,
+        "recent_72h": recent_72h,
+        "sync_recommended": with_source_url < total * 0.5  # Recommend sync if < 50% have source
+    }
+
+
+@app.delete("/routes/cleanup")
+async def cleanup_expired_routes(
+    db: Session = Depends(get_db),
+    token: Optional[str] = Query(None, description="Admin token")
+):
+    """
+    Remove expired road segments (older than expiry date)
+    """
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Admin token required")
+
+    deleted = RoutesSyncService.cleanup_expired_segments(db)
+
+    return {
+        "status": "success",
+        "deleted_count": deleted
+    }
+
+
+# ============================================================================
+# END ROUTES 2.5
+# ============================================================================
 
 
 # Startup message
