@@ -386,14 +386,14 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
 
   // Pre-compute report urgency levels in O(n) - single pass through reports
   const reportUrgencyMap = useMemo(() => {
-    const urgencyMap = new Map<string, { isUrgent: boolean; isAlertSos: boolean; hasRain: boolean }>()
+    const urgencyMap: Record<string, { isUrgent: boolean; isAlertSos: boolean; hasRain: boolean }> = {}
 
     for (const report of reports) {
       const isUrgent = (report.type === 'ALERT' || report.type === 'SOS') && report.trust_score >= 0.7
       const isAlertSos = report.type === 'ALERT' || report.type === 'SOS'
       const hasRain = report.type === 'RAIN' && report.trust_score >= 0.6
 
-      urgencyMap.set(report.id, { isUrgent, isAlertSos, hasRain })
+      urgencyMap[report.id] = { isUrgent, isAlertSos, hasRain }
     }
 
     return urgencyMap
@@ -426,7 +426,7 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
           const report = leaf.properties?.report
           if (!report) continue
 
-          const urgency = reportUrgencyMap.get(report.id)
+          const urgency = reportUrgencyMap[report.id]
           if (urgency) {
             if (urgency.isUrgent) urgentCount++
             if (urgency.isAlertSos) alertSosCount++

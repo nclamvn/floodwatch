@@ -191,9 +191,14 @@ const config: Config = {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(400%)' },
         },
+        'spin-slow': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         spotlight: 'spotlight 2s ease-in-out infinite',
+        'spin-slow': 'spin-slow 3s linear infinite',
       },
     },
   },

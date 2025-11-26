@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ChevronDown, ChevronUp, MapPin, MapPinned, Info, Map, Satellite, Globe, Mountain, Loader2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, MapPin, MapPinned, Info, Map, Satellite, Globe, Mountain, Loader2, Play, Pause, Newspaper } from 'lucide-react'
 import DarkModeToggle from './DarkModeToggle'
 import { type BaseMapStyleId } from '@/lib/mapProvider'
 import { useLocation } from '@/contexts/LocationContext'
+import { useGlobalAudioPlayer } from '@/contexts/AudioPlayerContext'
+import MobileNewsPopup from './MobileNewsPopup'
 
 interface MobileMapControlsProps {
   baseMapStyle: BaseMapStyleId
@@ -42,8 +44,13 @@ export function MobileMapControls({
   onLocationClick
 }: MobileMapControlsProps) {
   const { userLocation, isLocating, requestLocation } = useLocation()
+  const { isPlaying, isLoading, play, pause, currentTime, duration } = useGlobalAudioPlayer()
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isNewsPopupOpen, setIsNewsPopupOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Audio progress for spinning ring
+  const progress = duration > 0 ? currentTime / duration : 0
 
   // Handle My Location button click
   const handleLocationClick = () => {
@@ -51,6 +58,15 @@ export function MobileMapControls({
       onLocationClick?.(userLocation.latitude, userLocation.longitude)
     } else {
       requestLocation()
+    }
+  }
+
+  // Handle Audio play/pause
+  const handleAudioClick = () => {
+    if (isPlaying) {
+      pause()
+    } else {
+      play()
     }
   }
 
@@ -95,6 +111,53 @@ export function MobileMapControls({
 
       {/* Theme Toggle */}
       <DarkModeToggle />
+
+      {/* Audio Player Button with Spinning Ring */}
+      <div className="relative w-11 h-11">
+        {/* Spinning ring when playing */}
+        {isPlaying && (
+          <svg
+            className="absolute inset-0 w-full h-full animate-spin-slow"
+            viewBox="0 0 44 44"
+            style={{ animationDuration: '3s' }}
+          >
+            {/* Outer spinning ring */}
+            <circle
+              cx="22"
+              cy="22"
+              r="20"
+              fill="none"
+              stroke="url(#audioGradient)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray="40 85"
+            />
+            <defs>
+              <linearGradient id="audioGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#3b82f6" />
+                <stop offset="50%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#ec4899" />
+              </linearGradient>
+            </defs>
+          </svg>
+        )}
+
+        {/* Audio button */}
+        <button
+          onClick={handleAudioClick}
+          disabled={isLoading}
+          className={`${buttonBaseStyle} ${isPlaying ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-transparent' : buttonInactiveStyle} hover:scale-105 active:scale-95 disabled:opacity-50`}
+          aria-label={isPlaying ? 'Tạm dừng' : 'Phát tin tức'}
+        >
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : isPlaying ? (
+            <Pause className="w-5 h-5 fill-current" />
+          ) : (
+            <Play className="w-5 h-5 fill-current ml-0.5" />
+          )}
+        </button>
+      </div>
 
       {/* Hamburger / Expand Button */}
       <button
@@ -163,8 +226,26 @@ export function MobileMapControls({
           >
             <Info className="w-5 h-5" />
           </button>
+
+          {/* News Button */}
+          <button
+            onClick={() => {
+              setIsNewsPopupOpen(true)
+              setIsExpanded(false)
+            }}
+            className={`${buttonBaseStyle} ${buttonInactiveStyle} hover:scale-105 active:scale-95`}
+            title="Tin tức"
+          >
+            <Newspaper className="w-5 h-5" />
+          </button>
         </div>
       )}
+
+      {/* Full-screen News Popup */}
+      <MobileNewsPopup
+        isOpen={isNewsPopupOpen}
+        onClose={() => setIsNewsPopupOpen(false)}
+      />
     </div>
   )
 }
