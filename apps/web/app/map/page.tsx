@@ -561,30 +561,39 @@ export default function MapPage() {
 
       {/* Mobile: Action buttons - Top right - Design System 2025 */}
       {/* Note: Back button, Theme toggle, and Map controls are now in MobileMapControls component */}
+      {/* Order: Cứu trợ → Tuyến đường → Thời tiết → Bão số 15 → Tin tức */}
       <div className="sm:hidden fixed top-3 right-3 z-[70] flex flex-col gap-2">
-        {/* Weather Button (Mobile) */}
-        <button
-          onClick={() => setWindyModalOpen(true)}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-emerald-500 text-body-2 h-[36px]"
-        >
-          Thời tiết
-        </button>
-
-        {/* Help Connection Button (Mobile) */}
+        {/* 1. Help Connection Button - Cứu trợ (Orange) */}
         <Link
           href="/help"
-          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-orange-500 text-body-2 h-[36px]"
+          className="min-w-[90px] h-[36px] px-4 py-2 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-orange-500 text-body-2"
         >
           Cứu trợ
         </Link>
 
-        {/* Storm Button (Mobile) */}
-        <StormButton onClick={handleStormClick} className="px-4 py-2 text-body-2 h-[36px]" />
+        {/* 2. Routes Button - Tuyến đường (Blue) */}
+        <Link
+          href="/routes"
+          className="min-w-[90px] h-[36px] px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-blue-500 text-body-2"
+        >
+          Tuyến đường
+        </Link>
 
-        {/* News Toggle Button */}
+        {/* 3. Weather Button - Thời tiết (Green) */}
+        <button
+          onClick={() => setWindyModalOpen(true)}
+          className="min-w-[90px] h-[36px] px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-emerald-500 text-body-2"
+        >
+          Thời tiết
+        </button>
+
+        {/* 4. Storm Button - Bão số 15 (Purple) */}
+        <StormButton onClick={handleStormClick} className="min-w-[90px] h-[36px] px-4 py-2 text-body-2" />
+
+        {/* 5. News Toggle Button - Tin tức (Gray) */}
         <button
           onClick={() => setSheetOpen(!sheetOpen)}
-          className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-neutral-500 text-body-2 h-[36px]"
+          className="min-w-[90px] h-[36px] px-4 py-2 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-neutral-500 text-body-2"
         >
           <span>Tin tức</span>
           {filteredReports.length > 0 && (

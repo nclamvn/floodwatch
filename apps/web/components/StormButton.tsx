@@ -23,14 +23,17 @@ export default function StormButton({ onClick, className = '', isLoading = false
 
   const showLoading = isLoading || loading
 
+  // Check if custom sizing is provided via className
+  const hasCustomSize = className.includes('h-[') || className.includes('min-w-[')
+
   return (
     <button
       onClick={handleClick}
       disabled={showLoading}
       className={`
-        px-6 py-2
+        ${hasCustomSize ? '' : 'px-6 py-2'}
         bg-yellow-500 hover:bg-yellow-600
-        text-white text-body-1 font-semibold
+        text-white font-semibold
         rounded-pill
         shadow-elevation-1
         transition-all duration-ui ease-smooth
@@ -38,6 +41,7 @@ export default function StormButton({ onClick, className = '', isLoading = false
         backdrop-blur-md
         border border-yellow-400
         disabled:opacity-70 disabled:cursor-wait
+        flex items-center justify-center
         ${className}
       `}
       aria-label="Thông tin Bão số 15"

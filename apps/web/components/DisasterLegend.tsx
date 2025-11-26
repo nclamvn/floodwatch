@@ -78,7 +78,7 @@ export default function DisasterLegend({ lastUpdated, isOpen, onClose }: Disaste
   }
 
   return (
-    <div className="absolute top-24 left-3 sm:top-14 sm:left-4 z-40">
+    <div className="absolute top-24 left-3 sm:top-14 sm:left-4 z-[80]">
       {/* Expanded Panel */}
       {!collapsed && (
         <div ref={legendRef} className="absolute top-full left-0 mt-2 w-[calc(100vw-24px)] sm:w-72 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_2px_8px_rgba(0,0,0,0.3)] border border-neutral-300/50 dark:border-neutral-700/50 overflow-hidden">
