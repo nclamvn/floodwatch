@@ -733,34 +733,34 @@ export default function MapPage() {
         </aside>
       )}
 
-      {/* Mobile Bottom Sheet - Design System 2025 */}
+      {/* Mobile Bottom Sheet - Full Screen Card - Design System 2025 */}
       {sheetOpen && (
         <>
           {/* Backdrop with fade */}
           <div
-            className="md:hidden fixed inset-0 bg-black/60 z-40 animate-in fade-in duration-ui"
+            className="md:hidden fixed inset-0 bg-black/70 z-[90] animate-in fade-in duration-300"
             onClick={() => setSheetOpen(false)}
           />
 
-          {/* Bottom Sheet - Slide up with smooth easing */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl rounded-t-xl shadow-elevation-2 z-50 max-h-[75vh] flex flex-col animate-in slide-in-from-bottom duration-sheet ease-smooth border-t border-neutral-300/50 dark:border-neutral-700/50">
-            {/* Sheet Handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-12 h-1.5 bg-neutral-300 dark:bg-neutral-700 rounded-pill" />
-            </div>
-
-            {/* Sheet Header */}
-            <div className="px-5 py-4 bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-700 dark:to-neutral-800 text-neutral-900 dark:text-white flex items-center justify-between">
+          {/* Full Screen Card - Slide up from bottom */}
+          <div
+            className="md:hidden fixed inset-0 z-[100] flex flex-col bg-white dark:bg-neutral-900 animate-in slide-in-from-bottom duration-300 ease-out"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
+            {/* Sheet Header - Sticky */}
+            <div className="flex-shrink-0 px-5 py-4 bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 text-neutral-900 dark:text-white flex items-center justify-between border-b border-neutral-200 dark:border-neutral-700">
               <div>
                 <h2 className="text-title-2 mb-0.5">Tin mới nhận</h2>
-                <p className="text-body-2 text-neutral-700 dark:text-neutral-100">{reports.length} báo cáo</p>
+                <p className="text-body-2 text-neutral-600 dark:text-neutral-400">{filteredReports.length} báo cáo</p>
               </div>
               <button
                 onClick={() => setSheetOpen(false)}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-800/20 hover:bg-neutral-800/30 active:bg-neutral-800/40 dark:bg-white/20 dark:hover:bg-white/30 dark:active:bg-white/40 transition-all duration-ui ease-smooth tap-target"
+                className="w-11 h-11 flex items-center justify-center rounded-full bg-neutral-200 hover:bg-neutral-300 active:bg-neutral-400 dark:bg-neutral-700 dark:hover:bg-neutral-600 dark:active:bg-neutral-500 transition-all duration-ui ease-smooth"
                 aria-label="Đóng"
               >
-                <span className="text-2xl leading-none">×</span>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
