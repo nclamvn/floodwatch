@@ -76,27 +76,27 @@ export function SidebarHotlineTicker() {
 
   return (
     <div className="mx-4 mt-3 mb-2 relative" ref={dropdownRef}>
-      {/* Scrolling Ticker */}
+      {/* Scrolling Ticker - Apple Premium Design */}
       <div
-        className="h-10 bg-gray-100 border-2 border-red-400 rounded-full overflow-hidden relative shadow-md cursor-pointer hover:border-red-500 transition-colors"
+        className="h-10 bg-white/70 dark:bg-neutral-800/70 backdrop-blur-xl border border-neutral-300/50 dark:border-neutral-700/50 rounded-full overflow-hidden relative shadow-[0_4px_16px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3)] cursor-pointer hover:shadow-[0_6px_20px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_6px_20px_rgba(0,0,0,0.4)] transition-all duration-200 hover:scale-[1.01]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
       >
-        {/* Label Area - Fixed on left - Pill shape */}
-        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-red-500 px-3 rounded-l-full">
-          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-          <span className="text-[10px] font-bold text-white ml-1.5 uppercase tracking-wide">
+        {/* Label Area - Fixed on left - Premium Pill */}
+        <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-red-500 dark:bg-red-600 px-3 rounded-l-full shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
+          <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+          <span className="text-[10px] font-bold text-white ml-1.5 uppercase tracking-wide drop-shadow-sm">
             HOTLINE
           </span>
-          <ChevronDown className={`w-3 h-3 text-white ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-3 h-3 text-white ml-1 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
         </div>
 
         {/* Scrolling Content Container */}
         <div
           className="flex items-center h-full"
           style={{
-            paddingLeft: '70px', // Space for label + icon (optimized for visibility)
+            paddingLeft: '70px',
             animation: isPaused ? 'none' : 'tickerSidebar 35s linear infinite',
           }}
         >
@@ -108,12 +108,12 @@ export function SidebarHotlineTicker() {
                 key={`${item.number}-${idx}`}
                 className="inline-flex items-center gap-1 px-2.5 flex-shrink-0"
               >
-                <IconComponent className="w-4 h-4 text-red-600 flex-shrink-0" />
-                <span className="text-xs font-semibold text-red-700 whitespace-nowrap">
-                  {item.label}: <span className="font-bold">{item.number}</span>
+                <IconComponent className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                  {item.label}: <span className="font-bold text-red-600 dark:text-red-400">{item.number}</span>
                 </span>
                 {/* Separator */}
-                <span className="text-red-300 mx-1 text-sm">•</span>
+                <span className="text-neutral-300 dark:text-neutral-600 mx-1 text-sm">•</span>
               </div>
             )
           })}
@@ -132,10 +132,10 @@ export function SidebarHotlineTicker() {
         `}</style>
       </div>
 
-      {/* Dropdown List - Appears on click */}
+      {/* Dropdown List - Premium Apple Card */}
       {isDropdownOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-red-400 rounded-lg shadow-lg overflow-hidden z-20 max-h-96 overflow-y-auto">
-          <div className="p-2 space-y-1">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-2xl border border-neutral-300/50 dark:border-neutral-700/50 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_2px_8px_rgba(0,0,0,0.3)] overflow-hidden z-20 max-h-96 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="p-3 space-y-1">
             {hotlines.map((item, idx) => {
               const IconComponent = item.Icon
               return (
@@ -146,17 +146,17 @@ export function SidebarHotlineTicker() {
                     handleCall(item.number)
                     setIsDropdownOpen(false)
                   }}
-                  className="w-full flex items-start gap-2 p-2 hover:bg-red-50 rounded-md transition-colors group text-left"
+                  className="w-full flex items-start gap-2.5 p-2.5 hover:bg-neutral-100/80 dark:hover:bg-neutral-800/60 rounded-xl transition-all duration-200 group text-left active:scale-[0.98]"
                 >
-                  <IconComponent className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <IconComponent className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-red-700">{item.label}</span>
-                      <span className="text-sm font-bold text-red-900 tabular-nums">{item.number}</span>
+                      <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">{item.label}</span>
+                      <span className="text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">{item.number}</span>
                     </div>
-                    <p className="text-[10px] text-red-600/70 mt-0.5">{item.description}</p>
+                    <p className="text-[10px] text-neutral-600 dark:text-neutral-400 mt-0.5">{item.description}</p>
                   </div>
-                  <svg className="w-4 h-4 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-red-500 dark:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </button>

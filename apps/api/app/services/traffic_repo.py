@@ -10,7 +10,7 @@ from sqlalchemy import and_, or_, func
 from geoalchemy2.functions import ST_SetSRID, ST_MakePoint, ST_Distance, ST_DWithin
 from geoalchemy2 import Geography
 
-from app.database.models import TrafficDisruption
+from app.database.models import TrafficDisruption, AlertLifecycleStatus
 
 
 class TrafficDisruptionRepository:
@@ -93,6 +93,14 @@ class TrafficDisruptionRepository:
                 TrafficDisruption.ends_at.is_(None),
                 TrafficDisruption.ends_at > datetime.utcnow()
             )
+        )
+
+        # Exclude ARCHIVED alerts (lifecycle filter)
+        query = query.filter(
+            TrafficDisruption.lifecycle_status.in_([
+                AlertLifecycleStatus.ACTIVE,
+                AlertLifecycleStatus.RESOLVED
+            ])
         )
 
         # Type filter
@@ -183,6 +191,13 @@ class TrafficDisruptionRepository:
                     TrafficDisruption.ends_at > datetime.utcnow()
                 )
             )
+            # Exclude ARCHIVED alerts (lifecycle filter)
+            query = query.filter(
+                TrafficDisruption.lifecycle_status.in_([
+                    AlertLifecycleStatus.ACTIVE,
+                    AlertLifecycleStatus.RESOLVED
+                ])
+            )
 
         # Type filter
         if types:
@@ -244,6 +259,13 @@ class TrafficDisruptionRepository:
                     TrafficDisruption.ends_at.is_(None),
                     TrafficDisruption.ends_at > datetime.utcnow()
                 )
+            )
+            # Exclude ARCHIVED alerts (lifecycle filter)
+            query = query.filter(
+                TrafficDisruption.lifecycle_status.in_([
+                    AlertLifecycleStatus.ACTIVE,
+                    AlertLifecycleStatus.RESOLVED
+                ])
             )
 
         # Order by severity, then created_at

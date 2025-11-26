@@ -25,12 +25,27 @@ KEYWORDS = {
 }
 
 # Common road segments in Central Vietnam
+# IMPORTANT: Use correct names! "Đèo Nhông" is in Phù Mỹ district, NOT "Đèo Phù Mỹ"
 ROAD_SEGMENTS = {
-    "QL1A": ["Quốc lộ 1A", "QL1A", "QL 1A"],
-    "Đèo Hải Vân": ["Đèo Hải Vân", "Hải Vân"],
+    # National highways
+    "QL1A": ["Quốc lộ 1A", "QL1A", "QL 1A", "quốc lộ 1"],
     "QL9": ["Quốc lộ 9", "QL9", "QL 9", "Lao Bảo"],
-    "Đèo Phù Mỹ": ["Đèo Phù Mỹ", "Phù Mỹ"],
     "QL14": ["Quốc lộ 14", "QL14", "QL 14"],
+    "QL49": ["Quốc lộ 49", "QL49", "QL 49"],
+
+    # Mountain passes (Đèo) - Central Vietnam
+    "Đèo Hải Vân": ["Đèo Hải Vân", "Hải Vân", "Hai Van"],
+    "Đèo Nhông": ["Đèo Nhông", "Deo Nhong", "đèo Nhông Phù Mỹ"],  # In Phù Mỹ district, Bình Định
+    "Đèo Cù Mông": ["Đèo Cù Mông", "Cù Mông", "Cu Mong"],
+    "Đèo Cả": ["Đèo Cả", "Deo Ca", "đèo Cả"],
+    "Đèo Lò Xo": ["Đèo Lò Xo", "Lò Xo", "Lo Xo"],
+    "Đèo Ngang": ["Đèo Ngang", "Ngang", "Hoành Sơn"],
+    "Đèo Phước Tượng": ["Đèo Phước Tượng", "Phước Tượng", "Phuoc Tuong"],
+    "Đèo Phú Gia": ["Đèo Phú Gia", "Phú Gia", "Phu Gia"],
+
+    # Bridges (Cầu)
+    "Cầu Thạch Hãn": ["Cầu Thạch Hãn", "Thạch Hãn"],
+    "Cầu Hiền Lương": ["Cầu Hiền Lương", "Hiền Lương", "Bến Hải"],
 }
 
 # Province mapping

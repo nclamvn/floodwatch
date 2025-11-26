@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Clock, Navigation, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, ShieldX, AlertOctagon } from 'lucide-react'
+import { MapPin, Clock, Navigation, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, ShieldX, AlertOctagon, CheckCircle2 } from 'lucide-react'
 import DirectionsModal from './DirectionsModal'
 
 // 4-Status System (Apple Maps style)
 export type RouteStatus = 'OPEN' | 'LIMITED' | 'DANGEROUS' | 'CLOSED'
+
+// Lifecycle status for alerts
+export type LifecycleStatus = 'ACTIVE' | 'RESOLVED' | 'ARCHIVED'
 
 export interface RouteSegment {
   id: string
@@ -25,6 +28,11 @@ export interface RouteSegment {
   verified_at?: string
   created_at?: string
   updated_at?: string
+  // Lifecycle fields
+  lifecycle_status?: LifecycleStatus
+  last_verified_at?: string
+  resolved_at?: string
+  archived_at?: string
 }
 
 interface RouteCardProps {
@@ -117,25 +125,68 @@ function formatRiskScore(score?: number): string {
   return `${Math.round(score * 100)}%`
 }
 
+// Calculate days until archive for RESOLVED alerts (3 days from resolved_at)
+function getDaysUntilArchive(resolvedAt?: string): number {
+  if (!resolvedAt) return 3
+  const resolved = new Date(resolvedAt)
+  const archiveDate = new Date(resolved.getTime() + 3 * 24 * 60 * 60 * 1000)
+  const now = new Date()
+  const diffDays = Math.ceil((archiveDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+  return Math.max(0, diffDays)
+}
+
 export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
   const [showDirections, setShowDirections] = useState(false)
 
   const status = normalizeStatus(route.status)
   const config = STATUS_CONFIG[status]
   const hasCoordinates = route.lat !== undefined && route.lon !== undefined
+  const isResolved = route.lifecycle_status === 'RESOLVED'
+  const daysUntilArchive = isResolved ? getDaysUntilArchive(route.resolved_at) : 0
 
   return (
     <>
       <div
-        className={`group relative bg-white dark:bg-neutral-900 rounded-2xl border-2 ${config.borderColor} overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01]`}
+        className={`group relative bg-white dark:bg-neutral-900 rounded-2xl border-2 ${
+          isResolved
+            ? 'border-emerald-300 dark:border-emerald-700'
+            : config.borderColor
+        } overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01]`}
       >
+        {/* RESOLVED Banner - Shows green "Đã khắc phục" */}
+        {isResolved && (
+          <div className="flex items-center justify-between px-4 py-2 bg-emerald-100 dark:bg-emerald-900/40 border-b border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300">
+                Đã khắc phục
+              </span>
+            </div>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400">
+              Hiển thị thêm {daysUntilArchive} ngày
+            </span>
+          </div>
+        )}
+
         {/* Status Header Bar */}
-        <div className={`flex items-center justify-between px-4 py-2.5 ${config.bgColor}`}>
+        <div className={`flex items-center justify-between px-4 py-2.5 ${
+          isResolved
+            ? 'bg-neutral-50 dark:bg-neutral-800/50'
+            : config.bgColor
+        }`}>
           <div className="flex items-center gap-2">
-            <div className={`p-1.5 rounded-lg ${config.iconBg} ${config.textColor}`}>
+            <div className={`p-1.5 rounded-lg ${
+              isResolved
+                ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                : `${config.iconBg} ${config.textColor}`
+            }`}>
               {config.icon}
             </div>
-            <span className={`font-bold text-sm uppercase tracking-wide ${config.textColor}`}>
+            <span className={`font-bold text-sm uppercase tracking-wide ${
+              isResolved
+                ? 'text-neutral-500 dark:text-neutral-400 line-through'
+                : config.textColor
+            }`}>
               {config.label}
             </span>
           </div>

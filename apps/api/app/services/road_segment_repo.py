@@ -1,7 +1,12 @@
 """
-Road Segment Repository - Data access layer for Routes 2.0
+Road Segment Repository - Data access layer for Routes 2.5+
 
 Provides CRUD operations and specialized queries for road segments.
+
+ROUTES 2.5+ Safety Features:
+- require_source_url=True by default (cannot override for safety)
+- max_age_hours=72 by default (3 days max)
+- Only verified segments shown to public
 """
 from datetime import datetime, timedelta
 from typing import Optional, List, Tuple, Dict, Any
@@ -10,7 +15,7 @@ from sqlalchemy import func, desc, asc, and_, or_, text
 from sqlalchemy.orm import Session
 from geoalchemy2.functions import ST_DWithin, ST_MakePoint, ST_SetSRID
 
-from app.database.models import RoadSegment, RoadSegmentStatus, HazardEvent
+from app.database.models import RoadSegment, RoadSegmentStatus, HazardEvent, AlertLifecycleStatus
 
 
 class RoadSegmentFilters:
@@ -30,7 +35,10 @@ class RoadSegmentFilters:
         # NEW: Strict verification filters (enabled by default for public safety)
         require_source_url: bool = True,  # Only show segments with verifiable source
         max_age_hours: int = 72,  # Default 3 days - older info may be outdated
-        include_unverified: bool = False  # Admin override to see all
+        include_unverified: bool = False,  # Admin override to see all
+        # Lifecycle filter - exclude ARCHIVED by default
+        include_archived: bool = False,  # If True, include ARCHIVED segments
+        lifecycle_status: Optional[List[AlertLifecycleStatus]] = None  # Filter specific statuses
     ):
         self.province = province
         self.status = status or []
@@ -45,6 +53,9 @@ class RoadSegmentFilters:
         self.require_source_url = require_source_url
         self.max_age_hours = max_age_hours
         self.include_unverified = include_unverified
+        # Lifecycle filters
+        self.include_archived = include_archived
+        self.lifecycle_status = lifecycle_status
 
     def get_since_datetime(self) -> Optional[datetime]:
         """Convert since string to datetime"""
@@ -89,6 +100,20 @@ class RoadSegmentRepository:
 
         # Apply filters
         if filters:
+            # LIFECYCLE FILTER: Exclude ARCHIVED by default
+            if not filters.include_archived:
+                if filters.lifecycle_status:
+                    # Filter specific lifecycle statuses
+                    query = query.filter(RoadSegment.lifecycle_status.in_(filters.lifecycle_status))
+                else:
+                    # Default: show ACTIVE and RESOLVED only
+                    query = query.filter(
+                        RoadSegment.lifecycle_status.in_([
+                            AlertLifecycleStatus.ACTIVE,
+                            AlertLifecycleStatus.RESOLVED
+                        ])
+                    )
+
             # CRITICAL: Verification filters for public safety
             if not filters.include_unverified:
                 # Require source_url for verifiable information
@@ -170,6 +195,15 @@ class RoadSegmentRepository:
             # Default filters when no filter object provided
             # Still apply verification for safety
             max_age_cutoff = datetime.utcnow() - timedelta(hours=72)
+
+            # LIFECYCLE: Exclude ARCHIVED by default
+            query = query.filter(
+                RoadSegment.lifecycle_status.in_([
+                    AlertLifecycleStatus.ACTIVE,
+                    AlertLifecycleStatus.RESOLVED
+                ])
+            )
+
             query = query.filter(
                 and_(
                     RoadSegment.source_url.isnot(None),

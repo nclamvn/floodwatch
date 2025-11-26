@@ -22,6 +22,7 @@ from app.database import SessionLocal, Report
 from app.database.models import ReportType
 from app.services.province_extractor import extract_location_data
 from app.services.article_extractor import extract_article_hybrid
+from app.services.news_dedup import NewsDedupService
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -382,9 +383,11 @@ def scrape_vtc_rss(dry_run: bool = False) -> int:
                     if not is_disaster_related(title, description):
                         continue
 
-                    # Check for duplicates
-                    if deduplicate_check(db, title, created_at):
-                        print(f"  [SKIP] Duplicate: {title[:60]}...")
+                    # Check for cross-source duplicates (Layer 1)
+                    duplicate = NewsDedupService.find_duplicate(db, title, description, created_at)
+                    if duplicate:
+                        dup_id, similarity, match_type = duplicate
+                        print(f"  [SKIP] Duplicate ({match_type}, {similarity:.0%}): {title[:50]}...")
                         continue
 
                     # Extract location
@@ -395,6 +398,11 @@ def scrape_vtc_rss(dry_run: bool = False) -> int:
 
                     # Truncate source URL if too long
                     source_url = (link[:95] if len(link) > 95 else link) or "vtcnews.vn"
+
+                    # Prepare deduplication fields
+                    dedup_fields = NewsDedupService.prepare_report_dedup_fields(
+                        title, description, link or "vtcnews.vn"
+                    )
 
                     # Create report
                     report = Report(
@@ -409,7 +417,11 @@ def scrape_vtc_rss(dry_run: bool = False) -> int:
                         trust_score=0.88,  # VTC base trust score (state media)
                         status="new",
                         created_at=created_at,
-                        media=media_urls
+                        media=media_urls,
+                        # Deduplication fields
+                        normalized_title=dedup_fields['normalized_title'],
+                        content_hash=dedup_fields['content_hash'],
+                        source_domain=dedup_fields['source_domain']
                     )
 
                     if dry_run:

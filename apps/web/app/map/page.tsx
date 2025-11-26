@@ -4,19 +4,33 @@ import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import axios from 'axios'
 import Link from 'next/link'
-import { List } from 'lucide-react'
 import CustomDropdown from '@/components/CustomDropdown'
 import NewsTicker from '@/components/NewsTicker'
 import MediaCarousel from '@/components/MediaCarousel'
 import { ArticleReadModal } from '@/components/ArticleReadModal'
 import RegionalSummaryInput from '@/components/RegionalSummaryInput'
 import RegionalSummaryModal from '@/components/RegionalSummaryModal'
+import StormButton from '@/components/StormButton'
+import StormSummaryModal from '@/components/StormSummaryModal'
 import DisasterLegend from '@/components/DisasterLegend'
 import { SidebarHotlineTicker } from '@/components/SidebarHotlineTicker'
+import SidebarAudioPlayer from '@/components/SidebarAudioPlayer'
 import { LocationProvider } from '@/contexts/LocationContext'
+import { AudioPlayerProvider } from '@/contexts/AudioPlayerContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import DarkModeToggle from '@/components/DarkModeToggle'
+import { WindyModal } from '@/components/WindyModal'
 import { getReportTypeLabel } from '@/types/report'
 import { decodeHTML } from '@/lib/htmlDecode'
+import {
+  getCachedRegionalSummary,
+  setCachedRegionalSummary,
+  getCachedStormSummary,
+  setCachedStormSummary,
+  getRegionalSummaryCacheAge,
+  getStormSummaryCacheAge
+} from '@/lib/aiSearchCache'
+import { ArrowLeft } from 'lucide-react'
 
 // Dynamically import Map to avoid SSR issues with Mapbox
 const MapView = dynamic(() => import('@/components/MapViewClustered'), {
@@ -91,6 +105,18 @@ export default function MapPage() {
 
   // Legend state
   const [isLegendOpen, setIsLegendOpen] = useState(false)
+
+  // Windy modal state
+  const [windyModalOpen, setWindyModalOpen] = useState(false)
+  const [windyStormView, setWindyStormView] = useState(false)
+
+  // Storm summary state
+  const [stormData, setStormData] = useState<any | null>(null)
+  const [isStormModalOpen, setIsStormModalOpen] = useState(false)
+  const [isLoadingStorm, setIsLoadingStorm] = useState(false)
+
+  // Viewport state for WindyModal
+  const [viewportForWindy, setViewportForWindy] = useState({ lat: 16.0, lon: 108.2, zoom: 8 })
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -225,8 +251,8 @@ export default function MapPage() {
       // Reset to Vietnam overview when "ALL" is selected
       setTargetViewport({
         latitude: 16.0,
-        longitude: 107.5,
-        zoom: 8
+        longitude: 106.0,
+        zoom: 5.5
       })
     }
   }, [selectedProvince])
@@ -269,40 +295,175 @@ export default function MapPage() {
     return R * c
   }
 
-  // Handle regional summary search
+  // Handle regional summary search (with 30-minute cache)
   const handleRegionalSearch = async (province: string) => {
+    console.log('[RegionalSearch] Starting search for:', province)
+
+    // Check cache first
+    const cached = getCachedRegionalSummary(province)
+    if (cached) {
+      const cacheAge = getRegionalSummaryCacheAge(province)
+      console.log('[RegionalSearch] Using cached result, age:', cacheAge, 'minutes')
+      setSummaryData(cached)
+      setIsSummaryModalOpen(true)
+      return
+    }
+
     setIsLoadingSummary(true)
     try {
+      console.log('[RegionalSearch] Calling API:', `${API_URL}/api/v1/regional-summary`)
       const response = await axios.get(`${API_URL}/api/v1/regional-summary`, {
         params: {
           province,
           hours: 24
-        }
+        },
+        timeout: 30000 // 30 second timeout
       })
+      console.log('[RegionalSearch] API response:', response.data)
+
+      // Cache the result
+      setCachedRegionalSummary(province, response.data)
+
       setSummaryData(response.data)
       setIsSummaryModalOpen(true)
     } catch (error: any) {
-      console.error('Error fetching regional summary:', error)
+      console.error('[RegionalSearch] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url
+      })
       // Show error message to user
-      if (error.response?.data?.detail) {
-        alert(error.response.data.detail.message || 'Không thể tải tình hình khu vực. Vui lòng thử lại.')
-      } else {
-        alert('Không thể tải tình hình khu vực. Vui lòng kiểm tra kết nối và thử lại.')
-      }
+      const errorMsg = error.response?.data?.detail?.message
+        || error.response?.data?.message
+        || error.message
+        || 'Không thể tải tình hình khu vực'
+
+      alert(`Lỗi: ${errorMsg}\n\nKiểm tra console để biết thêm chi tiết.`)
     } finally {
       setIsLoadingSummary(false)
     }
   }
 
-  const provinces = ['ALL', 'Đà Nẵng', 'Quảng Nam', 'Quảng Trị', 'Thừa Thiên Huế', 'Quảng Bình']
+  // Handle storm summary (with 30-minute cache)
+  const handleStormClick = async () => {
+    console.log('[StormSummary] Fetching storm summary...')
 
-  // Province coordinates for auto-pan
+    // Check cache first
+    const hours = 72
+    const cached = getCachedStormSummary(hours)
+    if (cached) {
+      const cacheAge = getStormSummaryCacheAge(hours)
+      console.log('[StormSummary] Using cached result, age:', cacheAge, 'minutes')
+      setStormData(cached)
+      setIsStormModalOpen(true)
+      return
+    }
+
+    setIsLoadingStorm(true)
+    try {
+      const response = await axios.get(`${API_URL}/api/v1/storm-summary`, {
+        params: { hours },  // Last 3 days
+        timeout: 60000  // 60 seconds timeout for AI processing
+      })
+      console.log('[StormSummary] API response:', response.data)
+
+      // Cache the result
+      setCachedStormSummary(hours, response.data)
+
+      setStormData(response.data)
+      setIsStormModalOpen(true)
+    } catch (error: any) {
+      console.error('[StormSummary] Error:', error)
+      const errorMsg = error.response?.data?.detail?.message
+        || error.response?.data?.message
+        || error.message
+        || 'Không thể tải thông tin bão'
+      alert(`Lỗi: ${errorMsg}`)
+    } finally {
+      setIsLoadingStorm(false)
+    }
+  }
+
+  // 34 tỉnh/thành phố Việt Nam (từ 1/7/2025)
+  const provinces = [
+    'ALL',
+    // 5 TP trực thuộc Trung ương + Thành phố Huế
+    'Hà Nội',
+    'TP. Hồ Chí Minh',
+    'Hải Phòng',
+    'Đà Nẵng',
+    'Cần Thơ',
+    'Thành phố Huế',
+    // 28 tỉnh (theo alphabet)
+    'An Giang',
+    'Bắc Ninh',
+    'Bình Định',
+    'Bình Thuận',
+    'Cà Mau',
+    'Cao Bằng',
+    'Đắk Lắk',
+    'Điện Biên',
+    'Đồng Nai',
+    'Đồng Tháp',
+    'Gia Lai',
+    'Hà Nam',
+    'Hà Tĩnh',
+    'Hải Dương',
+    'Hòa Bình',
+    'Hưng Yên',
+    'Khánh Hòa',
+    'Lạng Sơn',
+    'Lào Cai',
+    'Lâm Đồng',
+    'Long An',
+    'Phú Thọ',
+    'Quảng Nam',
+    'Quảng Ninh',
+    'Sóc Trăng',
+    'Tây Ninh',
+    'Thái Nguyên',
+    'Tuyên Quang',
+  ]
+
+  // Province coordinates for auto-pan (34 tỉnh/thành phố từ 1/7/2025)
   const provinceCoordinates: Record<string, { lat: number; lng: number; zoom: number }> = {
+    // 5 TP trực thuộc TW + Thành phố Huế
+    'Hà Nội': { lat: 21.0285, lng: 105.8542, zoom: 10 },
+    'TP. Hồ Chí Minh': { lat: 10.8231, lng: 106.6297, zoom: 10 },
+    'Hải Phòng': { lat: 20.8449, lng: 106.6881, zoom: 11 },
     'Đà Nẵng': { lat: 16.0544, lng: 108.2022, zoom: 11 },
-    'Quảng Nam': { lat: 15.5394, lng: 108.0191, zoom: 10 },
-    'Quảng Trị': { lat: 16.7403, lng: 107.1854, zoom: 10 },
-    'Thừa Thiên Huế': { lat: 16.4637, lng: 107.5909, zoom: 10 },
-    'Quảng Bình': { lat: 17.4676, lng: 106.6229, zoom: 10 },
+    'Cần Thơ': { lat: 10.0452, lng: 105.7469, zoom: 10 },
+    'Thành phố Huế': { lat: 16.4637, lng: 107.5909, zoom: 10 },
+    // 28 tỉnh
+    'An Giang': { lat: 10.5216, lng: 105.1259, zoom: 9 },
+    'Bắc Ninh': { lat: 21.1861, lng: 106.0763, zoom: 11 },
+    'Bình Định': { lat: 14.1665, lng: 109.0590, zoom: 9 },
+    'Bình Thuận': { lat: 11.0904, lng: 108.0721, zoom: 9 },
+    'Cà Mau': { lat: 9.1769, lng: 105.1524, zoom: 9 },
+    'Cao Bằng': { lat: 22.6666, lng: 106.2640, zoom: 9 },
+    'Đắk Lắk': { lat: 12.7100, lng: 108.2378, zoom: 9 },
+    'Điện Biên': { lat: 21.3860, lng: 103.0230, zoom: 9 },
+    'Đồng Nai': { lat: 11.0686, lng: 107.1676, zoom: 9 },
+    'Đồng Tháp': { lat: 10.4938, lng: 105.6882, zoom: 9 },
+    'Gia Lai': { lat: 13.9830, lng: 108.0191, zoom: 8 },
+    'Hà Nam': { lat: 20.5835, lng: 105.9230, zoom: 10 },
+    'Hà Tĩnh': { lat: 18.3559, lng: 105.8877, zoom: 9 },
+    'Hải Dương': { lat: 20.9373, lng: 106.3146, zoom: 10 },
+    'Hòa Bình': { lat: 20.8171, lng: 105.3376, zoom: 9 },
+    'Hưng Yên': { lat: 20.6464, lng: 106.0511, zoom: 10 },
+    'Khánh Hòa': { lat: 12.2585, lng: 109.0526, zoom: 9 },
+    'Lạng Sơn': { lat: 21.8537, lng: 106.7615, zoom: 9 },
+    'Lào Cai': { lat: 22.4856, lng: 103.9707, zoom: 9 },
+    'Lâm Đồng': { lat: 11.9404, lng: 108.4583, zoom: 9 },
+    'Long An': { lat: 10.5360, lng: 106.4131, zoom: 9 },
+    'Phú Thọ': { lat: 21.4225, lng: 105.2297, zoom: 9 },
+    'Quảng Nam': { lat: 15.5394, lng: 108.0191, zoom: 9 },
+    'Quảng Ninh': { lat: 21.0064, lng: 107.2925, zoom: 9 },
+    'Sóc Trăng': { lat: 9.6025, lng: 105.9739, zoom: 9 },
+    'Tây Ninh': { lat: 11.3351, lng: 106.1099, zoom: 10 },
+    'Thái Nguyên': { lat: 21.5942, lng: 105.8482, zoom: 9 },
+    'Tuyên Quang': { lat: 21.8237, lng: 105.2181, zoom: 9 },
   }
 
   // Dropdown options
@@ -321,59 +482,113 @@ export default function MapPage() {
 
   return (
     <ErrorBoundary>
+      <AudioPlayerProvider>
       <LocationProvider>
         <div className="relative h-[100dvh] w-full overflow-hidden">
-      {/* Header overlay - Voice Player + Filter controls */}
+      {/* Header overlay - Desktop layout */}
       <header
         className="pointer-events-none absolute inset-x-0 top-0 z-50 p-3 sm:p-4"
         aria-label="Site header"
       >
-        {/* Layout container */}
-        <div className="relative flex items-start justify-end">
-          {/* Filter controls */}
+        {/* Desktop Layout: Left controls + Right action buttons */}
+        <div className="hidden sm:flex items-center justify-between">
+          {/* Left side: Back - Theme - Quan tâm - Địa phương - (Khay bản đồ is MapControlsGroup rendered by MapView) */}
           <div className="pointer-events-auto flex items-center gap-2">
-            {/* Desktop filters - Custom dropdowns with glass effect */}
-            <div className="hidden sm:flex items-center gap-2">
-              <CustomDropdown
-                value={filter}
-                onChange={setFilter}
-                options={filterOptions}
-              />
-              <CustomDropdown
-                value={selectedProvince}
-                onChange={setSelectedProvince}
-                options={provinceOptions}
-              />
-              {/* Help Connection Button */}
-              <Link
-                href="/help"
-                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-full shadow-lg transition-all hover:shadow-xl hover:scale-105 backdrop-blur-sm border border-purple-500"
-              >
-                <span className="whitespace-nowrap">Cứu trợ</span>
-              </Link>
-            </div>
+            {/* Back Button - 3D shadow effect matching other header buttons */}
+            <Link
+              href="/"
+              className="flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-xl border shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),0_1px_4px_rgba(0,0,0,0.2)] transition-all duration-ui ease-smooth hover:scale-105 active:scale-95 bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-800/70 dark:text-gray-200 dark:hover:bg-gray-700/80 dark:border-neutral-700/50"
+              aria-label="Quay về trang chủ"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            {/* Dark Mode Toggle */}
+            <DarkModeToggle />
+            {/* Quan tâm Dropdown */}
+            <CustomDropdown
+              value={filter}
+              onChange={setFilter}
+              options={filterOptions}
+            />
+            {/* Địa phương Dropdown */}
+            <CustomDropdown
+              value={selectedProvince}
+              onChange={setSelectedProvince}
+              options={provinceOptions}
+            />
+            {/* Note: Khay bản đồ (MapControlsGroup) is rendered inside MapView at position left-16 */}
+          </div>
+
+          {/* Right side: Cứu trợ - Tuyến đường - Thời tiết - Bão số 15 */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            {/* Help Connection Button */}
+            <Link
+              href="/help"
+              className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white text-body-1 font-semibold rounded-pill shadow-elevation-1 transition-all duration-ui ease-smooth hover:shadow-elevation-2 hover:scale-105 backdrop-blur-md border border-orange-500"
+            >
+              <span className="whitespace-nowrap">Cứu trợ</span>
+            </Link>
+            {/* Routes Button */}
+            <Link
+              href="/routes"
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-body-1 font-semibold rounded-pill shadow-elevation-1 transition-all duration-ui ease-smooth hover:shadow-elevation-2 hover:scale-105 backdrop-blur-md border border-blue-500"
+            >
+              <span className="whitespace-nowrap">Tuyến đường</span>
+            </Link>
+            {/* Weather Button (Windy) */}
+            <button
+              onClick={() => setWindyModalOpen(true)}
+              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-body-1 font-semibold rounded-pill shadow-elevation-1 transition-all duration-ui ease-smooth hover:shadow-elevation-2 hover:scale-105 backdrop-blur-md border border-emerald-500"
+            >
+              <span className="whitespace-nowrap">Thời tiết</span>
+            </button>
+            {/* Storm Button */}
+            <StormButton onClick={handleStormClick} />
           </div>
         </div>
       </header>
 
-      {/* Mobile: Help and News buttons - Top right */}
+      {/* Mobile: Back button - Top left with 3D shadow effect */}
+      <Link
+        href="/"
+        className="sm:hidden fixed top-4 left-4 z-50 flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-xl border shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),0_1px_4px_rgba(0,0,0,0.2)] transition-all duration-ui ease-smooth hover:scale-105 active:scale-95 bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-800/70 dark:text-gray-200 dark:hover:bg-gray-700/80 dark:border-neutral-700/50"
+        aria-label="Quay về trang chủ"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </Link>
+
+      {/* Mobile: Help and News buttons - Top right - Design System 2025 */}
       <div className="sm:hidden fixed top-3 right-3 z-[70] flex flex-col gap-2">
-        {/* Help Connection Button (Mobile) - Now on top */}
+        {/* Dark Mode Toggle (Mobile) */}
+        <DarkModeToggle />
+
+        {/* Weather Button (Mobile) */}
+        <button
+          onClick={() => setWindyModalOpen(true)}
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-emerald-500 text-body-2 h-[36px]"
+        >
+          Thời tiết
+        </button>
+
+        {/* Help Connection Button (Mobile) */}
         <Link
           href="/help"
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-purple-500 text-sm h-[36px]"
+          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-orange-500 text-body-2 h-[36px]"
         >
           Cứu trợ
         </Link>
 
-        {/* News Toggle Button - Now below, no icon, same height */}
+        {/* Storm Button (Mobile) */}
+        <StormButton onClick={handleStormClick} className="px-4 py-2 text-body-2 h-[36px]" />
+
+        {/* News Toggle Button */}
         <button
           onClick={() => setSheetOpen(!sheetOpen)}
-          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-full font-semibold flex items-center justify-center shadow-lg transition-all backdrop-blur-sm border border-primary-500 text-sm h-[36px]"
+          className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-neutral-500 text-body-2 h-[36px]"
         >
           <span>Tin tức</span>
           {filteredReports.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">{filteredReports.length}</span>
+            <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-pill text-label">{filteredReports.length}</span>
           )}
         </button>
       </div>
@@ -381,82 +596,57 @@ export default function MapPage() {
       {/* Gradient overlay for readability */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 h-16 sm:h-20 bg-gradient-to-b from-black/10 to-transparent" />
 
-      {/* Desktop Sidebar - Overlay on map */}
-      <aside className={`hidden md:flex absolute top-16 left-4 bottom-40 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md supports-[backdrop-filter]:backdrop-blur-md supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-neutral-900/70 rounded-prominent shadow-soft-xl overflow-hidden z-30 flex-col border border-white/20 dark:border-neutral-700/30 transition-all duration-300 ${
-        sidebarCollapsed ? 'w-16' : 'w-96'
-      }`}>
-        {/* Sidebar Header */}
-        <div className={`py-3 bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 text-white flex items-center justify-between ${
-          sidebarCollapsed ? 'px-0' : 'px-6'
-        }`}>
-          {sidebarCollapsed ? (
-            // Collapsed: Only show expand icon
-            <div className="flex items-center justify-center mx-auto">
-              <button
-                onClick={() => setSidebarCollapsed(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
-                aria-label="Mở sidebar"
-              >
-                {/* Expand icon (arrow right) */}
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            // Expanded: Show title and collapse button
-            <>
-              <div>
-                <h2 className="text-lg font-bold">Bảng tin</h2>
-              </div>
-              <button
-                onClick={() => setSidebarCollapsed(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors flex-shrink-0"
-                aria-label="Thu gọn sidebar"
-              >
-                {/* Collapse icon (arrow left) */}
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Emergency Hotline Ticker - Only when expanded */}
-        {!sidebarCollapsed && <SidebarHotlineTicker />}
-
-        {/* Reports List */}
-        {sidebarCollapsed ? (
-          // Collapsed: Show only icons vertically
-          <div className="flex-1 flex flex-col items-center gap-2 py-4 overflow-y-auto custom-scrollbar">
-            {filteredReports.slice(0, 20).map((report) => {
-              const getIcon = (type: string) => {
-                switch (type) {
-                  case 'ALERT': return '⚠️'
-                  case 'SOS': return '🆘'
-                  case 'ROAD': return '🚧'
-                  case 'NEEDS': return '📦'
-                  default: return 'ℹ️'
-                }
-              }
-              return (
-                <button
-                  key={report.id}
-                  onClick={() => {
-                    setSelectedReport(report)
-                    setIsModalOpen(true)
-                  }}
-                  className="text-2xl hover:scale-125 active:scale-110 transition-transform cursor-pointer"
-                  title={report.title}
-                >
-                  {getIcon(report.type)}
-                </button>
-              )
-            })}
+      {/* Desktop Sidebar - Design System 2025 */}
+      {sidebarCollapsed ? (
+        // Collapsed: Compact tab with circular audio player + expand arrow
+        <button
+          onClick={() => setSidebarCollapsed(false)}
+          className="hidden md:flex absolute left-0 top-[72px] z-30 flex-row items-center justify-center gap-2
+                     px-2.5 py-2 rounded-r-lg glass shadow-elevation-2 border border-l-0 border-slate-800 dark:border-neutral-700
+                     hover:pl-3 transition-all duration-200 group"
+          aria-label="Mở bảng tin"
+        >
+          {/* Circular Audio Player - Click to play/pause (doesn't expand sidebar) */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <SidebarAudioPlayer collapsed={true} />
           </div>
-        ) : (
-          // Expanded: Show full reports list
+
+          {/* Expand Arrow */}
+          <svg className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      ) : (
+        // Expanded: Full sidebar panel
+        <aside className="hidden md:flex absolute top-[72px] left-4 bottom-40 w-96 rounded-lg glass shadow-elevation-2 border border-slate-800 dark:border-neutral-700 overflow-hidden z-30 flex-col">
+          {/* Sidebar Header */}
+          <div className="px-6 py-3 bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-700 dark:to-neutral-800 text-neutral-900 dark:text-white flex items-center justify-between gap-3">
+            {/* Left: Title + Separator + Audio Player */}
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-title-2">Bảng tin</h2>
+              <span className="text-neutral-400 dark:text-neutral-500 text-sm">|</span>
+              <SidebarAudioPlayer collapsed={false} />
+            </div>
+
+            {/* Right: Simplified collapse button - NO background circle */}
+            <button
+              onClick={() => setSidebarCollapsed(true)}
+              className="flex items-center justify-center -mr-1
+                         text-neutral-600 dark:text-neutral-400
+                         hover:text-neutral-900 dark:hover:text-white
+                         transition-colors duration-200"
+              aria-label="Thu gọn sidebar"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Emergency Hotline Ticker */}
+          <SidebarHotlineTicker />
+
+          {/* Reports List - Expanded view */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
           {loading ? (
             <div className="p-6 space-y-4">
@@ -474,7 +664,7 @@ export default function MapPage() {
               {filteredReports.map((report) => (
                 <article
                   key={report.id}
-                  className="p-4 bg-white/60 dark:bg-neutral-800/60 backdrop-blur-sm border border-white/30 dark:border-neutral-700/30 rounded-card hover:shadow-soft-md hover:border-white/50 dark:hover:border-neutral-600/50 hover:bg-white/80 dark:hover:bg-neutral-800/80 transition-all cursor-pointer group"
+                  className="p-4 glass rounded-sm border border-neutral-800/50 dark:border-neutral-700/50 hover:shadow-elevation-1 hover:border-neutral-700 dark:hover:border-neutral-600 hover:bg-white/95 dark:hover:bg-neutral-900/95 transition-all duration-ui ease-smooth cursor-pointer group"
                   onClick={() => {
                     setSelectedReport(report)
                     setIsModalOpen(true)
@@ -482,13 +672,13 @@ export default function MapPage() {
                 >
                   {/* Type Badge */}
                   <div className="flex items-start justify-between mb-2">
-                    <span className={`px-2.5 py-1 text-xs font-medium rounded text-white ${
-                      report.type === 'SOS' ? 'bg-red-700 dark:bg-red-800' :
-                      report.type === 'ALERT' ? 'bg-red-600 dark:bg-red-700' :
-                      report.type === 'ROAD' ? 'bg-amber-600 dark:bg-amber-700' :
-                      report.type === 'RAIN' ? 'bg-blue-600 dark:bg-blue-700' :
-                      report.type === 'NEEDS' ? 'bg-purple-600 dark:bg-purple-700' :
-                      'bg-gray-600 dark:bg-gray-700'
+                    <span className={`px-2.5 py-1 text-label rounded-xs text-white ${
+                      report.type === 'SOS' ? 'bg-danger-strong' :
+                      report.type === 'ALERT' ? 'bg-danger' :
+                      report.type === 'ROAD' ? 'bg-warning' :
+                      report.type === 'RAIN' ? 'bg-neutral-600' :
+                      report.type === 'NEEDS' ? 'bg-neutral-600' :
+                      'bg-neutral-600'
                     }`}>
                       {getReportTypeLabel(report.type)}
                     </span>
@@ -502,7 +692,7 @@ export default function MapPage() {
                         <img
                           src={report.media[0]}
                           alt={report.title}
-                          className="w-16 h-16 object-cover rounded border border-neutral-200 dark:border-neutral-700"
+                          className="w-16 h-16 object-cover rounded-xs border border-neutral-200 dark:border-neutral-700"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
                           }}
@@ -513,12 +703,12 @@ export default function MapPage() {
                     {/* Text content */}
                     <div className="flex-1 min-w-0">
                       {/* Title */}
-                      <h3 className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
+                      <h3 className="font-semibold text-body-2 text-neutral-900 dark:text-neutral-100 mb-1 group-hover:text-neutral-600 dark:group-hover:text-neutral-400 transition-colors duration-ui line-clamp-2">
                         {decodeHTML(report.title)}
                       </h3>
 
                       {/* Province only */}
-                      <div className="flex items-center text-xs text-neutral-500 dark:text-neutral-500">
+                      <div className="flex items-center text-label text-neutral-700 dark:text-neutral-200">
                         <span className="flex items-center gap-1">
                           <span className="text-sm">📍</span>
                           {report.province ? decodeHTML(report.province) : 'Không rõ'}
@@ -531,34 +721,34 @@ export default function MapPage() {
             </div>
           )}
           </div>
-        )}
-      </aside>
+        </aside>
+      )}
 
-      {/* Mobile Bottom Sheet - Spring Animation */}
+      {/* Mobile Bottom Sheet - Design System 2025 */}
       {sheetOpen && (
         <>
           {/* Backdrop with fade */}
           <div
-            className="md:hidden fixed inset-0 bg-black/60 z-40 animate-in fade-in duration-200"
+            className="md:hidden fixed inset-0 bg-black/60 z-40 animate-in fade-in duration-ui"
             onClick={() => setSheetOpen(false)}
           />
 
-          {/* Bottom Sheet - Slide up with spring */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 rounded-t-sheet shadow-soft-xl z-50 max-h-[75vh] flex flex-col animate-in slide-in-from-bottom duration-300 ease-spring border-t border-neutral-200 dark:border-neutral-800">
+          {/* Bottom Sheet - Slide up with smooth easing */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl rounded-t-xl shadow-elevation-2 z-50 max-h-[75vh] flex flex-col animate-in slide-in-from-bottom duration-sheet ease-smooth border-t border-neutral-300/50 dark:border-neutral-700/50">
             {/* Sheet Handle */}
             <div className="flex justify-center pt-3 pb-1">
-              <div className="w-12 h-1.5 bg-neutral-300 dark:bg-neutral-700 rounded-full" />
+              <div className="w-12 h-1.5 bg-neutral-300 dark:bg-neutral-700 rounded-pill" />
             </div>
 
             {/* Sheet Header */}
-            <div className="px-5 py-4 bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 text-white flex items-center justify-between">
+            <div className="px-5 py-4 bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-700 dark:to-neutral-800 text-neutral-900 dark:text-white flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold mb-0.5">Tin mới nhận</h2>
-                <p className="text-sm text-primary-100">{reports.length} báo cáo</p>
+                <h2 className="text-title-2 mb-0.5">Tin mới nhận</h2>
+                <p className="text-body-2 text-neutral-700 dark:text-neutral-100">{reports.length} báo cáo</p>
               </div>
               <button
                 onClick={() => setSheetOpen(false)}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors tap-target"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-800/20 hover:bg-neutral-800/30 active:bg-neutral-800/40 dark:bg-white/20 dark:hover:bg-white/30 dark:active:bg-white/40 transition-all duration-ui ease-smooth tap-target"
                 aria-label="Đóng"
               >
                 <span className="text-2xl leading-none">×</span>
@@ -583,21 +773,21 @@ export default function MapPage() {
                   {filteredReports.map((report) => (
                     <article
                       key={report.id}
-                      className="p-4 bg-white/60 dark:bg-neutral-800/60 backdrop-blur-sm border border-white/30 dark:border-neutral-700/30 rounded-card active:scale-[0.98] active:bg-white/80 dark:active:bg-neutral-800/80 transition-all tap-target"
+                      className="p-4 glass rounded-sm border border-neutral-800/50 dark:border-neutral-700/50 active:scale-[0.98] active:bg-white/95 dark:active:bg-neutral-900/95 transition-all duration-ui ease-smooth tap-target"
                       onClick={() => {
                         setSelectedReport(report)
                         setIsModalOpen(true)
                       }}
                     >
-                      {/* Type Badge & Trust */}
+                      {/* Type Badge */}
                       <div className="flex items-start justify-between mb-2">
-                        <span className={`px-3 py-1.5 text-sm font-medium rounded text-white ${
-                          report.type === 'SOS' ? 'bg-red-700 dark:bg-red-800' :
-                          report.type === 'ALERT' ? 'bg-red-600 dark:bg-red-700' :
-                          report.type === 'ROAD' ? 'bg-amber-600 dark:bg-amber-700' :
-                          report.type === 'RAIN' ? 'bg-blue-600 dark:bg-blue-700' :
-                          report.type === 'NEEDS' ? 'bg-purple-600 dark:bg-purple-700' :
-                          'bg-gray-600 dark:bg-gray-700'
+                        <span className={`px-3 py-1.5 text-body-2 font-medium rounded-xs text-white ${
+                          report.type === 'SOS' ? 'bg-danger-strong' :
+                          report.type === 'ALERT' ? 'bg-danger' :
+                          report.type === 'ROAD' ? 'bg-warning' :
+                          report.type === 'RAIN' ? 'bg-neutral-600' :
+                          report.type === 'NEEDS' ? 'bg-neutral-600' :
+                          'bg-neutral-600'
                         }`}>
                           {getReportTypeLabel(report.type)}
                         </span>
@@ -611,7 +801,7 @@ export default function MapPage() {
                             <img
                               src={report.media[0]}
                               alt={report.title}
-                              className="w-20 h-20 object-cover rounded border border-neutral-200 dark:border-neutral-700"
+                              className="w-20 h-20 object-cover rounded-xs border border-neutral-200 dark:border-neutral-700"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none'
                               }}
@@ -622,12 +812,12 @@ export default function MapPage() {
                         {/* Text content */}
                         <div className="flex-1 min-w-0">
                           {/* Title */}
-                          <h3 className="font-semibold text-base text-neutral-900 dark:text-neutral-100 mb-1 line-clamp-2">
+                          <h3 className="font-semibold text-body-1 text-neutral-900 dark:text-neutral-100 mb-1 line-clamp-2">
                             {decodeHTML(report.title)}
                           </h3>
 
                           {/* Province only */}
-                          <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-500">
+                          <div className="flex items-center text-body-2 text-neutral-700 dark:text-neutral-200">
                             <span className="flex items-center gap-1">
                               <span>📍</span>
                               {report.province ? decodeHTML(report.province) : 'Không rõ'}
@@ -678,6 +868,28 @@ export default function MapPage() {
       {/* Hot News Ticker - Fixed at bottom */}
       <NewsTicker
         reports={reports}
+        excludeReportIds={useMemo(() => {
+          // Calculate carousel IDs for deduplication
+          return reports
+            .filter(r => {
+              if (!r.media || r.media.length === 0) return false
+              const decodedTitle = decodeHTML(r.title)
+              if (decodedTitle.length < 10) return false
+              const vietnameseChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
+              if (!vietnameseChars.test(decodedTitle)) return false
+              const textToCheck = `${decodedTitle} ${r.description ? decodeHTML(r.description) : ''}`.toLowerCase()
+              const trafficKeywords = ['container', 'va chạm', 'va cham', 'tai nạn', 'tai nan', 'giao thông', 'giao thong', 'xe tải', 'xe tai', 'ô tô', 'o to']
+              if (trafficKeywords.some(kw => textToCheck.includes(kw))) return false
+              const govDocKeywords = ['văn bản', 'van ban', 'công văn', 'cong van', 'thông tư', 'thong tu']
+              if (govDocKeywords.some(kw => textToCheck.includes(kw))) return false
+              if (r.type === 'ALERT' || r.type === 'SOS') return r.trust_score >= 0.2
+              if (r.type === 'RAIN') return r.trust_score >= 0.25
+              if (r.type === 'ROAD') return r.trust_score >= 0.3
+              return false
+            })
+            .slice(0, 30)
+            .map(r => r.id)
+        }, [reports])}
         onReportClick={(report) => {
           setSelectedReport(report)
           setIsModalOpen(true)
@@ -725,8 +937,42 @@ export default function MapPage() {
         onClose={() => setIsLegendOpen(false)}
         lastUpdated={reports.length > 0 ? new Date(reports[0].created_at) : undefined}
       />
+
+      {/* Windy Weather Modal */}
+      <WindyModal
+        isOpen={windyModalOpen}
+        onClose={() => {
+          setWindyModalOpen(false)
+          setWindyStormView(false)  // Reset storm view on close
+        }}
+        initialLat={viewportForWindy.lat}
+        initialLon={viewportForWindy.lon}
+        initialZoom={viewportForWindy.zoom}
+        stormView={windyStormView}
+      />
+
+      {/* Storm Summary Modal */}
+      <StormSummaryModal
+        data={stormData}
+        isOpen={isStormModalOpen}
+        onClose={() => setIsStormModalOpen(false)}
+        onStormPathClick={() => {
+          setWindyStormView(true)
+          setWindyModalOpen(true)
+          setIsStormModalOpen(false)
+        }}
+        onReportClick={(reportId) => {
+          const report = reports.find(r => r.id === reportId)
+          if (report) {
+            setSelectedReport(report)
+            setIsModalOpen(true)
+            setIsStormModalOpen(false)
+          }
+        }}
+      />
       </div>
       </LocationProvider>
+      </AudioPlayerProvider>
     </ErrorBoundary>
   )
 }

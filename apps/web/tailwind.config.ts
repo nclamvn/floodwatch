@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class', // Enable class-based dark mode strategy
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -8,9 +9,28 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Design Tokens: Modern & Minimal Color System
+      // ========================================
+      // DESIGN TOKENS: FloodWatch Mobile Premium
+      // Navy-Slate base, Inter font, Apple-inspired
+      // ========================================
+
       colors: {
-        // Primary Accent (Blue - for CTAs, links, active states)
+        // ===== BASE: Slate (Navy-dark theme) - HIGH CONTRAST =====
+        slate: {
+          950: '#020617',  // App background (dark mode)
+          900: '#0f172a',  // PRIMARY text (light mode), Surface (dark mode)
+          800: '#1e293b',  // Border (dark mode)
+          700: '#334155',  // SECONDARY text (light mode), Border (dark mode)
+          600: '#475569',  // Border (light mode)
+          500: '#64748b',  // TERTIARY text (light mode/dark mode)
+          400: '#94a3b8',  // TERTIARY text (dark mode)
+          300: '#cbd5e1',  // Border (light mode)
+          200: '#e2e8f0',  // SECONDARY text (dark mode), Border (light mode)
+          100: '#f1f5f9',  // Background (light mode)
+          50: '#f8fafc',   // PRIMARY text (dark mode), Background (light mode)
+        },
+
+        // ===== PRIMARY ACCENT (Blue - Keep existing) =====
         primary: {
           50: '#EFF6FF',
           100: '#DBEAFE',
@@ -24,7 +44,33 @@ const config: Config = {
           900: '#1E3A8A',
           950: '#172554',
         },
-        // Neutral Grays (for text, backgrounds, borders)
+
+        // ===== ACCENT ALIAS (for convenience) =====
+        accent: {
+          DEFAULT: '#3B82F6',
+          hover: '#60A5FA',
+        },
+
+        // ===== SEMANTIC: Danger/SOS (Red) =====
+        danger: {
+          DEFAULT: '#EF4444',   // red-500
+          strong: '#B91C1C',    // red-700 for SOS
+          light: '#FCA5A5',     // red-300 for text
+        },
+
+        // ===== SEMANTIC: Warning (Orange) =====
+        warning: {
+          DEFAULT: '#F97316',   // orange-500
+          hover: '#EA580C',     // orange-600
+        },
+
+        // ===== SEMANTIC: Success (Green) =====
+        success: {
+          DEFAULT: '#22C55E',   // green-500
+          hover: '#16A34A',     // green-600
+        },
+
+        // ===== LEGACY (backward compatibility) =====
         neutral: {
           50: '#FAFAFA',
           100: '#F5F5F5',
@@ -38,19 +84,6 @@ const config: Config = {
           900: '#171717',
           950: '#0A0A0A',
         },
-        // Semantic Colors (Alerts & Status)
-        success: {
-          50: '#F0FDF4',
-          500: '#22C55E',
-          600: '#16A34A',
-          700: '#15803D',
-        },
-        warning: {
-          50: '#FFFBEB',
-          500: '#F59E0B',
-          600: '#D97706',
-          700: '#B45309',
-        },
         error: {
           50: '#FEF2F2',
           500: '#EF4444',
@@ -62,7 +95,6 @@ const config: Config = {
           500: '#3B82F6',
           600: '#2563EB',
         },
-        // Legacy aliases (backward compatibility)
         flood: {
           light: '#60A5FA',
           DEFAULT: '#3B82F6',
@@ -71,35 +103,64 @@ const config: Config = {
         alert: {
           low: '#22C55E',
           medium: '#F59E0B',
-          high: '#F59E0B',
-          critical: '#EF4444',
+          high: '#F97316',
+          critical: '#B91C1C',
         }
       },
-      // Refined Border Radius
+
+      // ===== TYPOGRAPHY SCALE (Inter) =====
+      fontSize: {
+        'title-1': ['22px', { lineHeight: '1.3', fontWeight: '600' }],  // Hero, modal titles
+        'title-2': ['18px', { lineHeight: '1.4', fontWeight: '600' }],  // Section titles
+        'body-1': ['15px', { lineHeight: '1.6', fontWeight: '400' }],   // Primary text
+        'body-2': ['13px', { lineHeight: '1.5', fontWeight: '400' }],   // Secondary text
+        'label': ['12px', { lineHeight: '1.3', fontWeight: '500' }],    // Badges, chips, meta
+      },
+
+      // ===== BORDER RADIUS SYSTEM =====
       borderRadius: {
+        'xs': '6px',      // Chip, badge
+        'sm': '10px',     // Input, small card
+        'lg': '16px',     // Card, bottom sheet
+        'xl': '24px',     // Modal, read mode
+        'pill': '9999px', // Buttons, pills
+        // Legacy (keep for compatibility)
         'subtle': '8px',
         'card': '12px',
         'prominent': '16px',
         'sheet': '20px',
       },
-      // Soft Shadow System
+
+      // ===== SHADOW & ELEVATION =====
       boxShadow: {
+        // Premium elevation
+        'elevation-1': '0 8px 24px rgba(0, 0, 0, 0.40)',   // Floating buttons
+        'elevation-2': '0 24px 60px rgba(0, 0, 0, 0.50)',  // Modals
+        // Legacy soft shadows (keep for compatibility)
         'soft-sm': '0 1px 2px 0 rgb(0 0 0 / 0.03)',
         'soft': '0 2px 8px 0 rgb(0 0 0 / 0.04)',
         'soft-md': '0 4px 12px 0 rgb(0 0 0 / 0.05)',
         'soft-lg': '0 8px 24px 0 rgb(0 0 0 / 0.06)',
         'soft-xl': '0 12px 32px 0 rgb(0 0 0 / 0.08)',
       },
-      // Consistent Spacing (extend existing Tailwind scale)
+
+      // ===== SPACING (consistent 4px base) =====
       spacing: {
-        '18': '4.5rem',
-        '22': '5.5rem',
+        '18': '4.5rem',  // 72px
+        '22': '5.5rem',  // 88px
       },
-      // Animation easing
+
+      // ===== ANIMATION TIMING =====
+      transitionDuration: {
+        'ui': '180ms',      // Quick UI interactions
+        'sheet': '220ms',   // Bottom sheet, modals
+      },
       transitionTimingFunction: {
-        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'smooth': 'cubic-bezier(0.22, 0.61, 0.36, 1)',  // Apple-style ease-out
+        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',  // Legacy spring
       },
-      // Custom Animations
+
+      // ===== KEYFRAMES =====
       keyframes: {
         spotlight: {
           '0%': { transform: 'translateX(-100%)' },

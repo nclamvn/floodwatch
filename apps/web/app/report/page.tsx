@@ -145,19 +145,19 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-neutral-950">
       {/* Header - Modern pill style */}
-      <header className="sticky top-0 z-50 bg-white/90 dark:bg-neutral-900/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-neutral-200 dark:border-neutral-800 shadow-soft">
+      <header className="sticky top-0 z-50 bg-white/90 dark:bg-neutral-950/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-slate-200 dark:border-neutral-800 shadow-soft">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary-600 animate-pulse" />
-            <h1 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-neutral-600 animate-pulse" />
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-neutral-50">
               Báo cáo Cộng đồng
             </h1>
           </div>
           <Link
             href="/map"
-            className="px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 rounded-full text-sm font-medium transition-colors"
+            className="px-4 py-2 bg-slate-100 dark:bg-neutral-900 hover:bg-slate-200 dark:hover:bg-neutral-700 text-slate-900 dark:text-neutral-100 rounded-full text-sm font-medium transition-colors"
           >
             ← Bản đồ
           </Link>
@@ -166,7 +166,7 @@ export default function ReportPage() {
 
       {/* Form */}
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-neutral-900 rounded-prominent shadow-soft-lg p-6 md:p-8 border border-neutral-200 dark:border-neutral-800">
+        <div className="bg-white dark:bg-neutral-950 rounded-prominent shadow-soft-lg p-6 md:p-8 border border-slate-200 dark:border-neutral-800">
           {success && (
             <div className="mb-6 p-4 bg-success-50 dark:bg-success-900/30 text-success-700 dark:text-success-400 rounded-card border border-success-200 dark:border-success-700/30">
               ✅ Đã gửi báo cáo thành công! Đang chuyển đến bản đồ...
@@ -182,13 +182,13 @@ export default function ReportPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Type */}
             <div>
-              <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              <label className="block text-sm font-semibold text-slate-900 dark:text-neutral-100 mb-2">
                 Loại báo cáo *
               </label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-card text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow"
+                className="w-full px-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-card text-slate-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-shadow"
                 required
               >
                 <option value="SOS">🆘 SOS - Cần cứu trợ khẩn cấp</option>
@@ -199,25 +199,25 @@ export default function ReportPage() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              <label className="block text-sm font-semibold text-slate-900 dark:text-neutral-100 mb-2">
                 Mô tả chi tiết *
               </label>
               <textarea
                 value={formData.text}
                 onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
-                className="w-full px-4 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-card text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow resize-none"
+                className="w-full px-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-card text-slate-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-shadow resize-none"
                 rows={4}
                 placeholder="Ví dụ: Gia đình 5 người bị cô lập tại xóm 3, cần thực phẩm và nước uống..."
                 required
               />
-              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+              <p className="text-xs text-slate-600 dark:text-neutral-400 mt-1">
                 Càng chi tiết càng giúp đội cứu hộ hỗ trợ nhanh hơn
               </p>
             </div>
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              <label className="block text-sm font-semibold text-slate-900 dark:text-neutral-100 mb-2">
                 Vị trí *
               </label>
               <div className="space-y-3">
@@ -225,7 +225,7 @@ export default function ReportPage() {
                   type="button"
                   onClick={getLocation}
                   disabled={gettingLocation}
-                  className="w-full px-4 py-2.5 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white rounded-card font-medium shadow-sm hover:shadow-md transition-all disabled:bg-neutral-400 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white rounded-card font-medium shadow-sm hover:shadow-md transition-all disabled:bg-neutral-400 disabled:cursor-not-allowed"
                 >
                   {gettingLocation ? 'Đang lấy vị trí...' : '📍 Lấy vị trí hiện tại (GPS)'}
                 </button>
@@ -305,11 +305,11 @@ export default function ReportPage() {
           </form>
 
           {/* Help text */}
-          <div className="mt-8 p-5 border-t border-neutral-200 dark:border-neutral-800 bg-info-50/50 dark:bg-info-900/10 rounded-card">
-            <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-3">
+          <div className="mt-8 p-5 border-t border-slate-200 dark:border-neutral-800 bg-info-50/50 dark:bg-info-900/10 rounded-card">
+            <p className="text-sm font-bold text-slate-900 dark:text-neutral-100 mb-3">
               ⚠️ Lưu ý quan trọng:
             </p>
-            <ul className="text-sm text-neutral-700 dark:text-neutral-300 list-disc list-inside space-y-2">
+            <ul className="text-sm text-slate-700 dark:text-neutral-300 list-disc list-inside space-y-2">
               <li>Chỉ báo cáo tình huống thực tế, khẩn cấp</li>
               <li>Cung cấp thông tin chính xác để đội cứu hộ hỗ trợ nhanh</li>
               <li>Nếu tình huống nguy hiểm, gọi <strong>113/114</strong> trước khi báo cáo</li>

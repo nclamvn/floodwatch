@@ -21,6 +21,7 @@ from app.database import SessionLocal, Report
 from app.database.models import ReportType
 from app.services.province_extractor import extract_location_data
 from app.services.article_extractor import extract_article_hybrid
+from app.services.news_dedup import NewsDedupService
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -283,9 +284,11 @@ def scrape_kttv(dry_run: bool = False) -> int:
                         # Parse date
                         created_at = parse_kttv_date(date_str)
 
-                        # Check for duplicates
-                        if deduplicate_check(db, title):
-                            print(f"  [SKIP] Duplicate: {title[:60]}...")
+                        # Check for cross-source duplicates (Layer 1)
+                        duplicate = NewsDedupService.find_duplicate(db, title, description, created_at)
+                        if duplicate:
+                            dup_id, similarity, match_type = duplicate
+                            print(f"  [SKIP] Duplicate ({match_type}, {similarity:.0%}): {title[:50]}...")
                             continue
 
                         # Extract location
@@ -313,6 +316,11 @@ def scrape_kttv(dry_run: bool = False) -> int:
                                 print(f"  ✗ Article extraction failed: {str(e)}, using summary")
                                 final_description = summary
 
+                        # Prepare deduplication fields
+                        dedup_fields = NewsDedupService.prepare_report_dedup_fields(
+                            title, final_description, link or "nchmf.gov.vn"
+                        )
+
                         # Create report
                         report = Report(
                             type=report_type,
@@ -325,7 +333,11 @@ def scrape_kttv(dry_run: bool = False) -> int:
                             location=from_shape(Point(location_data['lon'], location_data['lat'])) if location_data['lat'] and location_data['lon'] else None,
                             trust_score=0.98,  # KTTV highest trust
                             status="new",
-                            created_at=created_at
+                            created_at=created_at,
+                            # Deduplication fields
+                            normalized_title=dedup_fields['normalized_title'],
+                            content_hash=dedup_fields['content_hash'],
+                            source_domain=dedup_fields['source_domain']
                         )
 
                         if dry_run:

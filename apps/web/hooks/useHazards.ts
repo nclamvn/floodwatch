@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { HazardEvent, GetHazardsParams } from '@/types/hazard'
+import { getCachedResponse, setCachedResponse } from '@/lib/apiCache'
+
+const CACHE_TTL_MS = 60 * 1000 // 60 seconds
 
 interface UseHazardsOptions extends Omit<GetHazardsParams, 'page' | 'limit'> {
   enabled?: boolean
@@ -59,31 +62,49 @@ export function useHazards(options: UseHazardsOptions = {}): UseHazardsReturn {
   useEffect(() => {
     if (!enabled) return
 
-    const fetchHazards = async () => {
+    // AbortController to cancel fetch on unmount
+    const abortController = new AbortController()
+    let isMounted = true
+
+    const fetchHazards = async (forceRefresh = false) => {
+      // Build query params
+      const params = new URLSearchParams()
+
+      if (lat !== undefined && lng !== undefined) {
+        params.append('lat', lat.toString())
+        params.append('lng', lng.toString())
+        params.append('radius_km', radius_km.toString())
+      }
+
+      if (types) params.append('types', types)
+      if (severity) params.append('severity', severity)
+      params.append('active_only', active_only.toString())
+      if (sort) params.append('sort', sort)
+      params.append('limit', '100') // Fetch up to 100 hazards
+
+      // Get API URL from env
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const url = `${apiUrl}/hazards?${params.toString()}`
+
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = getCachedResponse<{ data: HazardEvent[]; pagination?: { total: number } }>(url)
+        if (cached) {
+          if (isMounted) {
+            setHazards(cached.data || [])
+            setTotal(cached.pagination?.total || 0)
+          }
+          return
+        }
+      }
+
       try {
-        setIsLoading(true)
-        setError(null)
-
-        // Build query params
-        const params = new URLSearchParams()
-
-        if (lat !== undefined && lng !== undefined) {
-          params.append('lat', lat.toString())
-          params.append('lng', lng.toString())
-          params.append('radius_km', radius_km.toString())
+        if (isMounted) {
+          setIsLoading(true)
+          setError(null)
         }
 
-        if (types) params.append('types', types)
-        if (severity) params.append('severity', severity)
-        params.append('active_only', active_only.toString())
-        if (sort) params.append('sort', sort)
-        params.append('limit', '100') // Fetch up to 100 hazards
-
-        // Get API URL from env
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        const url = `${apiUrl}/hazards?${params.toString()}`
-
-        const response = await fetch(url)
+        const response = await fetch(url, { signal: abortController.signal })
 
         if (!response.ok) {
           throw new Error(`Failed to fetch hazards: ${response.statusText}`)
@@ -91,14 +112,25 @@ export function useHazards(options: UseHazardsOptions = {}): UseHazardsReturn {
 
         const data = await response.json()
 
-        setHazards(data.data || [])
-        setTotal(data.pagination?.total || 0)
+        // Cache the response
+        setCachedResponse(url, data, CACHE_TTL_MS)
+
+        if (isMounted) {
+          setHazards(data.data || [])
+          setTotal(data.pagination?.total || 0)
+        }
       } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching hazards:', err)
-        setError(err instanceof Error ? err.message : 'Unknown error')
-        setHazards([])
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Unknown error')
+          setHazards([])
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -111,6 +143,8 @@ export function useHazards(options: UseHazardsOptions = {}): UseHazardsReturn {
     }
 
     return () => {
+      isMounted = false
+      abortController.abort()
       if (intervalId) clearInterval(intervalId)
     }
   }, [

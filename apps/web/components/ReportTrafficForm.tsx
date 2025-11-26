@@ -113,7 +113,7 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
       case 'impassable': return 'bg-red-500/20 text-red-400 border-red-500'
       case 'dangerous': return 'bg-orange-500/20 text-orange-400 border-orange-500'
       case 'slow': return 'bg-amber-500/20 text-amber-400 border-amber-500'
-      case 'warning': return 'bg-blue-500/20 text-blue-400 border-blue-500'
+      case 'warning': return 'bg-neutral-500/20 text-neutral-400 border-neutral-500'
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500'
     }
   }
@@ -142,21 +142,21 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-lg max-w-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
+          className="bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-lg max-w-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-6 py-5 border-b border-neutral-200/50 dark:border-neutral-700 flex items-start justify-between">
+          <div className="px-6 py-5 border-b border-slate-200/50 dark:border-neutral-700 flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-full bg-amber-600 flex items-center justify-center">
                   <Construction className="w-6 h-6 text-white" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-neutral-50">
                   Báo cáo tình trạng giao thông
                 </h2>
               </div>
-              <p className="text-sm text-gray-600 dark:text-neutral-400">
+              <p className="text-sm text-gray-700 dark:text-neutral-200">
                 Giúp cộng đồng biết về đường bị ngập, sạt lở, ùn tắc
               </p>
             </div>
@@ -164,7 +164,7 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
             {/* Close button */}
             <button
               onClick={onClose}
-              className="ml-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-800 active:bg-gray-300 dark:active:bg-neutral-700 transition-colors text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+              className="ml-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-700 transition-colors text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
               aria-label="Đóng"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,7 +197,7 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
 
             {/* Disruption type */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-3">
                 Loại sự cố *
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -217,8 +217,8 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
                       onClick={() => setFormData({ ...formData, type: option.value })}
                       className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all flex items-center gap-2 ${
                         formData.type === option.value
-                          ? 'bg-blue-500/20 text-blue-400 border-blue-500'
-                          : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-400 border-gray-300 dark:border-neutral-700 hover:border-gray-400 dark:hover:border-neutral-600'
+                          ? 'bg-neutral-500/20 text-neutral-400 border-neutral-500'
+                          : 'bg-gray-100 dark:bg-neutral-900 text-gray-700 dark:text-neutral-200 border-gray-300 dark:border-neutral-700 hover:border-gray-400 dark:hover:border-neutral-600'
                       }`}
                     >
                       <IconComponent className="w-5 h-5" />
@@ -231,7 +231,7 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
 
             {/* Severity level */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-3">
                 Mức độ nghiêm trọng *
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -248,7 +248,7 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
                     className={`px-4 py-3 rounded-lg border-2 font-semibold transition-all ${
                       formData.severity === option.value
                         ? getSeverityColor(option.value)
-                        : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-400 border-gray-300 dark:border-neutral-700 hover:border-gray-400 dark:hover:border-neutral-600'
+                        : 'bg-gray-100 dark:bg-neutral-900 text-gray-700 dark:text-neutral-200 border-gray-300 dark:border-neutral-700 hover:border-gray-400 dark:hover:border-neutral-600'
                     }`}
                   >
                     {option.label}
@@ -259,21 +259,21 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
 
             {/* Road name */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-2">
                 Tên đường
               </label>
               <input
                 type="text"
                 value={formData.road_name}
                 onChange={(e) => setFormData({ ...formData, road_name: e.target.value })}
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-neutral-50 placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Ví dụ: QL1A, DT652, Đường Lê Lợi..."
               />
             </div>
 
             {/* Location description */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-2">
                 Mô tả vị trí *
               </label>
               <input
@@ -282,20 +282,20 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
                 minLength={5}
                 value={formData.location_description}
                 onChange={(e) => setFormData({ ...formData, location_description: e.target.value })}
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-neutral-50 placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Ví dụ: Gần ngã tư Bưu điện, đoạn Km15..."
               />
             </div>
 
             {/* Description */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-2">
                 Chi tiết
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-neutral-50 placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={3}
                 placeholder="Thông tin thêm về tình trạng đường..."
               />
@@ -303,27 +303,27 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
 
             {/* Estimated clearance */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-2">
                 Dự kiến thông tuyến
               </label>
               <input
                 type="text"
                 value={formData.estimated_clearance}
                 onChange={(e) => setFormData({ ...formData, estimated_clearance: e.target.value })}
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-neutral-50 placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Ví dụ: 2-3 ngày, 1 tuần, chưa rõ..."
               />
             </div>
 
             {/* Alternative route */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-2">
                 Đường thay thế
               </label>
               <textarea
                 value={formData.alternative_route}
                 onChange={(e) => setFormData({ ...formData, alternative_route: e.target.value })}
-                className="w-full px-4 py-3 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-neutral-50 placeholder-gray-500 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={2}
                 placeholder="Ví dụ: Có thể đi qua QL20 hoặc qua xã X..."
               />
@@ -331,25 +331,25 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
 
             {/* Location info */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-neutral-200 uppercase tracking-wide mb-2">
                 Vị trí hiện tại
               </label>
-              <div className="px-4 py-3 bg-gray-100 dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white font-mono text-sm">
+              <div className="px-4 py-3 bg-gray-100 dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-neutral-50 font-mono text-sm">
                 {formData.lat.toFixed(6)}, {formData.lon.toFixed(6)}
               </div>
-              <p className="text-xs text-gray-500 dark:text-neutral-500 mt-1">
+              <p className="text-xs text-gray-700 dark:text-neutral-200 mt-1">
                 Vị trí được lấy tự động từ thiết bị của bạn
               </p>
             </div>
           </form>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-neutral-200/50 dark:border-neutral-700 flex items-center justify-end gap-3 bg-gray-50/50 dark:bg-neutral-900/50">
+          <div className="px-6 py-4 border-t border-slate-200/50 dark:border-neutral-700 flex items-center justify-end gap-3 bg-gray-50/50 dark:bg-neutral-950/50">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 text-gray-900 dark:text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-neutral-900 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 text-gray-900 dark:text-neutral-50 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Hủy
             </button>

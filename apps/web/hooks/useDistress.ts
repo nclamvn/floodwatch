@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getCachedResponse, setCachedResponse } from '@/lib/apiCache'
+
+const CACHE_TTL_MS = 30 * 1000 // 30 seconds (distress reports need fresher data)
 
 export interface DistressReport {
   id: string
@@ -82,29 +85,52 @@ export function useDistress(options: UseDistressOptions = {}): UseDistressReturn
   useEffect(() => {
     if (!enabled) return
 
-    const fetchReports = async () => {
+    // AbortController to cancel fetch on unmount
+    const abortController = new AbortController()
+    let isMounted = true
+
+    const fetchReports = async (forceRefresh = false) => {
+      // Build query params
+      const params = new URLSearchParams()
+
+      if (lat !== undefined && lon !== undefined) {
+        params.append('lat', lat.toString())
+        params.append('lon', lon.toString())
+        params.append('radius_km', radius_km.toString())
+      }
+
+      if (status) params.append('status', status)
+      if (urgency) params.append('urgency', urgency)
+      if (verified_only) params.append('verified_only', 'true')
+      params.append('limit', '100')
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const url = `${apiUrl}/distress?${params.toString()}`
+
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = getCachedResponse<{ data: DistressReport[]; meta?: typeof stats }>(url)
+        if (cached) {
+          if (isMounted) {
+            setReports(cached.data || [])
+            setStats(cached.meta || {
+              critical_count: 0,
+              high_count: 0,
+              pending_count: 0,
+              total_active: 0,
+            })
+          }
+          return
+        }
+      }
+
       try {
-        setIsLoading(true)
-        setError(null)
-
-        // Build query params
-        const params = new URLSearchParams()
-
-        if (lat !== undefined && lon !== undefined) {
-          params.append('lat', lat.toString())
-          params.append('lon', lon.toString())
-          params.append('radius_km', radius_km.toString())
+        if (isMounted) {
+          setIsLoading(true)
+          setError(null)
         }
 
-        if (status) params.append('status', status)
-        if (urgency) params.append('urgency', urgency)
-        if (verified_only) params.append('verified_only', 'true')
-        params.append('limit', '100')
-
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        const url = `${apiUrl}/distress?${params.toString()}`
-
-        const response = await fetch(url)
+        const response = await fetch(url, { signal: abortController.signal })
 
         if (!response.ok) {
           throw new Error(`Failed to fetch distress reports: ${response.statusText}`)
@@ -112,19 +138,30 @@ export function useDistress(options: UseDistressOptions = {}): UseDistressReturn
 
         const data = await response.json()
 
-        setReports(data.data || [])
-        setStats(data.meta || {
-          critical_count: 0,
-          high_count: 0,
-          pending_count: 0,
-          total_active: 0,
-        })
+        // Cache the response
+        setCachedResponse(url, data, CACHE_TTL_MS)
+
+        if (isMounted) {
+          setReports(data.data || [])
+          setStats(data.meta || {
+            critical_count: 0,
+            high_count: 0,
+            pending_count: 0,
+            total_active: 0,
+          })
+        }
       } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching distress reports:', err)
-        setError(err instanceof Error ? err.message : 'Unknown error')
-        setReports([])
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Unknown error')
+          setReports([])
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -137,6 +174,8 @@ export function useDistress(options: UseDistressOptions = {}): UseDistressReturn
     }
 
     return () => {
+      isMounted = false
+      abortController.abort()
       if (intervalId) clearInterval(intervalId)
     }
   }, [

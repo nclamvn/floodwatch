@@ -54,6 +54,11 @@ interface RoadEventsResponse {
     source_url?: string
     created_at?: string
     updated_at?: string
+    // Lifecycle fields
+    lifecycle_status?: 'ACTIVE' | 'RESOLVED' | 'ARCHIVED'
+    last_verified_at?: string
+    resolved_at?: string
+    archived_at?: string
   }>
   total?: number
 }
@@ -76,7 +81,12 @@ function transformToRouteSegment(item: RoadEventsResponse['data'][0]): RouteSegm
     source_url: item.source_url,
     verified_at: item.last_verified,
     created_at: item.created_at,
-    updated_at: item.updated_at
+    updated_at: item.updated_at,
+    // Lifecycle fields
+    lifecycle_status: item.lifecycle_status,
+    last_verified_at: item.last_verified_at,
+    resolved_at: item.resolved_at,
+    archived_at: item.archived_at
   }
 }
 

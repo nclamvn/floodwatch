@@ -21,6 +21,7 @@ from app.database import SessionLocal, Report
 from app.database.models import ReportType
 from app.services.province_extractor import extract_location_data
 from app.services.article_extractor import extract_article_hybrid
+from app.services.news_dedup import NewsDedupService
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -274,9 +275,11 @@ def scrape_thanhnien_rss(dry_run: bool = False) -> int:
                     if not is_disaster_related(title, description):
                         continue
 
-                    # Check for duplicates
-                    if deduplicate_check(db, title, created_at):
-                        print(f"  [SKIP] Duplicate: {title[:60]}...")
+                    # Check for cross-source duplicates (Layer 1)
+                    duplicate = NewsDedupService.find_duplicate(db, title, description, created_at)
+                    if duplicate:
+                        dup_id, similarity, match_type = duplicate
+                        print(f"  [SKIP] Duplicate ({match_type}, {similarity:.0%}): {title[:50]}...")
                         continue
 
                     # Extract location
@@ -284,6 +287,11 @@ def scrape_thanhnien_rss(dry_run: bool = False) -> int:
 
                     # Classify report type
                     report_type = classify_report_type(title, description)
+
+                    # Prepare deduplication fields
+                    dedup_fields = NewsDedupService.prepare_report_dedup_fields(
+                        title, description, link or "thanhnien.vn"
+                    )
 
                     # Create report
                     report = Report(
@@ -297,7 +305,11 @@ def scrape_thanhnien_rss(dry_run: bool = False) -> int:
                         location=from_shape(Point(location_data['lon'], location_data['lat'])) if location_data['lat'] and location_data['lon'] else None,
                         trust_score=0.90,  # Thanh Niên base trust score
                         status="new",
-                        created_at=created_at
+                        created_at=created_at,
+                        # Deduplication fields
+                        normalized_title=dedup_fields['normalized_title'],
+                        content_hash=dedup_fields['content_hash'],
+                        source_domain=dedup_fields['source_domain']
                     )
 
                     if dry_run:

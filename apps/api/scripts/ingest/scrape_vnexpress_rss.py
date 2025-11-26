@@ -21,6 +21,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app.database import SessionLocal, Report
 from app.database.models import ReportType
 from app.services.province_extractor import extract_location_data
+from app.services.article_extractor import extract_article
+from app.services.news_dedup import NewsDedupService
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -357,8 +359,25 @@ def scrape_vnexpress_rss(dry_run: bool = False) -> int:
                 try:
                     # Extract basic data
                     title = clean_html(entry.get('title', ''))
-                    description = clean_html(entry.get('description', entry.get('summary', '')))
+                    rss_description = clean_html(entry.get('description', entry.get('summary', '')))
                     link = entry.get('link', '')
+
+                    # Try to extract full article content using 5-tier absolute extraction
+                    description = rss_description  # Default to RSS description
+                    if link:
+                        try:
+                            article_result = extract_article(link, language='vi', min_length=500)
+                            if article_result.get('success') and len(article_result.get('full_text', '')) >= 500:
+                                description = article_result['full_text']
+                                tier_used = article_result.get('tier_used', 'unknown')
+                                print(f"  ✓ Full article ({tier_used}): {len(description)} chars")
+                            elif article_result.get('full_text') and len(article_result.get('full_text', '')) > len(rss_description):
+                                description = article_result['full_text']
+                                print(f"  ~ Partial: {len(description)} chars")
+                            else:
+                                print(f"  ✗ Using RSS summary ({len(rss_description)} chars)")
+                        except Exception as e:
+                            print(f"  ✗ Extraction failed: {str(e)[:50]}")
 
                     # Parse published date
                     published = entry.get('published_parsed') or entry.get('updated_parsed')
@@ -371,9 +390,11 @@ def scrape_vnexpress_rss(dry_run: bool = False) -> int:
                     if not is_disaster_related(title, description):
                         continue
 
-                    # Check for duplicates
-                    if deduplicate_check(db, title, created_at):
-                        print(f"  [SKIP] Duplicate: {title[:60]}...")
+                    # Check for cross-source duplicates (Layer 1)
+                    duplicate = NewsDedupService.find_duplicate(db, title, description, created_at)
+                    if duplicate:
+                        dup_id, similarity, match_type = duplicate
+                        print(f"  [SKIP] Duplicate ({match_type}, {similarity:.0%}): {title[:50]}...")
                         continue
 
                     # Extract location
@@ -389,6 +410,11 @@ def scrape_vnexpress_rss(dry_run: bool = False) -> int:
                     if len(media_urls) == 0 and link:
                         media_urls = extract_images_from_url(link)
 
+                    # Prepare deduplication fields
+                    dedup_fields = NewsDedupService.prepare_report_dedup_fields(
+                        title, description, link or "vnexpress.net"
+                    )
+
                     # Create report
                     report = Report(
                         type=report_type,
@@ -402,7 +428,11 @@ def scrape_vnexpress_rss(dry_run: bool = False) -> int:
                         trust_score=0.9,  # VnExpress base trust score
                         status="new",
                         created_at=created_at,
-                        media=media_urls
+                        media=media_urls,
+                        # Deduplication fields
+                        normalized_title=dedup_fields['normalized_title'],
+                        content_hash=dedup_fields['content_hash'],
+                        source_domain=dedup_fields['source_domain']
                     )
 
                     if dry_run:

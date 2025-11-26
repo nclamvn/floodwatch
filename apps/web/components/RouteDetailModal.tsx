@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, MapPin, Clock, Navigation, ExternalLink, AlertTriangle, ShieldCheck, ShieldAlert, ShieldX, Copy, Check } from 'lucide-react'
+import { X, MapPin, Clock, Navigation, ExternalLink, AlertTriangle, ShieldCheck, ShieldAlert, ShieldX, Copy, Check, CheckCircle2 } from 'lucide-react'
 import { RouteSegment, RouteStatus } from './RouteCard'
 import DirectionsModal from './DirectionsModal'
 
@@ -78,12 +78,24 @@ function formatFullDate(dateString?: string): string {
   })
 }
 
+// Calculate days until archive for RESOLVED alerts
+function getDaysUntilArchive(resolvedAt?: string): number {
+  if (!resolvedAt) return 3
+  const resolved = new Date(resolvedAt)
+  const archiveDate = new Date(resolved.getTime() + 3 * 24 * 60 * 60 * 1000)
+  const now = new Date()
+  const diffDays = Math.ceil((archiveDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+  return Math.max(0, diffDays)
+}
+
 export default function RouteDetailModal({ route, onClose }: RouteDetailModalProps) {
   const [showDirections, setShowDirections] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const config = STATUS_CONFIG[route.status]
   const hasCoordinates = route.lat !== undefined && route.lon !== undefined
+  const isResolved = route.lifecycle_status === 'RESOLVED'
+  const daysUntilArchive = isResolved ? getDaysUntilArchive(route.resolved_at) : 0
 
   const handleCopyLocation = () => {
     if (hasCoordinates) {
@@ -110,18 +122,33 @@ export default function RouteDetailModal({ route, onClose }: RouteDetailModalPro
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto animate-scale-in">
+          {/* Resolved Banner */}
+          {isResolved && (
+            <div className="flex items-center justify-between px-4 py-3 bg-emerald-100 dark:bg-emerald-900/40 border-b border-emerald-200 dark:border-emerald-800">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                  Đã khắc phục
+                </span>
+              </div>
+              <span className="text-sm text-emerald-600 dark:text-emerald-400">
+                Hiển thị thêm {daysUntilArchive} ngày
+              </span>
+            </div>
+          )}
+
           {/* Header with Status */}
-          <div className={`flex items-center justify-between p-4 ${config.bgColor}`}>
+          <div className={`flex items-center justify-between p-4 ${isResolved ? 'bg-neutral-50 dark:bg-neutral-800/50' : config.bgColor}`}>
             <div className="flex items-center gap-3">
-              <div className={config.textColor}>
+              <div className={isResolved ? 'text-neutral-400 dark:text-neutral-500' : config.textColor}>
                 {config.icon}
               </div>
               <div>
-                <span className={`font-bold text-lg ${config.textColor}`}>
+                <span className={`font-bold text-lg ${isResolved ? 'text-neutral-500 dark:text-neutral-400 line-through' : config.textColor}`}>
                   {config.label}
                 </span>
                 {route.risk_score !== undefined && route.risk_score > 0 && (
-                  <p className={`text-sm ${config.textColor} opacity-80`}>
+                  <p className={`text-sm ${isResolved ? 'text-neutral-400 dark:text-neutral-500' : config.textColor} opacity-80`}>
                     Mức độ rủi ro: {Math.round(route.risk_score * 100)}%
                   </p>
                 )}

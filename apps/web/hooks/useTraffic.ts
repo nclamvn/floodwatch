@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { getCachedResponse, setCachedResponse } from '@/lib/apiCache'
+
+const CACHE_TTL_MS = 60 * 1000 // 60 seconds
 
 export interface TrafficDisruption {
   id: string
@@ -82,30 +85,58 @@ export function useTraffic(options: UseTrafficOptions = {}): UseTrafficReturn {
   useEffect(() => {
     if (!enabled) return
 
-    const fetchDisruptions = async () => {
+    // AbortController to cancel fetch on unmount
+    const abortController = new AbortController()
+    let isMounted = true
+
+    const fetchDisruptions = async (forceRefresh = false) => {
+      // Build query params
+      const params = new URLSearchParams()
+
+      if (lat !== undefined && lon !== undefined) {
+        params.append('lat', lat.toString())
+        params.append('lon', lon.toString())
+        params.append('radius_km', radius_km.toString())
+      }
+
+      if (type) params.append('type', type)
+      if (severity) params.append('severity', severity)
+      if (road_name) params.append('road_name', road_name)
+      params.append('is_active', is_active.toString())
+      params.append('limit', '100')
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const url = `${apiUrl}/traffic/disruptions?${params.toString()}`
+
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = getCachedResponse<{ data: TrafficDisruption[]; meta?: typeof stats }>(url)
+        if (cached) {
+          // Filter to only show disaster-related traffic disruptions
+          const disasterTypes = ['flooded_road', 'landslide', 'bridge_collapsed', 'bridge_flooded', 'road_damaged', 'blocked']
+          const disasterDisruptions = (cached.data || []).filter((disruption: TrafficDisruption) =>
+            disasterTypes.includes(disruption.type) || disruption.hazard_event_id
+          )
+          if (isMounted) {
+            setDisruptions(disasterDisruptions)
+            setStats(cached.meta || {
+              impassable_count: 0,
+              dangerous_count: 0,
+              total_active: 0,
+              major_roads_affected: [],
+            })
+          }
+          return
+        }
+      }
+
       try {
-        setIsLoading(true)
-        setError(null)
-
-        // Build query params
-        const params = new URLSearchParams()
-
-        if (lat !== undefined && lon !== undefined) {
-          params.append('lat', lat.toString())
-          params.append('lon', lon.toString())
-          params.append('radius_km', radius_km.toString())
+        if (isMounted) {
+          setIsLoading(true)
+          setError(null)
         }
 
-        if (type) params.append('type', type)
-        if (severity) params.append('severity', severity)
-        if (road_name) params.append('road_name', road_name)
-        params.append('is_active', is_active.toString())
-        params.append('limit', '100')
-
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        const url = `${apiUrl}/traffic/disruptions?${params.toString()}`
-
-        const response = await fetch(url)
+        const response = await fetch(url, { signal: abortController.signal })
 
         if (!response.ok) {
           throw new Error(`Failed to fetch traffic disruptions: ${response.statusText}`)
@@ -113,25 +144,36 @@ export function useTraffic(options: UseTrafficOptions = {}): UseTrafficReturn {
 
         const data = await response.json()
 
+        // Cache the response
+        setCachedResponse(url, data, CACHE_TTL_MS)
+
         // Filter to only show disaster-related traffic disruptions
         const disasterTypes = ['flooded_road', 'landslide', 'bridge_collapsed', 'bridge_flooded', 'road_damaged', 'blocked']
         const disasterDisruptions = (data.data || []).filter((disruption: TrafficDisruption) =>
           disasterTypes.includes(disruption.type) || disruption.hazard_event_id
         )
 
-        setDisruptions(disasterDisruptions)
-        setStats(data.meta || {
-          impassable_count: 0,
-          dangerous_count: 0,
-          total_active: 0,
-          major_roads_affected: [],
-        })
+        if (isMounted) {
+          setDisruptions(disasterDisruptions)
+          setStats(data.meta || {
+            impassable_count: 0,
+            dangerous_count: 0,
+            total_active: 0,
+            major_roads_affected: [],
+          })
+        }
       } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching traffic disruptions:', err)
-        setError(err instanceof Error ? err.message : 'Unknown error')
-        setDisruptions([])
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Unknown error')
+          setDisruptions([])
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -144,6 +186,8 @@ export function useTraffic(options: UseTrafficOptions = {}): UseTrafficReturn {
     }
 
     return () => {
+      isMounted = false
+      abortController.abort()
       if (intervalId) clearInterval(intervalId)
     }
   }, [

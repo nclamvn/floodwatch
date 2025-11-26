@@ -1,29 +1,45 @@
 'use client'
 
-import { useState } from 'react'
-import { HandHeart, Users, ArrowLeft } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { HandHeart, Users, ArrowLeft, MapIcon, ArrowRight, Map } from 'lucide-react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import DarkModeToggle from '@/components/DarkModeToggle'
 import HelpMeForm from '@/components/HelpMeForm'
 import ICanHelpForm from '@/components/ICanHelpForm'
 import HelpRequestsList from '@/components/HelpRequestsList'
 import HelpOffersList from '@/components/HelpOffersList'
+import { LocationProvider } from '@/contexts/LocationContext'
+
+// Dynamically import RescueMap to avoid SSR issues
+const RescueMap = dynamic(() => import('@/components/RescueMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-screen flex items-center justify-center">Đang tải bản đồ cứu trợ...</div>
+})
 
 /**
  * Help Connection Page - Kết nối cứu trợ
  *
- * Two-tab interface:
+ * Three-tab interface:
  * 1. "Tôi cần giúp đỡ" - Help requests (people needing assistance)
  * 2. "Tôi có thể giúp" - Help offers (people/orgs offering help)
+ * 3. "Bản đồ cứu trợ" - Rescue Intelligence Map (visualize requests & offers)
  *
- * Each tab: Form (left 40%) + List (right 60%)
+ * First two tabs: Form (left 40%) + List (right 60%)
+ * Third tab: Full-screen map with rescue pins
  */
 
-type TabType = 'need-help' | 'can-help'
+type TabType = 'need-help' | 'can-help' | 'rescue-map'
 
 export default function HelpConnectionPage() {
   const [activeTab, setActiveTab] = useState<TabType>('need-help')
   const [refreshRequests, setRefreshRequests] = useState(0)
   const [refreshOffers, setRefreshOffers] = useState(0)
+  const [needHelpFormHeight, setNeedHelpFormHeight] = useState<number | null>(null)
+  const [canHelpFormHeight, setCanHelpFormHeight] = useState<number | null>(null)
+
+  const needHelpFormRef = useRef<HTMLDivElement>(null)
+  const canHelpFormRef = useRef<HTMLDivElement>(null)
 
   const handleRequestSubmitted = () => {
     setRefreshRequests(prev => prev + 1)
@@ -33,37 +49,84 @@ export default function HelpConnectionPage() {
     setRefreshOffers(prev => prev + 1)
   }
 
+  // Measure form heights and sync with list boxes
+  useEffect(() => {
+    const measureHeights = () => {
+      if (needHelpFormRef.current) {
+        setNeedHelpFormHeight(needHelpFormRef.current.offsetHeight)
+      }
+      if (canHelpFormRef.current) {
+        setCanHelpFormHeight(canHelpFormRef.current.offsetHeight)
+      }
+    }
+
+    // Measure immediately
+    measureHeights()
+
+    // Measure after a short delay (for any animations/transitions)
+    const timer = setTimeout(measureHeights, 100)
+
+    // Measure on window resize
+    window.addEventListener('resize', measureHeights)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', measureHeights)
+    }
+  }, [activeTab, refreshRequests, refreshOffers])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
-      {/* Header */}
-      <div className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
+      {/* Header - Design System 2025 */}
+      <div className="glass border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-10 shadow-elevation-1 relative">
+        {/* Back Arrow - Outside Left (Desktop Only) */}
+        <Link
+          href="/map"
+          className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-pill hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all duration-ui ease-smooth"
+        >
+          <ArrowLeft className="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
+        </Link>
+
+        {/* Routes Arrow - Outside Right (Desktop Only) */}
+        <Link
+          href="/routes"
+          className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-10 h-10 rounded-pill hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all duration-ui ease-smooth"
+        >
+          <ArrowRight className="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
+        </Link>
+
+        <div className="container mx-auto px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
           {/* Mobile Header - New Design */}
           <div className="lg:hidden">
-            {/* Back Button */}
-            <div className="flex justify-start mb-4">
+            {/* Back Button and Dark Mode Toggle */}
+            <div className="flex justify-between items-center mb-4">
               <Link
-                href="/"
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+                href="/map"
+                className="flex items-center justify-center w-10 h-10 rounded-pill hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-all duration-ui ease-smooth"
               >
                 <ArrowLeft className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
               </Link>
+              <DarkModeToggle />
             </div>
 
             {/* Centered Titles and Slogan */}
             <div className="flex flex-col items-center gap-4 mb-6">
               <h1 className="text-4xl font-bold text-center">
-                <span className="text-red-600 dark:text-red-500">Giúp tôi</span>
+                <span className="text-danger">Giúp tôi</span>
                 <span className="text-neutral-600 dark:text-neutral-400">, </span>
-                <span className="text-green-600 dark:text-green-500">tôi giúp</span>
+                <span className="text-success">tôi giúp</span>
               </h1>
               <div className="relative">
-                <p className="text-lg text-neutral-600 dark:text-neutral-400 text-center italic">
-                  Thương người như thể thương thân
+                <p className="text-body-1 text-neutral-700 dark:text-neutral-200 text-center italic">
+                  {activeTab === 'need-help'
+                    ? 'Bầu ơi thương lấy bí cùng'
+                    : activeTab === 'can-help'
+                    ? 'Tuy rằng khác giống nhưng chung một giàn'
+                    : 'Thương người như thể thương thân'}
                 </p>
-                {/* Pink shimmer effect */}
+                {/* White/Silver shimmer effect */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <div className="absolute inset-0 -translate-x-full animate-shimmer-slogan bg-gradient-to-r from-transparent via-pink-400/40 to-transparent" />
+                  <div className="absolute inset-0 -translate-x-full animate-shimmer-slogan bg-gradient-to-r from-transparent via-white/50 dark:via-neutral-300/50 to-transparent" />
                 </div>
               </div>
             </div>
@@ -84,118 +147,175 @@ export default function HelpConnectionPage() {
               }
             `}</style>
 
-            {/* Tab Buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setActiveTab('need-help')}
-                className={`
-                  flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all shadow-md
-                  ${activeTab === 'need-help'
-                    ? 'bg-red-600 text-white scale-105'
-                    : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
-                  }
-                `}
-              >
-                <HandHeart className="w-5 h-5" />
-                <span className="text-sm">Tôi cần giúp đỡ</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('can-help')}
-                className={`
-                  flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all shadow-md
-                  ${activeTab === 'can-help'
-                    ? 'bg-green-600 text-white scale-105'
-                    : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
-                  }
-                `}
-              >
-                <Users className="w-5 h-5" />
-                <span className="text-sm">Tôi có thể giúp</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Desktop Header - Original Design */}
-          <div className="hidden lg:block">
-            <div className="flex items-center justify-between mb-4">
-              {/* Back Button - positioned outside the border */}
-              <Link
-                href="/"
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors -ml-14"
-              >
-                <ArrowLeft className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
-              </Link>
-
-              <div className="flex-1 px-4">
-                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <HandHeart className="w-7 h-7 text-red-600" />
-                  Kết nối cứu trợ
-                </h1>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                  Kết nối những người cần giúp đỡ với những người có thể giúp
-                </p>
-              </div>
-              <p className="text-sm italic text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                Thương người như thể thương thân
-              </p>
-            </div>
-
-            {/* Tabs */}
+            {/* Tab Buttons - Design System 2025 */}
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('need-help')}
                 className={`
-                  flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-colors
+                  flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg font-medium transition-all duration-ui ease-smooth shadow-elevation-1
                   ${activeTab === 'need-help'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
+                    ? 'bg-danger text-white scale-105'
+                    : 'glass border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white/95 dark:hover:bg-neutral-700/90'
                   }
                 `}
               >
                 <HandHeart className="w-4 h-4" />
-                Tôi cần giúp đỡ
+                <span className="text-xs">Cần giúp</span>
               </button>
               <button
                 onClick={() => setActiveTab('can-help')}
                 className={`
-                  flex items-center gap-2 px-4 py-2 rounded-t-lg font-medium transition-colors
+                  flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg font-medium transition-all duration-ui ease-smooth shadow-elevation-1
                   ${activeTab === 'can-help'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600'
+                    ? 'bg-success text-white scale-105'
+                    : 'glass border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white/95 dark:hover:bg-neutral-700/90'
                   }
                 `}
               >
                 <Users className="w-4 h-4" />
-                Tôi có thể giúp
+                <span className="text-xs">Có thể giúp</span>
               </button>
+              <button
+                onClick={() => setActiveTab('rescue-map')}
+                className={`
+                  flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg font-medium transition-all duration-ui ease-smooth shadow-elevation-1
+                  ${activeTab === 'rescue-map'
+                    ? 'bg-blue-600 text-white scale-105'
+                    : 'glass border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white/95 dark:hover:bg-neutral-700/90'
+                  }
+                `}
+              >
+                <MapIcon className="w-4 h-4" />
+                <span className="text-xs">Bản đồ</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Header - Design System 2025 */}
+          <div className="hidden lg:block">
+            <div className="flex items-center justify-between gap-4">
+              {/* Map Button - Flush Left */}
+              <Link
+                href="/map"
+                className="text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 font-medium transition-colors"
+                style={{ fontSize: '0.952em' }}
+              >
+                Bản đồ
+              </Link>
+
+              {/* Tabs - Larger */}
+              <div className="flex gap-2">
+              <button
+                onClick={() => setActiveTab('need-help')}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-ui ease-smooth
+                  ${activeTab === 'need-help'
+                    ? 'bg-danger text-white'
+                    : 'glass border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white/95 dark:hover:bg-neutral-700/90'
+                  }
+                `}
+                style={{ fontSize: '1.02em' }}
+              >
+                <HandHeart className="w-5 h-5" />
+                Giúp tôi
+              </button>
+              <button
+                onClick={() => setActiveTab('can-help')}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-ui ease-smooth
+                  ${activeTab === 'can-help'
+                    ? 'bg-success text-white'
+                    : 'glass border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white/95 dark:hover:bg-neutral-700/90'
+                  }
+                `}
+                style={{ fontSize: '1.02em' }}
+              >
+                <Users className="w-5 h-5" />
+                Tôi giúp
+              </button>
+              <button
+                onClick={() => setActiveTab('rescue-map')}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-ui ease-smooth
+                  ${activeTab === 'rescue-map'
+                    ? 'bg-blue-600 text-white'
+                    : 'glass border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-white/95 dark:hover:bg-neutral-700/90'
+                  }
+                `}
+                style={{ fontSize: '1.02em' }}
+              >
+                <MapIcon className="w-5 h-5" />
+                Bản đồ cứu trợ
+              </button>
+              </div>
+
+              {/* Slogan - Dynamic with shimmer */}
+              <div className="relative">
+                <p className="text-body-2 italic text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                  {activeTab === 'need-help'
+                    ? 'Bầu ơi thương lấy bí cùng'
+                    : activeTab === 'can-help'
+                    ? 'Tuy rằng khác giống nhưng chung một giàn'
+                    : 'Thương người như thể thương thân'}
+                </p>
+                {/* White/Silver shimmer effect */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute inset-0 -translate-x-full animate-shimmer-slogan bg-gradient-to-r from-transparent via-white/50 dark:via-neutral-300/50 to-transparent" />
+                </div>
+              </div>
+
+              {/* Theme Toggle + Routes Button - Flush Right */}
+              <div className="flex items-center gap-2">
+                <DarkModeToggle />
+                <Link
+                  href="/routes"
+                  className="text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 font-medium transition-colors"
+                  style={{ fontSize: '0.952em' }}
+                >
+                  Tuyến đường
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className={activeTab === 'rescue-map' ? '' : 'container mx-auto px-4 py-6'}>
         {activeTab === 'need-help' ? (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Form - 40% */}
-            <div className="lg:col-span-2">
+            {/* Form - 40% (chiều cao tự nhiên làm chuẩn) */}
+            <div ref={needHelpFormRef} className="lg:col-span-2">
               <HelpMeForm onSubmitSuccess={handleRequestSubmitted} />
             </div>
-            {/* List - 60% */}
-            <div className="lg:col-span-3">
+            {/* List - 60% (khớp chiều cao form) */}
+            <div
+              className="lg:col-span-3"
+              style={needHelpFormHeight ? { height: `${needHelpFormHeight}px` } : undefined}
+            >
               <HelpRequestsList key={refreshRequests} />
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'can-help' ? (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Form - 40% */}
-            <div className="lg:col-span-2">
+            {/* Form - 40% (chiều cao tự nhiên làm chuẩn) */}
+            <div ref={canHelpFormRef} className="lg:col-span-2">
               <ICanHelpForm onSubmitSuccess={handleOfferSubmitted} />
             </div>
-            {/* List - 60% */}
-            <div className="lg:col-span-3">
+            {/* List - 60% (khớp chiều cao form) */}
+            <div
+              className="lg:col-span-3"
+              style={canHelpFormHeight ? { height: `${canHelpFormHeight}px` } : undefined}
+            >
               <HelpOffersList key={refreshOffers} />
             </div>
+          </div>
+        ) : (
+          /* Rescue Map - Full Screen */
+          <div className="w-full h-[calc(100vh-64px)]">
+            <LocationProvider>
+              <RescueMap />
+            </LocationProvider>
           </div>
         )}
       </div>

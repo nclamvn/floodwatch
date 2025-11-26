@@ -409,19 +409,45 @@ def extract_location_data(text: str) -> dict:
     """
     Extract complete location data from text.
 
-    Convenience function that extracts province name and coordinates in one call.
+    This function now uses a multi-tier geocoding strategy:
+    1. Landmark database (most accurate - for passes, bridges, etc.)
+    2. District-level lookup
+    3. Province-level fallback
 
     Args:
         text: Input text
 
     Returns:
-        Dictionary with 'province', 'lat', 'lon' keys
-        Returns None values if province not found
+        Dictionary with 'province', 'district', 'lat', 'lon', 'accuracy' keys
+        Returns None values if location not found
 
     Examples:
+        >>> extract_location_data("Sạt lở tại đèo Nhông, huyện Phù Mỹ, Bình Định")
+        {'province': 'Bình Định', 'district': 'Phù Mỹ', 'lat': 14.0847, 'lon': 108.9203, 'accuracy': 'landmark'}
+
         >>> extract_location_data("Lũ lụt tại Quảng Trị")
-        {'province': 'Quảng Trị', 'lat': 16.8194, 'lon': 107.0997}
+        {'province': 'Quảng Trị', 'district': None, 'lat': 16.8194, 'lon': 107.0997, 'accuracy': 'province'}
     """
+    # Try new geocoding service first (more accurate)
+    try:
+        from app.services.geocoding_service import geocode_vietnamese_text
+
+        result = geocode_vietnamese_text(text)
+        if result:
+            return {
+                "province": result.province,
+                "district": result.district,
+                "lat": result.lat,
+                "lon": result.lon,
+                "accuracy": result.accuracy,
+                "matched_name": result.matched_name,
+                "confidence": result.confidence
+            }
+    except ImportError:
+        # Geocoding service not available, fall back to province-only
+        pass
+
+    # Fallback to province-level extraction
     province = extract_province_from_text(text)
 
     if province:
@@ -429,12 +455,20 @@ def extract_location_data(text: str) -> dict:
         if coords:
             return {
                 "province": province,
+                "district": None,
                 "lat": coords[0],
-                "lon": coords[1]
+                "lon": coords[1],
+                "accuracy": "province",
+                "matched_name": province,
+                "confidence": 0.5
             }
 
     return {
         "province": None,
+        "district": None,
         "lat": None,
-        "lon": None
+        "lon": None,
+        "accuracy": None,
+        "matched_name": None,
+        "confidence": 0.0
     }

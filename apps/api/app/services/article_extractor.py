@@ -1,22 +1,104 @@
 """
 Article Content Extractor Service
 
-Extracts full article content from news URLs using Newspaper3k library.
+Extracts full article content from news URLs.
 Supports Vietnamese news sites: VnExpress, Tuoi Tre, Thanh Nien, VTC, etc.
+
+UPDATED: Now integrates with AbsoluteExtractor (5-tier extraction) for guaranteed
+full article extraction. Legacy functions maintained for backward compatibility.
 """
 
 import logging
-from typing import Optional, Dict
-from newspaper import Article
+from typing import Optional, Dict, Any
+
+try:
+    from newspaper import Article
+    NEWSPAPER_AVAILABLE = True
+except ImportError:
+    NEWSPAPER_AVAILABLE = False
+
 import requests
 from bs4 import BeautifulSoup
+
+# Import AbsoluteExtractor for 5-tier extraction
+try:
+    from app.services.absolute_extractor import (
+        get_absolute_extractor,
+        extract_article_absolute,
+        ExtractionStatus
+    )
+    ABSOLUTE_EXTRACTOR_AVAILABLE = True
+except ImportError:
+    ABSOLUTE_EXTRACTOR_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
 
-def extract_full_article(url: str, language: str = 'vi', timeout: int = 10) -> Dict[str, any]:
+# ============================================
+# ABSOLUTE EXTRACTION (5-TIER) - NEW PRIMARY
+# ============================================
+
+def extract_article_absolute_mode(url: str, language: str = 'vi') -> Dict[str, Any]:
     """
-    Extract full article content from URL using Newspaper3k
+    ABSOLUTE MODE: 5-tier extraction guaranteeing full article content.
+
+    This is the NEW PRIMARY extraction method that uses:
+    - Tier 1: DOM extraction (newspaper3k + readability + BeautifulSoup)
+    - Tier 2: Headless browser (Playwright)
+    - Tier 3: Trafilatura full mode
+    - Tier 4: AI reconstruction
+    - Tier 5: Multi-source cross fetch
+
+    Args:
+        url: Article URL to extract
+        language: Content language (default: Vietnamese)
+
+    Returns:
+        dict: {
+            'success': bool,
+            'full_text': str,
+            'title': str,
+            'authors': list,
+            'images': list,
+            'publish_date': datetime,
+            'tier_used': str,
+            'word_count': int,
+            'char_count': int,
+            'guards_passed': list,
+            'guards_failed': list,
+            'error': str
+        }
+    """
+    if not ABSOLUTE_EXTRACTOR_AVAILABLE:
+        logger.warning("AbsoluteExtractor not available, falling back to hybrid extraction")
+        result = extract_article_hybrid(url, language)
+        result['tier_used'] = 'legacy_hybrid'
+        return result
+
+    try:
+        extractor = get_absolute_extractor()
+        result = extractor.extract(url, language)
+        return result.to_dict()
+    except Exception as e:
+        logger.error(f"AbsoluteExtractor failed for {url}: {e}")
+        # Fallback to hybrid
+        result = extract_article_hybrid(url, language)
+        result['tier_used'] = 'legacy_hybrid_fallback'
+        result['error'] = str(e)
+        return result
+
+
+# ============================================
+# LEGACY FUNCTIONS (BACKWARD COMPATIBILITY)
+# ============================================
+
+
+def extract_full_article(url: str, language: str = 'vi', timeout: int = 10) -> Dict[str, Any]:
+    """
+    Extract full article content from URL using Newspaper3k (LEGACY)
+
+    Note: For production use, prefer extract_article_absolute_mode() which
+    uses 5-tier extraction for guaranteed full content.
 
     Args:
         url: Article URL to extract content from
@@ -46,6 +128,10 @@ def extract_full_article(url: str, language: str = 'vi', timeout: int = 10) -> D
 
     if not url or not url.startswith('http'):
         result['error'] = f'Invalid URL: {url}'
+        return result
+
+    if not NEWSPAPER_AVAILABLE:
+        result['error'] = 'newspaper3k not installed'
         return result
 
     try:
@@ -233,9 +319,12 @@ def extract_images_with_beautifulsoup(url: str, timeout: int = 10) -> list:
         return []
 
 
-def extract_article_hybrid(url: str, language: str = 'vi') -> Dict[str, any]:
+def extract_article_hybrid(url: str, language: str = 'vi') -> Dict[str, Any]:
     """
-    Hybrid extraction: Try Newspaper3k first, fall back to BeautifulSoup
+    Hybrid extraction: Try Newspaper3k first, fall back to BeautifulSoup (LEGACY)
+
+    Note: For production use with guaranteed full content, use
+    extract_article_absolute_mode() instead.
 
     Args:
         url: Article URL
@@ -272,4 +361,45 @@ def extract_article_hybrid(url: str, language: str = 'vi') -> Dict[str, any]:
 
             logger.info(f"BeautifulSoup image fallback added {len(bs_images)} images, total now: {len(result['images'])}")
 
+    return result
+
+
+# ============================================
+# CONVENIENCE WRAPPER - USE FOR ALL SCRAPERS
+# ============================================
+
+def extract_article(url: str, language: str = 'vi', min_length: int = 500) -> Dict[str, Any]:
+    """
+    PRIMARY EXTRACTION FUNCTION - Use this for all scrapers.
+
+    Automatically uses AbsoluteExtractor (5-tier) when available,
+    falls back to hybrid extraction otherwise.
+
+    Args:
+        url: Article URL to extract
+        language: Content language (default: Vietnamese)
+        min_length: Minimum acceptable article length (default: 500)
+
+    Returns:
+        dict with 'success', 'full_text', 'title', 'images', etc.
+    """
+    # Use absolute mode if available (5-tier extraction)
+    if ABSOLUTE_EXTRACTOR_AVAILABLE:
+        result = extract_article_absolute_mode(url, language)
+
+        # Check if we got enough content
+        if result.get('success') and len(result.get('full_text', '')) >= min_length:
+            return result
+
+        # If absolute mode failed or returned insufficient content,
+        # log warning but still return the result
+        logger.warning(
+            f"Absolute extraction returned {len(result.get('full_text', ''))} chars "
+            f"(min: {min_length}) for {url}"
+        )
+        return result
+
+    # Fallback to hybrid mode
+    result = extract_article_hybrid(url, language)
+    result['tier_used'] = 'legacy_hybrid'
     return result

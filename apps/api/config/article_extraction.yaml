@@ -1,0 +1,289 @@
+# ============================================
+# FloodWatch V1 - Article Extraction Config
+# ============================================
+# Absolute Mode: 100% Full Article Extraction
+# 5-Tier Fallback Strategy
+# ============================================
+
+# Global Settings
+global:
+  min_article_length: 500          # Minimum acceptable article length (chars)
+  min_word_count: 100              # Minimum acceptable word count
+  max_extraction_attempts: 5       # Max retries per URL
+  request_timeout: 30              # HTTP request timeout (seconds)
+  headless_timeout: 60             # Playwright timeout (seconds)
+  ai_reconstruction_threshold: 300 # Min chars before trying AI reconstruction
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+# Content Quality Guards (10 Guardrails)
+guards:
+  # Rule 1: Minimum length
+  min_length: 500
+
+  # Rule 2: Must contain paragraphs
+  min_paragraphs: 3
+
+  # Rule 3: Reject if too many special chars
+  max_special_char_ratio: 0.15
+
+  # Rule 4: Reject if mostly numbers
+  max_numeric_ratio: 0.30
+
+  # Rule 5: Reject known snippet patterns
+  snippet_patterns:
+    - "Đọc tiếp..."
+    - "Xem thêm..."
+    - "Read more..."
+    - "Xem chi tiết"
+    - "Đọc bài viết đầy đủ"
+    - "Click để xem"
+    - "[...]"
+    - "… Xem tiếp"
+    - "Nguồn:"
+
+  # Rule 6: Reject if title repeated too many times
+  max_title_repetition: 2
+
+  # Rule 7: Reject if content is mostly menu/navigation
+  navigation_keywords:
+    - "Trang chủ"
+    - "Đăng nhập"
+    - "Đăng ký"
+    - "Liên hệ"
+    - "Về chúng tôi"
+    - "Quảng cáo"
+    - "Điều khoản"
+
+  # Rule 8: Min unique words
+  min_unique_words: 50
+
+  # Rule 9: Reject cookie consent / popup text
+  reject_patterns:
+    - "chấp nhận cookie"
+    - "đồng ý với điều khoản"
+    - "bạn có muốn nhận thông báo"
+    - "popup"
+
+  # Rule 10: Language check (Vietnamese content)
+  vietnamese_char_threshold: 0.3
+
+# Site-Specific Selectors
+sites:
+  # VnExpress
+  vnexpress.net:
+    selectors:
+      - "article.fck_detail"
+      - "div.content-detail"
+      - "p.description"
+    remove_elements:
+      - ".banner-ads"
+      - ".box-related"
+      - ".social-share"
+      - ".author-info"
+    requires_js: false
+    trust_score: 0.95
+
+  # Tuổi Trẻ
+  tuoitre.vn:
+    selectors:
+      - "div.detail-content"
+      - "div.content"
+      - "article.detail"
+    remove_elements:
+      - ".box-related-inner"
+      - ".VCSortableIn498"
+      - ".ads"
+    requires_js: false
+    trust_score: 0.90
+
+  # Thanh Niên
+  thanhnien.vn:
+    selectors:
+      - "div.article-body"
+      - "div.content-body"
+      - "article.detail-content"
+    remove_elements:
+      - ".article-related"
+      - ".adsbygoogle"
+    requires_js: true
+    trust_score: 0.88
+
+  # VTC
+  vtc.vn:
+    selectors:
+      - "div.content-detail"
+      - "div.edittor-content"
+      - "article.main-content"
+    remove_elements:
+      - ".related-news"
+      - ".box-ads"
+    requires_js: false
+    trust_score: 0.85
+
+  # Dân Trí
+  dantri.com.vn:
+    selectors:
+      - "article.singular-content"
+      - "div.singular-content"
+      - "div.detail-content"
+    remove_elements:
+      - ".relate-news"
+      - ".ads"
+    requires_js: false
+    trust_score: 0.88
+
+  # VietnamNet
+  vietnamnet.vn:
+    selectors:
+      - "div.vnn-content-detail"
+      - "div.content-detail"
+      - "article.main-content"
+    remove_elements:
+      - ".relate-news"
+      - ".social-buttons"
+    requires_js: false
+    trust_score: 0.87
+
+  # Zing / ZNews
+  zingnews.vn:
+    selectors:
+      - "div.the-article-body"
+      - "article.article-body"
+      - "div.content-body"
+    remove_elements:
+      - ".article-relate"
+      - ".adbox"
+    requires_js: true
+    trust_score: 0.86
+
+  # Báo Mới
+  baomoi.com:
+    selectors:
+      - "div.bm-article-content"
+      - "article.content-box"
+      - "div.detail__content"
+    remove_elements:
+      - ".bm-ads"
+      - ".related-news"
+    requires_js: true
+    trust_score: 0.80
+
+  # Chính Phủ Portal
+  chinhphu.vn:
+    selectors:
+      - "div.news-content"
+      - "article.article-content"
+      - "div.content-detail"
+    remove_elements:
+      - ".relate-box"
+    requires_js: false
+    trust_score: 0.95
+
+  # KTTV (Meteorology)
+  nchmf.gov.vn:
+    selectors:
+      - "div.news-detail"
+      - "div.content-detail"
+      - "article.main-content"
+    remove_elements: []
+    requires_js: false
+    trust_score: 0.98
+
+  # PCTT (Disaster Prevention)
+  phongchongthientai.gov.vn:
+    selectors:
+      - "div.news-content"
+      - "div.detail-content"
+      - "article.post-content"
+    remove_elements: []
+    requires_js: false
+    trust_score: 0.98
+
+# Tier Configuration
+tiers:
+  # Tier 1: DOM Extraction (newspaper3k + readability + lxml)
+  tier1_dom:
+    enabled: true
+    timeout: 15
+    libraries:
+      - newspaper3k
+      - readability-lxml
+      - beautifulsoup4
+    fallback_on_failure: true
+
+  # Tier 2: Headless Browser (Playwright)
+  tier2_headless:
+    enabled: true
+    timeout: 45
+    wait_for_selector: "article, div[class*='content']"
+    wait_for_load_state: "networkidle"
+    browser: chromium
+    headless: true
+
+  # Tier 3: Trafilatura Full Mode
+  tier3_trafilatura:
+    enabled: true
+    timeout: 30
+    include_tables: true
+    include_images: false
+    include_links: false
+    favor_precision: false
+    favor_recall: true
+
+  # Tier 4: AI Reconstruction Mode
+  tier4_ai:
+    enabled: true
+    model: "gpt-4o-mini"
+    max_tokens: 2000
+    temperature: 0.3
+    prompt_template: |
+      You are an expert article reconstructor. Given partial article content and metadata,
+      reconstruct the full article in Vietnamese.
+
+      RULES:
+      1. ONLY use information from the provided content
+      2. DO NOT fabricate facts, quotes, or statistics
+      3. Maintain the original article structure
+      4. Expand truncated sentences naturally
+      5. Remove navigation/advertisement text
+      6. Keep the journalistic tone consistent
+
+      Title: {title}
+      Source: {source_url}
+      Partial Content: {partial_content}
+
+      Reconstruct the full article (minimum 500 characters):
+
+  # Tier 5: Multi-Source Cross Fetch
+  tier5_multisource:
+    enabled: true
+    sources:
+      - google_cache
+      - wayback_machine
+      - baomoi_aggregator
+    timeout: 60
+
+# Extraction Pipeline Order
+pipeline:
+  - tier1_dom
+  - tier2_headless
+  - tier3_trafilatura
+  - tier4_ai
+  - tier5_multisource
+
+# Logging & Monitoring
+logging:
+  log_level: INFO
+  log_extractions: true
+  log_failures: true
+  metrics_enabled: true
+  extraction_stats_file: "logs/extraction_stats.json"
+
+# Rate Limiting (per-domain)
+rate_limits:
+  default: 5  # requests per minute
+  vnexpress.net: 10
+  tuoitre.vn: 10
+  thanhnien.vn: 8
+  chinhphu.vn: 5
+  nchmf.gov.vn: 5

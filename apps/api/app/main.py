@@ -4441,6 +4441,106 @@ async def cleanup_expired_routes(
 
 
 # ============================================================================
+# ALERT LIFECYCLE MANAGEMENT
+# ============================================================================
+
+from app.services.alert_lifecycle_service import AlertLifecycleService
+
+
+@app.get("/routes/lifecycle/stats")
+async def get_lifecycle_stats(db: Session = Depends(get_db)):
+    """
+    Get current lifecycle statistics for all alert tables.
+
+    Returns counts of ACTIVE, RESOLVED, ARCHIVED alerts.
+    """
+    return AlertLifecycleService.get_lifecycle_stats(db)
+
+
+@app.post("/routes/lifecycle/run")
+async def run_lifecycle_job(
+    db: Session = Depends(get_db),
+    dry_run: bool = Query(True, description="If true, don't commit changes"),
+    token: Optional[str] = Query(None, description="Admin token for non-dry-run")
+):
+    """
+    Run the daily lifecycle job manually.
+
+    - ACTIVE alerts not verified in 3 days -> RESOLVED
+    - RESOLVED alerts older than 3 days -> ARCHIVED
+
+    Requires admin token for non-dry-run operations.
+    """
+    if not dry_run and token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Admin token required for non-dry-run")
+
+    return AlertLifecycleService.run_daily_lifecycle(db, dry_run=dry_run)
+
+
+@app.post("/routes/{segment_id}/resolve")
+async def resolve_segment(
+    segment_id: str,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Query(None, description="Admin token")
+):
+    """
+    Manually mark a road segment as RESOLVED.
+    """
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Admin token required")
+
+    from uuid import UUID
+    success = AlertLifecycleService.mark_as_resolved(db, RoadSegment, UUID(segment_id))
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Segment not found")
+
+    return {"status": "success", "message": "Segment marked as resolved"}
+
+
+@app.post("/routes/{segment_id}/verify")
+async def verify_segment(
+    segment_id: str,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Query(None, description="Admin token")
+):
+    """
+    Update last_verified_at to keep a segment ACTIVE.
+    """
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Admin token required")
+
+    from uuid import UUID
+    success = AlertLifecycleService.verify_alert(db, RoadSegment, UUID(segment_id))
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Segment not found")
+
+    return {"status": "success", "message": "Segment verification updated"}
+
+
+@app.post("/routes/{segment_id}/reactivate")
+async def reactivate_segment(
+    segment_id: str,
+    db: Session = Depends(get_db),
+    token: Optional[str] = Query(None, description="Admin token")
+):
+    """
+    Reactivate a RESOLVED or ARCHIVED segment back to ACTIVE.
+    """
+    if token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Admin token required")
+
+    from uuid import UUID
+    success = AlertLifecycleService.reactivate_alert(db, RoadSegment, UUID(segment_id))
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Segment not found")
+
+    return {"status": "success", "message": "Segment reactivated"}
+
+
+# ============================================================================
 # END ROUTES 2.5
 # ============================================================================
 

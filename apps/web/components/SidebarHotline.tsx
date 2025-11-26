@@ -15,7 +15,7 @@ export function SidebarHotline() {
   // Primary emergency numbers - always visible
   const primaryNumbers = [
     { number: '112', label: 'Cứu Nạn', icon: '🆘', color: 'bg-red-600' },
-    { number: '113', label: 'Cảnh Sát', icon: '👮', color: 'bg-blue-600' },
+    { number: '113', label: 'Cảnh Sát', icon: '👮', color: 'bg-neutral-600' },
     { number: '114', label: 'Cứu Hỏa', icon: '🔥', color: 'bg-orange-600' },
     { number: '115', label: 'Cấp Cứu', icon: '🚑', color: 'bg-green-600' },
   ]
@@ -106,7 +106,7 @@ export function SidebarHotline() {
                 <button
                   key={item.number}
                   onClick={() => handleCall(item.number)}
-                  className="w-full text-left px-2 py-1.5 bg-white/50 dark:bg-neutral-800/30 hover:bg-white dark:hover:bg-neutral-800/50 rounded border border-yellow-200/50 dark:border-yellow-800/20 transition-colors group"
+                  className="w-full text-left px-2 py-1.5 bg-white/50 dark:bg-neutral-900/30 hover:bg-white dark:hover:bg-neutral-900/50 rounded border border-yellow-200/50 dark:border-yellow-800/20 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
@@ -135,7 +135,7 @@ export function SidebarHotline() {
                 <button
                   key={item.number}
                   onClick={() => handleCall(item.number)}
-                  className="w-full text-left px-2 py-1.5 bg-white/50 dark:bg-neutral-800/30 hover:bg-white dark:hover:bg-neutral-800/50 rounded border border-yellow-200/50 dark:border-yellow-800/20 transition-colors group"
+                  className="w-full text-left px-2 py-1.5 bg-white/50 dark:bg-neutral-900/30 hover:bg-white dark:hover:bg-neutral-900/50 rounded border border-yellow-200/50 dark:border-yellow-800/20 transition-colors group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">

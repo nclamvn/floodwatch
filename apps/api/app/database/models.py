@@ -6,7 +6,7 @@ from uuid import uuid4
 from typing import Optional
 
 from sqlalchemy import (
-    Column, String, Text, Float, DateTime, Integer, Boolean, Enum as SQLEnum, CheckConstraint, func
+    Column, String, Text, Float, DateTime, Integer, Boolean, Enum as SQLEnum, CheckConstraint, func, ForeignKey, text
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from geoalchemy2 import Geography
@@ -35,10 +35,18 @@ class ReportStatus(str, enum.Enum):
 
 
 class RoadStatus(str, enum.Enum):
-    """Road status enum"""
+    """Road status enum (legacy 3-status)"""
     OPEN = "OPEN"
     CLOSED = "CLOSED"
     RESTRICTED = "RESTRICTED"
+
+
+class RoadSegmentStatus(str, enum.Enum):
+    """Road segment status enum - Apple Maps style 4-level system"""
+    OPEN = "OPEN"           # Thông thoáng - Normal traffic flow
+    LIMITED = "LIMITED"     # Hạn chế - Slow, minor obstruction
+    DANGEROUS = "DANGEROUS" # Nguy hiểm - Active hazard, caution
+    CLOSED = "CLOSED"       # Đóng - Road impassable
 
 
 class HazardType(str, enum.Enum):
@@ -96,6 +104,19 @@ class DisruptionSeverity(str, enum.Enum):
     WARNING = "warning"
 
 
+class AlertLifecycleStatus(str, enum.Enum):
+    """
+    Alert lifecycle status - for map alerts visibility management
+
+    ACTIVE: Issue is ongoing, shown with red/orange markers
+    RESOLVED: Issue fixed, shown with green markers for 3 days
+    ARCHIVED: Old, hidden from map (after 3 days of being resolved)
+    """
+    ACTIVE = "ACTIVE"
+    RESOLVED = "RESOLVED"
+    ARCHIVED = "ARCHIVED"
+
+
 class Report(Base):
     """
     Report model - stores alerts, community reports, rainfall data
@@ -133,6 +154,11 @@ class Report(Base):
     audio_generated_at = Column(DateTime(timezone=True), nullable=True)  # When audio was generated
     audio_language = Column(String(10), default='vi', nullable=True)  # Language code (vi, en, etc.)
 
+    # Deduplication columns (Phase: News Dedup)
+    normalized_title = Column(String(500), nullable=True)  # Lowercase, collapsed whitespace for matching
+    content_hash = Column(String(64), nullable=True)  # SHA256 of first 500 chars of description
+    source_domain = Column(String(100), nullable=True)  # Extracted domain (e.g., 'vnexpress.net')
+
     # Constraints
     __table_args__ = (
         CheckConstraint('trust_score >= 0.0 AND trust_score <= 1.0', name='check_trust_score'),
@@ -160,7 +186,11 @@ class Report(Base):
             "trust_score": self.trust_score,
             "media": self.media,
             "status": self.status,
-            "duplicate_of": str(self.duplicate_of) if self.duplicate_of else None
+            "duplicate_of": str(self.duplicate_of) if self.duplicate_of else None,
+            # Deduplication fields
+            "normalized_title": self.normalized_title,
+            "content_hash": self.content_hash,
+            "source_domain": self.source_domain
         }
 
 
@@ -295,6 +325,16 @@ class RoadEvent(Base):
     last_verified = Column(DateTime(timezone=True))
     source = Column(String(100), default="PRESS")
 
+    # Lifecycle status (ACTIVE/RESOLVED/ARCHIVED)
+    lifecycle_status = Column(
+        SQLEnum(AlertLifecycleStatus, name="alert_lifecycle_status", values_callable=lambda x: [e.value for e in x], create_constraint=False),
+        nullable=False,
+        server_default="ACTIVE"
+    )
+    last_verified_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
+
     def __repr__(self):
         return f"<RoadEvent {self.id} [{self.status}] {self.segment_name[:30]}>"
 
@@ -312,7 +352,12 @@ class RoadEvent(Base):
             "lat": self.lat,
             "lon": self.lon,
             "last_verified": self.last_verified.isoformat() if self.last_verified else None,
-            "source": self.source
+            "source": self.source,
+            # Lifecycle fields
+            "lifecycle_status": self.lifecycle_status.value if isinstance(self.lifecycle_status, enum.Enum) else self.lifecycle_status,
+            "last_verified_at": self.last_verified_at.isoformat() if self.last_verified_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None
         }
 
 
@@ -387,6 +432,16 @@ class HazardEvent(Base):
     # Metadata
     created_by = Column(UUID(as_uuid=True), nullable=True)
 
+    # Lifecycle status (ACTIVE/RESOLVED/ARCHIVED)
+    lifecycle_status = Column(
+        SQLEnum(AlertLifecycleStatus, name="alert_lifecycle_status", values_callable=lambda x: [e.value for e in x], create_constraint=False),
+        nullable=False,
+        server_default="ACTIVE"
+    )
+    last_verified_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
+
     # Constraints
     __table_args__ = (
         CheckConstraint('radius_km IS NULL OR radius_km > 0', name='check_valid_radius'),
@@ -411,7 +466,12 @@ class HazardEvent(Base):
             "source": self.source,
             "external_id": self.external_id,
             "raw_payload": self.raw_payload,
-            "created_by": str(self.created_by) if self.created_by else None
+            "created_by": str(self.created_by) if self.created_by else None,
+            # Lifecycle fields
+            "lifecycle_status": self.lifecycle_status.value if isinstance(self.lifecycle_status, enum.Enum) else self.lifecycle_status,
+            "last_verified_at": self.last_verified_at.isoformat() if self.last_verified_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None
         }
 
 
@@ -636,6 +696,16 @@ class TrafficDisruption(Base):
     # Admin
     admin_notes = Column(Text, nullable=True)
 
+    # Lifecycle status (ACTIVE/RESOLVED/ARCHIVED)
+    lifecycle_status = Column(
+        SQLEnum(AlertLifecycleStatus, name="alert_lifecycle_status", values_callable=lambda x: [e.value for e in x], create_constraint=False),
+        nullable=False,
+        server_default="ACTIVE"
+    )
+    last_verified_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
+
     # Constraints
     __table_args__ = (
         CheckConstraint('char_length(location_description) >= 10', name='check_min_location_description'),
@@ -666,7 +736,12 @@ class TrafficDisruption(Base):
             "is_active": self.is_active,
             "hazard_event_id": str(self.hazard_event_id) if self.hazard_event_id else None,
             "media_urls": self.media_urls,
-            "admin_notes": self.admin_notes
+            "admin_notes": self.admin_notes,
+            # Lifecycle fields
+            "lifecycle_status": self.lifecycle_status.value if isinstance(self.lifecycle_status, enum.Enum) else self.lifecycle_status,
+            "last_verified_at": self.last_verified_at.isoformat() if self.last_verified_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None
         }
 
 
@@ -711,6 +786,17 @@ class HelpUrgency(str, enum.Enum):
     LOW = "low"
 
 
+class VehicleType(str, enum.Enum):
+    """Vehicle type enum for help offers"""
+    BOAT = "boat"
+    TRUCK = "truck"
+    HELICOPTER = "helicopter"
+    AMBULANCE = "ambulance"
+    CAR = "car"
+    MOTORCYCLE = "motorcycle"
+    OTHER = "other"
+
+
 class HelpRequest(Base):
     """
     Help Request model - people requesting assistance during disasters
@@ -738,6 +824,18 @@ class HelpRequest(Base):
     contact_name = Column(String(255), nullable=False)
     contact_phone = Column(String(50), nullable=False)
     contact_method = Column(String(50), nullable=True)
+    contact_email = Column(Text, nullable=True)
+
+    # Phase 1 Operational Intel (Rescue Intelligence)
+    has_children = Column(Boolean, nullable=True, server_default="false")
+    has_elderly = Column(Boolean, nullable=True, server_default="false")
+    has_disabilities = Column(Boolean, nullable=True, server_default="false")
+    water_level_cm = Column(Integer, nullable=True)
+    building_floor = Column(Integer, nullable=True)
+
+    # Phase 2: Priority & Assignment
+    priority_score = Column(Integer, nullable=True, server_default="0", index=True)
+    assigned_to_offer_id = Column(UUID(as_uuid=True), ForeignKey('help_offers.id', ondelete='SET NULL'), nullable=True)
 
     # Verification
     is_verified = Column(Boolean, nullable=False, server_default="false")
@@ -776,6 +874,14 @@ class HelpRequest(Base):
             "contact_name": self.contact_name,
             "contact_phone": self.contact_phone,
             "contact_method": self.contact_method,
+            "contact_email": self.contact_email,
+            "has_children": self.has_children,
+            "has_elderly": self.has_elderly,
+            "has_disabilities": self.has_disabilities,
+            "water_level_cm": self.water_level_cm,
+            "building_floor": self.building_floor,
+            "priority_score": self.priority_score,
+            "assigned_to_offer_id": str(self.assigned_to_offer_id) if self.assigned_to_offer_id else None,
             "is_verified": self.is_verified,
             "verified_at": self.verified_at.isoformat() if self.verified_at else None,
             "verified_by": str(self.verified_by) if self.verified_by else None,
@@ -813,7 +919,16 @@ class HelpOffer(Base):
     contact_name = Column(String(255), nullable=False)
     contact_phone = Column(String(50), nullable=False)
     contact_method = Column(String(50), nullable=True)
+    contact_email = Column(Text, nullable=True)
     organization = Column(String(255), nullable=True)
+
+    # Phase 1 Operational Intel (Rescue Intelligence)
+    vehicle_type = Column(SQLEnum(VehicleType, name="vehicle_type", values_callable=lambda x: [e.value for e in x]), nullable=True)
+    available_capacity = Column(Integer, nullable=True)
+
+    # Phase 2: Assignment tracking
+    active_assignments_count = Column(Integer, nullable=True, server_default="0")
+    total_assignments_count = Column(Integer, nullable=True, server_default="0")
 
     # Verification
     is_verified = Column(Boolean, nullable=False, server_default="false")
@@ -853,10 +968,185 @@ class HelpOffer(Base):
             "contact_name": self.contact_name,
             "contact_phone": self.contact_phone,
             "contact_method": self.contact_method,
+            "contact_email": self.contact_email,
             "organization": self.organization,
+            "vehicle_type": self.vehicle_type.value if isinstance(self.vehicle_type, enum.Enum) else self.vehicle_type,
+            "available_capacity": self.available_capacity,
+            "active_assignments_count": self.active_assignments_count,
+            "total_assignments_count": self.total_assignments_count,
             "is_verified": self.is_verified,
             "verified_at": self.verified_at.isoformat() if self.verified_at else None,
             "verified_by": str(self.verified_by) if self.verified_by else None,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "notes": self.notes
+        }
+
+
+# Phase 2: Assignment/Matching System
+class RescueAssignment(Base):
+    """Model for tracking assignments between help requests and offers"""
+    __tablename__ = "rescue_assignments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()"))
+
+    # Assignment relationships
+    help_request_id = Column(UUID(as_uuid=True), ForeignKey('help_requests.id', ondelete='CASCADE'), nullable=False, index=True)
+    help_offer_id = Column(UUID(as_uuid=True), ForeignKey('help_offers.id', ondelete='CASCADE'), nullable=False, index=True)
+
+    # Status tracking
+    status = Column(String(50), nullable=False, server_default='pending', index=True)
+    assigned_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Assignment metadata
+    assigned_by = Column(String(255), nullable=True, comment='Who made the assignment (user_id or system)')
+    priority_at_assignment = Column(Integer, nullable=True, comment='Priority score when assignment was made')
+    distance_km_at_assignment = Column(Float, nullable=True, comment='Distance between offer and request at assignment')
+    estimated_arrival_minutes = Column(Integer, nullable=True)
+
+    # Notes and tracking
+    notes = Column(Text, nullable=True)
+    cancellation_reason = Column(Text, nullable=True)
+
+    def __repr__(self):
+        return f"<RescueAssignment {self.id} request={self.help_request_id} offer={self.help_offer_id} status={self.status}>"
+
+    def to_dict(self):
+        """Convert to dictionary for API response"""
+        return {
+            "id": str(self.id),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "help_request_id": str(self.help_request_id),
+            "help_offer_id": str(self.help_offer_id),
+            "status": self.status,
+            "assigned_at": self.assigned_at.isoformat() if self.assigned_at else None,
+            "accepted_at": self.accepted_at.isoformat() if self.accepted_at else None,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "cancelled_at": self.cancelled_at.isoformat() if self.cancelled_at else None,
+            "assigned_by": self.assigned_by,
+            "priority_at_assignment": self.priority_at_assignment,
+            "distance_km_at_assignment": self.distance_km_at_assignment,
+            "estimated_arrival_minutes": self.estimated_arrival_minutes,
+            "notes": self.notes,
+            "cancellation_reason": self.cancellation_reason
+        }
+
+
+class RoadSegment(Base):
+    """
+    Road Segment model - Unified model for road status (Routes 2.0)
+
+    Consolidates RoadEvent, TrafficDisruption, and Report(type=ROAD) into
+    a single model with 4-level Apple Maps style status system.
+    """
+    __tablename__ = "road_segments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Road identification
+    segment_name = Column(String(200), nullable=False)  # "QL1A - Quảng Bình"
+    road_name = Column(String(100), nullable=True)  # "Quốc lộ 1A"
+
+    # Location - point-based
+    province = Column(String(50), index=True, nullable=True)
+    district = Column(String(100), nullable=True)
+    start_lat = Column(Float, nullable=True)
+    start_lon = Column(Float, nullable=True)
+    end_lat = Column(Float, nullable=True)
+    end_lon = Column(Float, nullable=True)
+
+    # PostGIS geometry for spatial queries
+    location = Column(Geography(geometry_type='POINT', srid=4326), nullable=True)
+    geometry = Column(Geography(geometry_type='LINESTRING', srid=4326), nullable=True)
+
+    # Status - 4-level system
+    status = Column(
+        SQLEnum(RoadSegmentStatus, name="road_segment_status", values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        server_default="OPEN"
+    )
+    status_reason = Column(Text, nullable=True)  # Full description of why road has this status
+
+    # Risk scoring (0.0 - 1.0)
+    risk_score = Column(Float, default=0.0, nullable=False)
+
+    # Link to hazard event if caused by disaster
+    hazard_event_id = Column(UUID(as_uuid=True), ForeignKey('hazard_events.id', ondelete='SET NULL'), nullable=True)
+
+    # Deduplication fields (following NewsDedupService pattern)
+    normalized_name = Column(String(200), index=True, nullable=True)  # Lowercase, no diacritics
+    content_hash = Column(String(64), nullable=True)  # SHA256 of status_reason
+    source_domain = Column(String(100), nullable=True)  # Extracted domain
+    source_url = Column(String(500), nullable=True)  # Original article URL
+
+    # Source and verification
+    source = Column(String(100), default="SCRAPER", nullable=False)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    verified_by = Column(UUID(as_uuid=True), nullable=True)
+
+    # Expiration (when status is expected to change)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Legacy reference (for migration tracking)
+    legacy_road_event_id = Column(UUID(as_uuid=True), nullable=True)
+    legacy_disruption_id = Column(UUID(as_uuid=True), nullable=True)
+
+    # Lifecycle status (ACTIVE/RESOLVED/ARCHIVED)
+    lifecycle_status = Column(
+        SQLEnum(AlertLifecycleStatus, name="alert_lifecycle_status", values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        server_default="ACTIVE"
+    )
+    last_verified_at = Column(DateTime(timezone=True), nullable=True)  # Last time this was confirmed still active
+    resolved_at = Column(DateTime(timezone=True), nullable=True)  # When status changed to RESOLVED
+    archived_at = Column(DateTime(timezone=True), nullable=True)  # When status changed to ARCHIVED
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint('risk_score >= 0.0 AND risk_score <= 1.0', name='check_road_segment_risk_score'),
+    )
+
+    def __repr__(self):
+        return f"<RoadSegment {self.id} [{self.status.value}] {self.segment_name[:50]}>"
+
+    def to_dict(self):
+        """Convert to dictionary for API response"""
+        return {
+            "id": str(self.id),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "segment_name": self.segment_name,
+            "road_name": self.road_name,
+            "province": self.province,
+            "district": self.district,
+            "start_lat": self.start_lat,
+            "start_lon": self.start_lon,
+            "end_lat": self.end_lat,
+            "end_lon": self.end_lon,
+            # For backward compatibility, provide single lat/lon (use start point)
+            "lat": self.start_lat,
+            "lon": self.start_lon,
+            "status": self.status.value if isinstance(self.status, enum.Enum) else self.status,
+            "status_reason": self.status_reason,
+            "risk_score": self.risk_score,
+            "hazard_event_id": str(self.hazard_event_id) if self.hazard_event_id else None,
+            "source": self.source,
+            "source_url": self.source_url,
+            "source_domain": self.source_domain,
+            "verified_at": self.verified_at.isoformat() if self.verified_at else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            # Lifecycle fields
+            "lifecycle_status": self.lifecycle_status.value if isinstance(self.lifecycle_status, enum.Enum) else self.lifecycle_status,
+            "last_verified_at": self.last_verified_at.isoformat() if self.last_verified_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "archived_at": self.archived_at.isoformat() if self.archived_at else None
         }

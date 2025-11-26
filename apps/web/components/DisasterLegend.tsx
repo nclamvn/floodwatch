@@ -54,14 +54,14 @@ export default function DisasterLegend({ lastUpdated, isOpen, onClose }: Disaste
   ]
 
   const disasterTypes = [
-    { Icon: CloudRain, label: 'Mưa lớn', color: 'text-blue-500' },
+    { Icon: CloudRain, label: 'Mưa lớn', color: 'text-neutral-500' },
     { Icon: Waves, label: 'Lũ lụt', color: 'text-red-600' },
-    { Icon: Droplets, label: 'Ngập úng', color: 'text-blue-600' },
+    { Icon: Droplets, label: 'Ngập úng', color: 'text-neutral-600' },
     { Icon: Mountain, label: 'Sạt lở', color: 'text-orange-600' },
-    { Icon: Dam, label: 'Xả đập', color: 'text-purple-600' },
+    { Icon: Dam, label: 'Xả đập', color: 'text-neutral-600' },
     { Icon: Wind, label: 'Bão', color: 'text-gray-700' },
     { Icon: Waves, label: 'Triều cường', color: 'text-cyan-600' },
-    { Icon: Sparkles, label: 'Dự báo AI', color: 'text-purple-600' },
+    { Icon: Sparkles, label: 'Dự báo AI', color: 'text-neutral-600' },
     { Icon: Construction, label: 'Giao thông', color: 'text-amber-600' },
     { Icon: Siren, label: 'Cứu hộ', color: 'text-red-700' },
   ]
@@ -81,7 +81,7 @@ export default function DisasterLegend({ lastUpdated, isOpen, onClose }: Disaste
     <div className="absolute top-24 left-3 sm:top-14 sm:left-4 z-40">
       {/* Expanded Panel */}
       {!collapsed && (
-        <div ref={legendRef} className="absolute top-full left-0 mt-2 w-[calc(100vw-24px)] sm:w-72 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md rounded-lg shadow-sm border border-white/30 dark:border-neutral-700/30 overflow-hidden">
+        <div ref={legendRef} className="absolute top-full left-0 mt-2 w-[calc(100vw-24px)] sm:w-72 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),0_2px_8px_rgba(0,0,0,0.3)] border border-neutral-300/50 dark:border-neutral-700/50 overflow-hidden">
       {/* Header */}
       <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-neutral-700 to-neutral-800 dark:from-neutral-800 dark:to-neutral-900 text-white flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -175,8 +175,8 @@ export default function DisasterLegend({ lastUpdated, isOpen, onClose }: Disaste
       </div>
 
       {/* Footer Note */}
-      <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-200/50 dark:border-neutral-700/50">
-        <p className="text-xs text-neutral-300 dark:text-neutral-600 text-left">
+      <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-neutral-50 dark:bg-neutral-900/50 border-t border-neutral-200/50 dark:border-neutral-700/50">
+        <p className="text-xs text-neutral-500 dark:text-neutral-600 text-left">
           <span>© Thông tin mưa lũ - Lâm Nguyễn</span>
         </p>
       </div>

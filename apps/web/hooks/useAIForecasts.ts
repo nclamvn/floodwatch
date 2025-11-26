@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { AIForecast, GetAIForecastsParams } from '@/types/aiForecast'
+import { getCachedResponse, setCachedResponse } from '@/lib/apiCache'
+
+const CACHE_TTL_MS = 120 * 1000 // 120 seconds (forecasts change slower)
 
 interface UseAIForecastsOptions extends Omit<GetAIForecastsParams, 'page' | 'offset'> {
   enabled?: boolean
@@ -62,32 +65,50 @@ export function useAIForecasts(options: UseAIForecastsOptions = {}): UseAIForeca
   useEffect(() => {
     if (!enabled) return
 
-    const fetchForecasts = async () => {
+    // AbortController to cancel fetch on unmount
+    const abortController = new AbortController()
+    let isMounted = true
+
+    const fetchForecasts = async (forceRefresh = false) => {
+      // Build query params
+      const params = new URLSearchParams()
+
+      if (lat !== undefined && lng !== undefined) {
+        params.append('lat', lat.toString())
+        params.append('lng', lng.toString())
+        params.append('radius_km', radius_km.toString())
+      }
+
+      if (types) params.append('types', types)
+      if (severity) params.append('severity', severity)
+      params.append('min_confidence', min_confidence.toString())
+      params.append('active_only', active_only.toString())
+      if (sort) params.append('sort', sort)
+      params.append('limit', limit.toString())
+
+      // Get API URL from env
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const url = `${apiUrl}/ai-forecasts?${params.toString()}`
+
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cached = getCachedResponse<{ data: AIForecast[]; pagination?: { total: number } }>(url)
+        if (cached) {
+          if (isMounted) {
+            setForecasts(cached.data || [])
+            setTotal(cached.pagination?.total || 0)
+          }
+          return
+        }
+      }
+
       try {
-        setIsLoading(true)
-        setError(null)
-
-        // Build query params
-        const params = new URLSearchParams()
-
-        if (lat !== undefined && lng !== undefined) {
-          params.append('lat', lat.toString())
-          params.append('lng', lng.toString())
-          params.append('radius_km', radius_km.toString())
+        if (isMounted) {
+          setIsLoading(true)
+          setError(null)
         }
 
-        if (types) params.append('types', types)
-        if (severity) params.append('severity', severity)
-        params.append('min_confidence', min_confidence.toString())
-        params.append('active_only', active_only.toString())
-        if (sort) params.append('sort', sort)
-        params.append('limit', limit.toString())
-
-        // Get API URL from env
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        const url = `${apiUrl}/ai-forecasts?${params.toString()}`
-
-        const response = await fetch(url)
+        const response = await fetch(url, { signal: abortController.signal })
 
         if (!response.ok) {
           throw new Error(`Failed to fetch AI forecasts: ${response.statusText}`)
@@ -95,14 +116,25 @@ export function useAIForecasts(options: UseAIForecastsOptions = {}): UseAIForeca
 
         const data = await response.json()
 
-        setForecasts(data.data || [])
-        setTotal(data.pagination?.total || 0)
+        // Cache the response
+        setCachedResponse(url, data, CACHE_TTL_MS)
+
+        if (isMounted) {
+          setForecasts(data.data || [])
+          setTotal(data.pagination?.total || 0)
+        }
       } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching AI forecasts:', err)
-        setError(err instanceof Error ? err.message : 'Unknown error')
-        setForecasts([])
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Unknown error')
+          setForecasts([])
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setIsLoading(false)
+        }
       }
     }
 
@@ -115,6 +147,8 @@ export function useAIForecasts(options: UseAIForecastsOptions = {}): UseAIForeca
     }
 
     return () => {
+      isMounted = false
+      abortController.abort()
       if (intervalId) clearInterval(intervalId)
     }
   }, [

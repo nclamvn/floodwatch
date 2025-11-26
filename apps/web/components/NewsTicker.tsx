@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { decodeHTML } from '@/lib/htmlDecode'
+import { deduplicateReports } from '@/lib/newsDedup'
 
 interface Report {
   id: string
@@ -12,6 +13,8 @@ interface Report {
   created_at: string
   trust_score: number
   source: string
+  source_domain?: string
+  normalized_title?: string
   status: string
   lat?: number
   lon?: number
@@ -22,15 +25,25 @@ interface NewsTickerProps {
   reports: Report[]
   onReportClick?: (report: Report) => void
   onVoiceClick?: () => void
+  excludeReportIds?: string[]  // IDs of reports to exclude (e.g., already in carousel)
 }
 
-export default function NewsTicker({ reports, onReportClick, onVoiceClick }: NewsTickerProps) {
+export default function NewsTicker({ reports, onReportClick, onVoiceClick, excludeReportIds = [] }: NewsTickerProps) {
   const tickerRef = useRef<HTMLDivElement>(null)
   const [isPaused, setIsPaused] = useState(false)
 
+  // Layer 3: Frontend deduplication before filtering
+  const dedupedReports = useMemo(() => {
+    const { reports: unique } = deduplicateReports(reports as unknown as import('@/lib/newsDedup').Report[])
+    return unique as unknown as Report[]
+  }, [reports])
+
   // Filter and sort for hot news (disaster-related only)
-  const hotNews = reports
+  const hotNews = dedupedReports
     .filter(r => {
+      // Exclude reports that are already in the carousel
+      if (excludeReportIds.includes(r.id)) return false
+
       const textToCheck = `${r.title} ${r.description || ''}`.toLowerCase()
 
       // Exclude very short titles (likely spam or incomplete)
@@ -186,7 +199,7 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick }: New
         {/* Duplicate items for seamless loop */}
         {[...hotNews, ...hotNews].map((report, index) => (
           <div
-            key={`${report.id}-${index}`}
+            key={`ticker-${report.id}-${index}`}
             className="inline-flex items-center gap-2 px-4 cursor-pointer hover:bg-white/10 transition-colors flex-shrink-0"
             onClick={() => onReportClick?.(report)}
             style={{ minWidth: 'max-content' }}

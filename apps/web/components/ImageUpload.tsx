@@ -119,14 +119,14 @@ export default function ImageUpload({
       <div>
         <label className="block cursor-pointer">
           <div className={`px-4 py-3 border-2 border-dashed rounded-lg text-center transition ${
-            uploading ? 'bg-gray-100 border-gray-300' : 'hover:border-blue-400 hover:bg-blue-50'
+            uploading ? 'bg-gray-100 border-gray-300' : 'hover:border-neutral-400 hover:bg-neutral-50'
           }`}>
             {uploading ? (
               <div>
-                <div className="text-sm text-gray-600 mb-2">Đang upload {progress}%...</div>
+                <div className="text-sm text-gray-700 mb-2">Đang upload {progress}%...</div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
+                    className="bg-neutral-600 h-2 rounded-full transition-all"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -134,7 +134,7 @@ export default function ImageUpload({
             ) : (
               <div>
                 <span className="text-2xl">📷</span>
-                <div className="text-sm text-gray-600 mt-1">
+                <div className="text-sm text-gray-700 mt-1">
                   Click để chọn ảnh (tối đa {maxImages} ảnh, 5MB/ảnh)
                 </div>
               </div>
@@ -182,7 +182,7 @@ export default function ImageUpload({
 
       {/* Count */}
       {uploadedUrls.length > 0 && (
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-gray-700">
           {uploadedUrls.length}/{maxImages} ảnh
         </div>
       )}

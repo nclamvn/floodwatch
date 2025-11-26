@@ -1,16 +1,16 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback, useRef, memo } from 'react'
 import Map, { Marker, Popup, NavigationControl, ScaleControl, Source, Layer } from 'react-map-gl/maplibre'
 import maplibregl from 'maplibre-gl'
 import Supercluster from 'supercluster'
 import { getMapConfig, getStyleUrlWithToken, getCurrentProvider, type BaseMapStyleId } from '@/lib/mapProvider'
 import { useLocation } from '@/contexts/LocationContext'
 import UserLocationMarker from './UserLocationMarker'
-import HazardLayer from './HazardLayer'
+import OptimizedHazardLayer from './OptimizedHazardLayer'
 import DistressLayer from './DistressLayer'
 import TrafficLayer from './TrafficLayer'
-import AIForecastLayer from './AIForecastLayer'
+import OptimizedAIForecastLayer from './OptimizedAIForecastLayer'
 import LayerControlPanel, { LayerVisibility } from './LayerControlPanel'
 import { MapControlsGroup } from './MapControlsGroup'
 import { WindyModal } from './WindyModal'
@@ -62,14 +62,116 @@ function truncateDescription(text: string, maxLength: number = 150): string {
   return text.substring(0, cutPoint).trim() + '...'
 }
 
+// Memoized Cluster Marker Component - prevents re-render when other parts of map change
+interface ClusterMarkerProps {
+  id: number
+  longitude: number
+  latitude: number
+  pointCount: number
+  level: string
+  style: { size: number; bg: string; border: string; shadow: string }
+  onClusterClick: (clusterId: number, longitude: number, latitude: number) => void
+}
+
+const ClusterMarker = memo(function ClusterMarker({
+  id, longitude, latitude, pointCount, level, style, onClusterClick
+}: ClusterMarkerProps) {
+  return (
+    <Marker
+      longitude={longitude}
+      latitude={latitude}
+      anchor="center"
+    >
+      <div
+        className="flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
+        style={{
+          width: `${style.size}px`,
+          height: `${style.size}px`,
+          borderRadius: '50%',
+          backgroundColor: style.bg,
+          color: 'white',
+          fontWeight: '700',
+          fontSize: pointCount > 99 ? '12px' : '14px',
+          border: `3px solid ${style.border}`,
+          boxShadow: style.shadow,
+        }}
+        onClick={() => onClusterClick(id, longitude, latitude)}
+        title={`${pointCount} báo cáo (${level}) - Click để tách ra`}
+      >
+        {pointCount}
+      </div>
+    </Marker>
+  )
+})
+
+// Memoized Individual Pin Marker Component
+interface PinMarkerProps {
+  report: Report
+  longitude: number
+  latitude: number
+  color: string
+  emoji: string
+  isSelected: boolean
+  onPinClick: (report: Report, hasPopup: boolean) => void
+}
+
+const PinMarker = memo(function PinMarker({
+  report, longitude, latitude, color, emoji, isSelected, onPinClick
+}: PinMarkerProps) {
+  return (
+    <Marker
+      longitude={longitude}
+      latitude={latitude}
+      anchor="bottom"
+      onClick={(e) => {
+        e.originalEvent.stopPropagation()
+        onPinClick(report, isSelected)
+      }}
+    >
+      <div
+        className="cursor-pointer transform hover:scale-125 transition-all duration-200"
+        style={{
+          position: 'relative',
+          filter: `drop-shadow(0 3px 6px ${color}66)`
+        }}
+      >
+        {/* Colored background circle with breathing animation */}
+        <div
+          className="marker-glow"
+          style={{
+            position: 'absolute',
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            backgroundColor: color,
+            top: '-10px',
+            left: '-10px'
+          }}
+        />
+        {/* Emoji */}
+        <div
+          style={{
+            fontSize: '24px',
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
+          {emoji}
+        </div>
+      </div>
+    </Marker>
+  )
+})
+
 export default function MapViewClustered({ reports, radiusFilter, targetViewport, onViewportChange, onMapClick, onClearRadius, onExpandArticle, onLegendClick, legendActive }: MapViewProps) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [viewState, setViewState] = useState({
-    longitude: 107.5,
-    latitude: 16.5,
-    zoom: 7
+    longitude: 106.0,  // Toàn Việt Nam
+    latitude: 16.0,
+    zoom: 5.5
   })
-  const [previousViewState, setPreviousViewState] = useState<{
+  // Use ref for previousViewState to avoid unnecessary re-renders
+  const previousViewStateRef = useRef<{
     longitude: number
     latitude: number
     zoom: number
@@ -80,12 +182,22 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
   const [aiForecastOpen, setAiForecastOpen] = useState(true)
   const [isDesktop, setIsDesktop] = useState(false)
 
-  // Detect desktop/mobile for zoom controls
+  // Detect desktop/mobile for zoom controls (debounced)
   useEffect(() => {
-    const checkDesktop = () => setIsDesktop(window.innerWidth >= 640)
-    checkDesktop()
+    let timeoutId: NodeJS.Timeout
+    const checkDesktop = () => {
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        setIsDesktop(window.innerWidth >= 640)
+      }, 150) // Debounce 150ms
+    }
+    // Initial check without debounce
+    setIsDesktop(window.innerWidth >= 640)
     window.addEventListener('resize', checkDesktop)
-    return () => window.removeEventListener('resize', checkDesktop)
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('resize', checkDesktop)
+    }
   }, [])
 
   // Layer visibility state - all enabled by default
@@ -109,14 +221,16 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
   const mapStyleUrl = getStyleUrlWithToken(baseMapStyle)
   const currentProvider = getCurrentProvider()
 
-  // Debug map initialization
+  // Debug map initialization (only in development)
   useEffect(() => {
-    console.log('🗺️ Map Config:', {
-      styleUrl: mapStyleUrl,
-      provider: currentProvider,
-      baseMapStyle,
-      hasToken: !!mapConfig.accessToken
-    })
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🗺️ Map Config:', {
+        styleUrl: mapStyleUrl,
+        provider: currentProvider,
+        baseMapStyle,
+        hasToken: !!mapConfig.accessToken
+      })
+    }
   }, [mapStyleUrl, currentProvider, baseMapStyle, mapConfig])
 
   // Handle viewport changes from parent (when province is selected)
@@ -169,15 +283,17 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
     refreshInterval: 300000, // Refresh every 5 minutes (forecasts change slower)
   })
 
-  // Debug logging for AI forecasts
+  // Debug logging for AI forecasts (only in development)
   useEffect(() => {
-    console.log('🗺️ AI Forecasts Status:', {
-      userLocation: userLocation ? `${userLocation.latitude}, ${userLocation.longitude}` : 'NOT SET',
-      forecastCount: aiForecasts.length,
-      isLoading: forecastsLoading,
-      toggleState: aiForecastOpen,
-      message: !userLocation ? '⚠️ Need to click "Locate Me" button' : aiForecasts.length === 0 ? '⚠️ No forecasts in database' : '✅ Forecasts available'
-    })
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🗺️ AI Forecasts Status:', {
+        userLocation: userLocation ? `${userLocation.latitude}, ${userLocation.longitude}` : 'NOT SET',
+        forecastCount: aiForecasts.length,
+        isLoading: forecastsLoading,
+        toggleState: aiForecastOpen,
+        message: !userLocation ? '⚠️ Need to click "Locate Me" button' : aiForecasts.length === 0 ? '⚠️ No forecasts in database' : '✅ Forecasts available'
+      })
+    }
   }, [userLocation, aiForecasts, forecastsLoading, aiForecastOpen])
 
   // Update last data update timestamp when hazards change
@@ -198,8 +314,17 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
     }
   }, [userLocation?.timestamp]) // Only trigger when location timestamp changes
 
-  // Create clusters
-  const { clusters, supercluster } = useMemo(() => {
+  // Handle location button click - fly to user location
+  const handleLocationClick = useCallback((lat: number, lon: number) => {
+    setViewState({
+      latitude: lat,
+      longitude: lon,
+      zoom: 12,
+    })
+  }, [])
+
+  // Supercluster instance - only recreate when reports change
+  const supercluster = useMemo(() => {
     const cluster = new Supercluster({
       radius: 60,
       maxZoom: 16
@@ -217,7 +342,11 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       }))
 
     cluster.load(points)
+    return cluster
+  }, [reports]) // Only depends on reports, not viewState
 
+  // Clusters - update when viewport changes (but supercluster stays same)
+  const clusters = useMemo(() => {
     const bounds = [
       viewState.longitude - 360 / Math.pow(2, viewState.zoom),
       viewState.latitude - 180 / Math.pow(2, viewState.zoom),
@@ -225,10 +354,8 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       viewState.latitude + 180 / Math.pow(2, viewState.zoom)
     ] as [number, number, number, number]
 
-    const clusters = cluster.getClusters(bounds, Math.floor(viewState.zoom))
-
-    return { clusters, supercluster: cluster }
-  }, [reports, viewState.zoom, viewState.longitude, viewState.latitude])
+    return supercluster.getClusters(bounds, Math.floor(viewState.zoom))
+  }, [supercluster, viewState.zoom, viewState.longitude, viewState.latitude])
 
   // Heatmap data for rainfall
   const heatmapData = useMemo(() => {
@@ -251,47 +378,51 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
 
   // OSM tiles don't need token, so skip this check
 
-  // Cluster severity levels - based on URGENCY of reports, not just count
-  const getClusterLevel = (clusterId: number, pointCount: number, superclusterInstance: any) => {
-    try {
-      // Get actual reports within this cluster
-      const leaves = superclusterInstance.getLeaves(clusterId, Infinity)
-      const clusterReports = leaves.map((leaf: any) => leaf.properties.report).filter(Boolean)
+  // Memoized cluster levels - compute once per cluster set, not on each render
+  const clusterLevels = useMemo(() => {
+    const levels: Record<number, string> = {}
 
-      if (clusterReports.length === 0) return 'low'
+    for (const cluster of clusters) {
+      if (!cluster.properties.cluster) continue
 
-      // Count high-priority reports (ALERT/SOS with good trust)
-      const urgentCount = clusterReports.filter((r: Report) =>
-        (r.type === 'ALERT' || r.type === 'SOS') && r.trust_score >= 0.7
-      ).length
+      const clusterId = cluster.id as number
+      const pointCount = cluster.properties.point_count
 
-      const alertSosCount = clusterReports.filter((r: Report) =>
-        r.type === 'ALERT' || r.type === 'SOS'
-      ).length
+      if (typeof clusterId !== 'number') continue
 
-      // Priority 1: Many urgent reports → CRITICAL (RED)
-      if (urgentCount >= 3) return 'critical'  // 3+ urgent ALERT/SOS → RED
-      if (alertSosCount >= 5) return 'critical'  // 5+ ALERT/SOS → RED
+      try {
+        const leaves = supercluster.getLeaves(clusterId, Infinity)
+        const clusterReports = leaves.map((leaf: any) => leaf.properties.report).filter(Boolean)
 
-      // Priority 2: Some urgent reports → HIGH (ORANGE)
-      if (urgentCount >= 1) return 'high'  // 1-2 urgent reports → ORANGE
-      if (alertSosCount >= 2) return 'high'  // 2-4 ALERT/SOS → ORANGE
+        if (clusterReports.length === 0) {
+          levels[clusterId] = 'low'
+          continue
+        }
 
-      // Priority 3: RAIN or lower urgency → MEDIUM (YELLOW)
-      if (clusterReports.some((r: Report) => r.type === 'RAIN' && r.trust_score >= 0.6)) {
-        return 'medium'
+        const urgentCount = clusterReports.filter((r: Report) =>
+          (r.type === 'ALERT' || r.type === 'SOS') && r.trust_score >= 0.7
+        ).length
+
+        const alertSosCount = clusterReports.filter((r: Report) =>
+          r.type === 'ALERT' || r.type === 'SOS'
+        ).length
+
+        if (urgentCount >= 3 || alertSosCount >= 5) {
+          levels[clusterId] = 'critical'
+        } else if (urgentCount >= 1 || alertSosCount >= 2) {
+          levels[clusterId] = 'high'
+        } else if (clusterReports.some((r: Report) => r.type === 'RAIN' && r.trust_score >= 0.6) || pointCount >= 10) {
+          levels[clusterId] = 'medium'
+        } else {
+          levels[clusterId] = 'low'
+        }
+      } catch {
+        levels[clusterId] = pointCount >= 10 ? 'high' : pointCount >= 5 ? 'medium' : 'low'
       }
-
-      // Fallback: Count-based for non-urgent clusters
-      if (pointCount >= 10) return 'medium'
-      return 'low'
-    } catch (error) {
-      // Fallback to count-based if error
-      if (pointCount >= 10) return 'high'
-      if (pointCount >= 5) return 'medium'
-      return 'low'
     }
-  }
+
+    return levels
+  }, [clusters, supercluster])
 
   const getClusterStyle = (level: string) => {
     const baseSize = 30
@@ -357,6 +488,43 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
     }
   }
 
+  // Memoized callbacks to prevent re-renders
+  const handleClusterClick = useCallback((clusterId: number, longitude: number, latitude: number) => {
+    // Save current position before zooming (using ref, no re-render)
+    previousViewStateRef.current = {
+      longitude: viewState.longitude,
+      latitude: viewState.latitude,
+      zoom: viewState.zoom
+    }
+
+    // Zoom to expand cluster
+    const expansionZoom = Math.min(
+      supercluster.getClusterExpansionZoom(clusterId),
+      20
+    )
+
+    setViewState({
+      ...viewState,
+      longitude,
+      latitude,
+      zoom: expansionZoom
+    })
+  }, [viewState, supercluster])
+
+  const handlePinClick = useCallback((report: Report, isCurrentlySelected: boolean) => {
+    if (isCurrentlySelected) {
+      // Second click - restore previous view
+      if (previousViewStateRef.current) {
+        setViewState(previousViewStateRef.current)
+        previousViewStateRef.current = null
+      }
+      setSelectedReport(null)
+    } else {
+      // First click - show popup
+      setSelectedReport(report)
+    }
+  }, []) // No dependencies needed - ref doesn't cause re-render
+
   // Convert km radius to meters for the circle
   const radiusCircleData = radiusFilter ? {
     type: 'FeatureCollection' as const,
@@ -403,16 +571,17 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
         aiForecastActive={aiForecastOpen}
         onLegendClick={() => onLegendClick?.()}
         legendActive={legendActive}
+        onLocationClick={handleLocationClick}
       />
 
-      {/* Hazard events visualization */}
-      <HazardLayer
+      {/* Hazard events visualization - Optimized Symbol Layer */}
+      <OptimizedHazardLayer
         hazards={hazards}
         visible={layerVisibility.heavyRain || layerVisibility.flood || layerVisibility.landslide || layerVisibility.damRelease || layerVisibility.storm || layerVisibility.tideSurge}
       />
 
-      {/* AI Forecast Layer */}
-      <AIForecastLayer
+      {/* AI Forecast Layer - Optimized Symbol Layer */}
+      <OptimizedAIForecastLayer
         forecasts={aiForecasts}
         visible={aiForecastOpen}
       />
@@ -524,126 +693,47 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
         </div>
       )}
 
-      {/* Render clusters and markers */}
+      {/* Render clusters and markers - using memoized components */}
       {clusters.map((cluster: any) => {
         const [longitude, latitude] = cluster.geometry.coordinates
         const { cluster: isCluster, point_count: pointCount } = cluster.properties
 
         if (isCluster) {
-          // Render cluster with severity-based styling (based on report urgency)
-          const level = getClusterLevel(cluster.id, pointCount, supercluster)
+          // Use pre-computed level from memoized clusterLevels
+          const level = clusterLevels[cluster.id] || 'low'
           const style = getClusterStyle(level)
 
           return (
-            <Marker
+            <ClusterMarker
               key={`cluster-${cluster.id}`}
+              id={cluster.id}
               longitude={longitude}
               latitude={latitude}
-              anchor="center"
-            >
-              <div
-                className="flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
-                style={{
-                  width: `${style.size}px`,
-                  height: `${style.size}px`,
-                  borderRadius: '50%',
-                  backgroundColor: style.bg,
-                  color: 'white',
-                  fontWeight: '700',
-                  fontSize: pointCount > 99 ? '12px' : '14px',
-                  border: `3px solid ${style.border}`,
-                  boxShadow: style.shadow,
-                }}
-                onClick={() => {
-                  // Save current position before zooming to cluster
-                  setPreviousViewState({
-                    longitude: viewState.longitude,
-                    latitude: viewState.latitude,
-                    zoom: viewState.zoom
-                  })
-
-                  // Always zoom in to expand cluster into smaller clusters or individual markers
-                  const expansionZoom = Math.min(
-                    supercluster.getClusterExpansionZoom(cluster.id),
-                    20
-                  )
-
-                  // Smooth zoom animation to expansion level
-                  setViewState({
-                    ...viewState,
-                    longitude,
-                    latitude,
-                    zoom: expansionZoom
-                  })
-                }}
-                title={`${pointCount} báo cáo (${level}) - Click để tách ra`}
-              >
-                {pointCount}
-              </div>
-            </Marker>
+              pointCount={pointCount}
+              level={level}
+              style={style}
+              onClusterClick={handleClusterClick}
+            />
           )
         } else {
-          // Render individual marker with severity color
+          // Render individual marker with memoized PinMarker component
           const report = cluster.properties.report
           const severity = getSeverity(report)
           const color = getMarkerColor(severity)
           const emoji = getMarkerEmoji(report.type)
+          const isSelected = selectedReport?.id === report.id
 
           return (
-            <Marker
+            <PinMarker
               key={report.id}
+              report={report}
               longitude={longitude}
               latitude={latitude}
-              anchor="bottom"
-              onClick={(e) => {
-                e.originalEvent.stopPropagation()
-
-                // Check if clicking the same pin that already has popup open
-                if (selectedReport?.id === report.id) {
-                  // Second click on same pin - zoom out to position before cluster click
-                  if (previousViewState) {
-                    setViewState(previousViewState)
-                    setPreviousViewState(null)
-                  }
-                  setSelectedReport(null)
-                } else {
-                  // First click on pin - just show popup (no zoom)
-                  setSelectedReport(report)
-                }
-              }}
-            >
-              <div
-                className="cursor-pointer transform hover:scale-125 transition-all duration-200"
-                style={{
-                  position: 'relative',
-                  filter: `drop-shadow(0 3px 6px ${color}66)`
-                }}
-              >
-                {/* Colored background circle with breathing animation */}
-                <div
-                  className="marker-glow"
-                  style={{
-                    position: 'absolute',
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    backgroundColor: color,
-                    top: '-10px',
-                    left: '-10px'
-                  }}
-                />
-                {/* Emoji */}
-                <div
-                  style={{
-                    fontSize: '24px',
-                    position: 'relative',
-                    zIndex: 1
-                  }}
-                >
-                  {emoji}
-                </div>
-              </div>
-            </Marker>
+              color={color}
+              emoji={emoji}
+              isSelected={isSelected}
+              onPinClick={handlePinClick}
+            />
           )
         }
       })}
@@ -666,13 +756,13 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
                 e.stopPropagation()
                 onExpandArticle?.(selectedReport)
               }}
-              className="absolute top-2 right-2 p-1.5 rounded-lg hover:bg-neutral-100 active:bg-neutral-200 transition-colors group"
+              className="absolute top-2 right-2 p-1.5 rounded-lg hover:bg-neutral-100 active:bg-neutral-200 dark:hover:bg-neutral-700 dark:active:bg-neutral-600 transition-colors group"
               title="Mở chế độ đọc đầy đủ"
               aria-label="Expand article"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-neutral-600 group-hover:text-neutral-900"
+                className="h-5 w-5 text-neutral-600 group-hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-neutral-100"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -684,37 +774,37 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
             {/* Badge & Trust Score */}
             <div className="flex items-center gap-2 mb-3">
               <span className={`px-2.5 py-1 text-xs font-medium rounded ${
-                selectedReport.type === 'ALERT' ? 'bg-error-50 text-error-700' :
-                selectedReport.type === 'SOS' ? 'bg-warning-50 text-warning-700' :
-                selectedReport.type === 'ROAD' ? 'bg-warning-50 text-warning-600' :
-                'bg-info-50 text-info-700'
+                selectedReport.type === 'ALERT' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' :
+                selectedReport.type === 'SOS' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' :
+                selectedReport.type === 'ROAD' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
+                'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
               }`}>
                 {selectedReport.type}
               </span>
-              <span className="text-xs text-neutral-600 font-medium">
+              <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
                 {(selectedReport.trust_score * 100).toFixed(0)}% tin cậy
               </span>
             </div>
 
             {/* Title */}
-            <h3 className="font-bold text-base text-neutral-900 mb-2 leading-snug">
+            <h3 className="font-bold text-base text-neutral-900 dark:text-neutral-100 mb-2 leading-snug">
               {selectedReport.title}
             </h3>
 
             {/* Description - Truncated preview */}
             {selectedReport.description && (
               <>
-                <p className="text-sm text-neutral-700 mb-2 leading-relaxed line-clamp-3">
+                <p className="text-sm text-neutral-700 dark:text-neutral-300 mb-2 leading-relaxed line-clamp-3">
                   {truncateDescription(selectedReport.description, 150)}
                 </p>
-                <p className="text-[10px] text-neutral-500 italic mb-3">
+                <p className="text-[10px] text-neutral-500 dark:text-neutral-500 italic mb-3">
                   Nhấn icon ↗️ để xem đầy đủ
                 </p>
               </>
             )}
 
             {/* Meta Info */}
-            <div className="text-xs text-neutral-600 space-y-1.5 pt-2 border-t border-neutral-200">
+            <div className="text-xs text-neutral-600 dark:text-neutral-400 space-y-1.5 pt-2 border-t border-neutral-200 dark:border-neutral-700">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm">📍</span>
                 <span className="font-medium">{selectedReport.province || 'Không rõ'}</span>
@@ -731,7 +821,7 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
             </div>
 
             {/* Copyright Footer */}
-            <div className="text-[10px] text-neutral-300 text-left pt-2 mt-2 border-t border-neutral-100">
+            <div className="text-[10px] text-neutral-400 dark:text-neutral-800 text-left pt-2 mt-2 border-t border-neutral-100 dark:border-neutral-800">
               © Thông tin mưa lũ - Lâm Nguyễn
             </div>
           </div>

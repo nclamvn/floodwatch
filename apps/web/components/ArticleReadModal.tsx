@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { X, ExternalLink, MapPin, Clock, Volume2, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { decodeHTML } from '@/lib/htmlDecode'
 import axios from 'axios'
+
+// Minimum image dimensions to be considered "quality" (320px)
+const MIN_IMAGE_SIZE = 320
 
 interface Report {
   id: string
@@ -31,6 +34,14 @@ interface ArticleReadModalProps {
 export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalProps) {
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
+  const [imageError, setImageError] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
+
+  // Reset image state when report changes
+  useEffect(() => {
+    setImageError(false)
+    setImageLoaded(false)
+  }, [report?.id])
 
   // Fetch AI summary if no description
   useEffect(() => {
@@ -74,6 +85,22 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
     }
   }, [isOpen, onClose])
 
+  // Handle image load to validate dimensions - MUST be before early return
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget
+    // Hide image if too small (less than 320px in either dimension)
+    if (img.naturalWidth < MIN_IMAGE_SIZE || img.naturalHeight < MIN_IMAGE_SIZE) {
+      setImageError(true)
+    } else {
+      setImageLoaded(true)
+    }
+  }, [])
+
+  // Handle image error - MUST be before early return
+  const handleImageError = useCallback(() => {
+    setImageError(true)
+  }, [])
+
   if (!isOpen || !report) return null
 
   // Format timestamp
@@ -87,15 +114,24 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
     if (!images || images.length === 0) return []
 
     return images.filter(url => {
-      // Skip if URL contains thumbnail indicators
+      // Skip empty or invalid URLs
+      if (!url || url.trim() === '' || url === '#') return false
+
+      // Skip if URL contains thumbnail or low-quality indicators
       const thumbnailKeywords = [
         'thumb', 'thumbnail', 'ico', 'icon', 'avatar',
-        'logo', 'banner', 'ads', 'tracking',
-        '/50x', '/100x', '/150x', '/200x',  // Small dimension indicators
-        '_thumb', '_small', '_mini', '_xs', '_sm',
-        'size=s', 'size=m', 'resize=',
+        'logo', 'banner', 'ads', 'tracking', 'placeholder',
+        '/50x', '/100x', '/150x', '/200x', '/250x', '/300x', // Small dimension indicators
+        '_thumb', '_small', '_mini', '_xs', '_sm', '_tiny',
+        'size=s', 'size=m', 'resize=', 'width=1', 'height=1',
         'static-tuoitre', 'logotuoitre', 'banner_gg',
-        '/icon/', '/logo/', '/ads/', '/banner/'
+        '/icon/', '/logo/', '/ads/', '/banner/', '/widget/',
+        'pixel.gif', '1x1', 'spacer', 'blank',
+        // Common broken image patterns
+        'data:image', 'base64,', 'undefined', 'null',
+        // Baomoi small thumbnails (w100, w150, etc.)
+        '/w100', '/w150', '/w200', '/w250', 'w100_', 'w150_', 'w200_', 'w250_',
+        'r1x1'  // 1:1 ratio thumbnails are usually small icons
       ]
 
       const urlLower = url.toLowerCase()
@@ -103,9 +139,20 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
         return false
       }
 
-      // Only include valid image extensions
-      const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
-      if (!validExtensions.some(ext => urlLower.includes(ext))) {
+      // Only include valid image extensions - prefer photos over graphics
+      const validExtensions = ['.jpg', '.jpeg', '.webp']  // Exclude .png (often logos) and .gif (often tracking)
+      const hasValidExtension = validExtensions.some(ext => {
+        // Check both with and without query params
+        return urlLower.includes(ext + '?') || urlLower.endsWith(ext)
+      })
+      if (!hasValidExtension) {
+        return false
+      }
+
+      // Must be a valid URL
+      try {
+        new URL(url)
+      } catch {
         return false
       }
 
@@ -113,11 +160,19 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
     })
   }
 
-  // Get filtered high-quality images
-  const highQualityImages = filterHighQualityImages(report.media)
+  // Get filtered high-quality images, prioritize larger images
+  const highQualityImages = filterHighQualityImages(report.media).sort((a, b) => {
+    // Prioritize images with w700 or larger widths
+    const aIsLarge = /w[5-9]\d{2}|w\d{4}/.test(a)
+    const bIsLarge = /w[5-9]\d{2}|w\d{4}/.test(b)
+    if (aIsLarge && !bIsLarge) return -1
+    if (!aIsLarge && bIsLarge) return 1
+    return 0
+  })
 
-  // Get first image for hero
+  // Get first image for hero - only show if valid
   const heroImage = highQualityImages[0]
+  const shouldShowImage = heroImage && !imageError
 
   // Parse description into paragraphs - handle different formats
   // Use AI summary if no description available
@@ -169,22 +224,22 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
 
       {/* Modal Container - Desktop Premium / Mobile Bottom Sheet */}
       <div
-        className="relative w-full mx-4 flex flex-col max-h-[92vh] rounded-t-2xl sm:rounded-3xl sm:max-w-[920px] sm:max-h-[85vh] sm:mx-auto bg-zinc-900/90 backdrop-blur-3xl supports-[backdrop-filter]:backdrop-blur-3xl border border-zinc-700/30 shadow-[0_24px_60px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 p-4 sm:p-7"
+        className="relative w-full mx-4 flex flex-col max-h-[92vh] rounded-t-2xl sm:rounded-3xl sm:max-w-[920px] sm:max-h-[85vh] sm:mx-auto bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl supports-[backdrop-filter]:backdrop-blur-3xl border border-neutral-300/50 dark:border-zinc-700/50 shadow-[0_24px_60px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 p-4 sm:p-7"
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-4 sm:mb-5">
           {/* Left: Metadata badges */}
           <div className="flex flex-col gap-2">
             {/* Region badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800/40 backdrop-blur-sm border border-zinc-700/40">
-              <MapPin className="w-3.5 h-3.5 text-zinc-300" />
-              <span className="text-xs font-medium text-zinc-200">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-200/60 dark:bg-zinc-800/60 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50">
+              <MapPin className="w-3.5 h-3.5 text-neutral-700 dark:text-zinc-300" />
+              <span className="text-xs font-medium text-neutral-800 dark:text-zinc-200">
                 {regionDisplay}
               </span>
             </div>
 
             {/* Timestamp */}
-            <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
               <Clock className="w-3.5 h-3.5" />
               <span>Cập nhật: {formattedDate}</span>
             </div>
@@ -193,10 +248,10 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
           {/* Right: Close button */}
           <button
             onClick={onClose}
-            className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-zinc-800/70 hover:bg-zinc-700/70 active:bg-zinc-600/70 backdrop-blur-sm border border-zinc-700/40 flex items-center justify-center transition-all duration-200 group"
+            className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-neutral-200/70 dark:bg-zinc-800/70 hover:bg-neutral-300/80 dark:hover:bg-zinc-700/80 active:bg-neutral-400/80 dark:active:bg-zinc-600/80 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50 flex items-center justify-center transition-all duration-200 group"
             aria-label="Đóng"
           >
-            <X className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" />
+            <X className="w-5 h-5 text-neutral-700 dark:text-zinc-300 group-hover:text-neutral-900 dark:text-white transition-colors" />
           </button>
         </div>
 
@@ -205,19 +260,19 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
           {/* Article Title */}
           <h1
             id="article-modal-title"
-            className="text-xl sm:text-2xl md:text-[26px] font-bold text-white leading-tight mb-3 sm:mb-4 break-words"
+            className="text-xl sm:text-2xl md:text-[26px] font-bold text-neutral-900 dark:text-white leading-tight mb-3 sm:mb-4 break-words"
           >
             {decodeHTML(report.title)}
           </h1>
 
           {/* Source Info & Link */}
-          <div className="flex flex-wrap items-center gap-3 mb-4 sm:mb-5 pb-4 border-b border-zinc-700/30">
+          <div className="flex flex-wrap items-center gap-3 mb-4 sm:mb-5 pb-4 border-b border-neutral-300/50 dark:border-zinc-700/50">
             {/* Source badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/50 border border-zinc-700/40">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-200/60 dark:bg-zinc-800/60 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50">
               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-zinc-500 to-zinc-700 flex items-center justify-center text-[10px] font-bold text-white">
                 {sourceDomain[0].toUpperCase()}
               </div>
-              <span className="text-xs font-medium text-neutral-300">
+              <span className="text-xs font-medium text-neutral-800 dark:text-neutral-300">
                 {sourceDomain}
               </span>
             </div>
@@ -227,7 +282,7 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
               href={report.source.startsWith('http') ? report.source : `https://${report.source}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800/40 hover:bg-zinc-700/50 border border-zinc-700/50 hover:border-zinc-600/60 text-xs font-medium text-zinc-200 hover:text-white transition-all duration-200 group"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-200/60 dark:bg-zinc-800/60 hover:bg-neutral-300/70 dark:hover:bg-zinc-700/70 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50 hover:border-neutral-400/60 dark:hover:border-zinc-600/60 text-xs font-medium text-neutral-800 dark:text-zinc-200 hover:text-neutral-900 dark:hover:text-white transition-all duration-200 group"
             >
               <span>Xem bài gốc</span>
               <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -237,75 +292,56 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
             <button
               disabled
               title="Tính năng sắp có"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-800/20 border border-neutral-700/30 text-xs font-medium text-neutral-500 cursor-not-allowed opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-200/40 dark:bg-neutral-900/40 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50 text-xs font-medium text-neutral-500 dark:text-neutral-400 cursor-not-allowed opacity-50"
             >
               <Volume2 className="w-3.5 h-3.5" />
               <span>Nghe tóm tắt</span>
             </button>
           </div>
 
-          {/* Hero Image */}
-          {heroImage && (
+          {/* Hero Image - only show if valid and meets minimum quality */}
+          {shouldShowImage && (
             <div className="mb-5 sm:mb-6 -mx-1">
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-neutral-800/50">
+              <div className={`relative w-full aspect-video rounded-2xl overflow-hidden bg-neutral-200/60 dark:bg-neutral-900/50 ${!imageLoaded ? 'animate-pulse' : ''}`}>
                 <img
                   src={heroImage}
                   alt={report.title}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   loading="lazy"
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
                 />
-              </div>
-            </div>
-          )}
-
-          {/* Additional Images Gallery (if more than 1 high-quality image) */}
-          {highQualityImages.length > 1 && (
-            <div className="mb-5 sm:mb-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {highQualityImages.slice(1, 7).map((img, idx) => (
-                  <div
-                    key={idx}
-                    className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800/50"
-                  >
-                    <img
-                      src={img}
-                      alt={`${report.title} - Ảnh ${idx + 2}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
               </div>
             </div>
           )}
 
           {/* Article Content */}
           <article
-            className="prose prose-invert prose-sm sm:prose-base max-w-none prose-headings:!text-white prose-p:!text-zinc-100 prose-p:leading-relaxed prose-a:!text-zinc-400 prose-a:no-underline prose-a:hover:underline prose-strong:!text-white prose-strong:font-semibold prose-ul:!text-zinc-100 prose-ol:!text-zinc-100 prose-li:!text-zinc-100 prose-blockquote:!text-zinc-200 prose-blockquote:border-zinc-700"
+            className="prose dark:prose-invert prose-sm sm:prose-base max-w-none"
           >
             {loadingSummary ? (
-              <div className="flex items-center gap-2 text-zinc-100 italic">
+              <div className="flex items-center gap-2 !text-neutral-900 dark:!text-zinc-100 italic">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Đang tạo tóm tắt bằng AI...</span>
               </div>
             ) : paragraphs.length > 0 ? (
               <>
                 {!report.description && aiSummary && (
-                  <div className="mb-4 p-3 rounded-lg bg-zinc-800/40 border border-zinc-700/40">
-                    <p className="text-xs !text-zinc-400 mb-2 flex items-center gap-1">
+                  <div className="mb-4 p-3 rounded-lg bg-neutral-200/60 dark:bg-zinc-800/60 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50">
+                    <p className="text-xs !text-neutral-600 dark:text-neutral-400 mb-2 flex items-center gap-1">
                       <Volume2 className="w-3 h-3" />
                       Tóm tắt được tạo bởi AI
                     </p>
                   </div>
                 )}
                 {paragraphs.map((paragraph, idx) => (
-                  <p key={idx} className="mb-4 !text-zinc-100">
+                  <p key={idx} className="mb-4 !text-neutral-900 dark:!text-zinc-100">
                     {decodeHTML(paragraph)}
                   </p>
                 ))}
               </>
             ) : (
-              <p className="!text-zinc-100 italic">
+              <p className="!text-neutral-900 dark:!text-zinc-100 italic">
                 Nội dung chi tiết không khả dụng. Vui lòng xem bài gốc để đọc đầy đủ.
               </p>
             )}
@@ -316,8 +352,8 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
         </div>
 
         {/* Footer - Disclaimer */}
-        <div className="mt-4 pt-4 border-t border-zinc-700/30">
-          <p className="text-[11px] text-neutral-500 leading-relaxed">
+        <div className="mt-4 pt-4 border-t border-neutral-300/50 dark:border-zinc-700/30">
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
             Dữ liệu tổng hợp từ các nguồn chính thống. FloodWatch chỉ tái hiện nội dung,
             vui lòng xem chi tiết tại bài gốc nếu cần xác minh thông tin.
           </p>

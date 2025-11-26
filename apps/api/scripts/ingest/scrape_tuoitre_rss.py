@@ -19,7 +19,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app.database import SessionLocal, Report
 from app.database.models import ReportType
 from app.services.province_extractor import extract_location_data
-from app.services.article_extractor import extract_article_hybrid
+from app.services.article_extractor import extract_article
+from app.services.news_dedup import NewsDedupService
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 
@@ -244,14 +245,19 @@ def scrape_tuoitre_rss(dry_run: bool = False) -> int:
                     # Get RSS summary as fallback
                     summary = clean_html(entry.get('description', entry.get('summary', '')))
 
-                    # Try to extract full article content
+                    # Try to extract full article content using 5-tier absolute extraction
                     description = summary  # Default to summary
                     if link:
                         try:
-                            article_result = extract_article_hybrid(link, language='vi')
-                            if article_result['success'] and len(article_result['full_text']) > 300:
+                            article_result = extract_article(link, language='vi', min_length=500)
+                            if article_result.get('success') and len(article_result.get('full_text', '')) >= 500:
                                 description = article_result['full_text']
-                                print(f"  ✓ Full article extracted: {len(description)} chars from {link[:50]}...")
+                                tier_used = article_result.get('tier_used', 'unknown')
+                                print(f"  ✓ Full article extracted ({tier_used}): {len(description)} chars from {link[:50]}...")
+                            elif article_result.get('full_text') and len(article_result.get('full_text', '')) > len(summary):
+                                # Use partial content if it's better than summary
+                                description = article_result['full_text']
+                                print(f"  ~ Partial extraction: {len(description)} chars (better than summary)")
                             else:
                                 print(f"  ✗ Using RSS summary fallback ({len(summary)} chars)")
                         except Exception as e:
@@ -269,9 +275,11 @@ def scrape_tuoitre_rss(dry_run: bool = False) -> int:
                     if not is_disaster_related(title, description):
                         continue
 
-                    # Check for duplicates
-                    if deduplicate_check(db, title, created_at):
-                        print(f"  [SKIP] Duplicate: {title[:60]}...")
+                    # Check for cross-source duplicates (Layer 1)
+                    duplicate = NewsDedupService.find_duplicate(db, title, description, created_at)
+                    if duplicate:
+                        dup_id, similarity, match_type = duplicate
+                        print(f"  [SKIP] Duplicate ({match_type}, {similarity:.0%}): {title[:50]}...")
                         continue
 
                     # Extract location
@@ -279,6 +287,11 @@ def scrape_tuoitre_rss(dry_run: bool = False) -> int:
 
                     # Classify report type
                     report_type = classify_report_type(title, description)
+
+                    # Prepare deduplication fields
+                    dedup_fields = NewsDedupService.prepare_report_dedup_fields(
+                        title, description, link or "tuoitre.vn"
+                    )
 
                     # Create report
                     report = Report(
@@ -292,7 +305,11 @@ def scrape_tuoitre_rss(dry_run: bool = False) -> int:
                         location=from_shape(Point(location_data['lon'], location_data['lat'])) if location_data['lat'] and location_data['lon'] else None,
                         trust_score=0.90,  # Tuổi Trẻ base trust score
                         status="new",
-                        created_at=created_at
+                        created_at=created_at,
+                        # Deduplication fields
+                        normalized_title=dedup_fields['normalized_title'],
+                        content_hash=dedup_fields['content_hash'],
+                        source_domain=dedup_fields['source_domain']
                     )
 
                     if dry_run:

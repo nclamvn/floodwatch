@@ -11,7 +11,7 @@ from sqlalchemy.types import UserDefinedType
 from geoalchemy2.functions import ST_SetSRID, ST_MakePoint, ST_Distance
 from geoalchemy2 import Geography
 
-from app.database.models import HazardEvent, HazardType, SeverityLevel
+from app.database.models import HazardEvent, HazardType, SeverityLevel, AlertLifecycleStatus
 
 
 class HazardEventRepository:
@@ -113,6 +113,13 @@ class HazardEventRepository:
                         HazardEvent.ends_at > now  # Not ended yet
                     )
                 )
+            )
+            # Exclude ARCHIVED alerts (lifecycle filter)
+            query = query.filter(
+                HazardEvent.lifecycle_status.in_([
+                    AlertLifecycleStatus.ACTIVE,
+                    AlertLifecycleStatus.RESOLVED
+                ])
             )
 
         # Time range filter

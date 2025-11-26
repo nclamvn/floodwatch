@@ -93,7 +93,7 @@ export default function UserLocationMarker() {
         <div className="relative">
           {/* Pulsing outer ring */}
           <div
-            className="absolute inset-0 rounded-full bg-primary-500 animate-ping"
+            className="absolute inset-0 rounded-full bg-neutral-500 animate-ping"
             style={{
               width: '32px',
               height: '32px',
@@ -105,7 +105,7 @@ export default function UserLocationMarker() {
 
           {/* Outer glow ring */}
           <div
-            className="absolute inset-0 rounded-full bg-primary-400"
+            className="absolute inset-0 rounded-full bg-neutral-400"
             style={{
               width: '24px',
               height: '24px',
@@ -117,7 +117,7 @@ export default function UserLocationMarker() {
 
           {/* Main dot */}
           <div
-            className="relative rounded-full bg-primary-600 border-4 border-white shadow-lg"
+            className="relative rounded-full bg-neutral-600 border-4 border-white shadow-lg"
             style={{
               width: '16px',
               height: '16px',
@@ -149,7 +149,7 @@ export default function UserLocationMarker() {
         <div
           className="
             px-3 py-1.5
-            bg-primary-600 text-white
+            bg-neutral-600 text-white
             rounded-full
             text-xs font-semibold
             shadow-lg

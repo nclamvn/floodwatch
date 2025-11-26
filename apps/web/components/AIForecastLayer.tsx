@@ -142,9 +142,14 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
           anchor="center"
           onClick={(e) => {
             e.originalEvent.stopPropagation()
-            setSelectedForecast(forecast)
-            setShowDataSources(false) // Reset on new selection
-            onForecastClick?.(forecast)
+            // Toggle: click lại pin đang mở sẽ đóng popup
+            if (selectedForecast?.id === forecast.id) {
+              setSelectedForecast(null)
+            } else {
+              setSelectedForecast(forecast)
+              setShowDataSources(false) // Reset on new selection
+              onForecastClick?.(forecast)
+            }
           }}
         >
           <div className="cursor-pointer transform hover:scale-125 transition-all duration-200">
@@ -191,17 +196,17 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
               {/* Title Line */}
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5">
-                  <Bot className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <Bot className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-base text-purple-700 dark:text-purple-400">
+                  <h3 className="font-bold text-base text-neutral-700 dark:text-neutral-400">
                     Dự báo AI – {HAZARD_TYPE_LABELS[selectedForecast.type]}
                   </h3>
                 </div>
               </div>
 
               {/* Time & Risk Badge */}
-              <div className="text-xs text-neutral-600 mb-2">
+              <div className="text-xs text-neutral-700 mb-2">
                 Khung thời gian: {new Date(selectedForecast.forecast_time).toLocaleString('vi-VN', {
                   day: '2-digit',
                   month: '2-digit',
@@ -228,8 +233,8 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
 
             {/* AI Summary - UI Spec Section 3.3.2 */}
             {selectedForecast.summary && (
-              <div className="mb-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <h4 className="text-sm font-semibold text-purple-900 mb-1.5">Nội dung dự báo (AI)</h4>
+              <div className="mb-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                <h4 className="text-sm font-semibold text-neutral-900 mb-1.5">Nội dung dự báo (AI)</h4>
                 <p className="text-sm text-neutral-700 leading-relaxed break-words overflow-wrap-break-word">
                   {selectedForecast.summary}
                 </p>
@@ -240,7 +245,7 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
             <div className="mb-3 pb-3 border-b border-neutral-200">
               <div className="flex items-center gap-1.5 mb-2">
                 <span>⏱️</span>
-                <span className="text-xs text-neutral-600">
+                <span className="text-xs text-neutral-700">
                   Dự báo: {new Date(selectedForecast.forecast_time).toLocaleString('vi-VN', {
                     dateStyle: 'short',
                     timeStyle: 'short',
@@ -251,7 +256,7 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
               {/* Confidence Progress Bar */}
               <div className="mb-1.5">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-neutral-600">Độ tin cậy</span>
+                  <span className="text-neutral-700">Độ tin cậy</span>
                   <span className="font-bold" style={{ color: AI_FORECAST_COLORS.dark }}>
                     {Math.round(selectedForecast.confidence * 100)}% ({getConfidenceLevel(selectedForecast.confidence)})
                   </span>
@@ -268,7 +273,7 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
                 </div>
               </div>
 
-              <p className="text-xs text-neutral-500 italic">
+              <p className="text-xs text-neutral-700 italic">
                 Ước tính dựa trên mô hình kết hợp dữ liệu mưa, mực nước và lịch sử.
               </p>
             </div>
@@ -277,7 +282,7 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
             <div className="mb-3">
               <button
                 onClick={() => setShowDataSources(!showDataSources)}
-                className="flex items-center gap-1.5 text-sm font-semibold text-neutral-700 hover:text-purple-700 transition-colors w-full"
+                className="flex items-center gap-1.5 text-sm font-semibold text-neutral-900 hover:text-neutral-700 transition-colors w-full"
               >
                 <span>{showDataSources ? '▾' : '▸'}</span>
                 <span>Nguồn dữ liệu sử dụng</span>
@@ -289,7 +294,7 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
               </button>
 
               {showDataSources && (
-                <ul className="mt-2 space-y-1 text-xs text-neutral-600 max-h-32 overflow-y-auto">
+                <ul className="mt-2 space-y-1 text-xs text-neutral-700 max-h-32 overflow-y-auto">
                   {selectedForecast.data_sources && selectedForecast.data_sources.length > 0 ? (
                     selectedForecast.data_sources.map((source, idx) => (
                       <li key={idx} className="flex items-start gap-1.5">
@@ -305,7 +310,7 @@ export default function AIForecastLayer({ forecasts, visible = true, onForecastC
             </div>
 
             {/* Additional Info */}
-            <div className="text-xs text-neutral-600 space-y-1.5">
+            <div className="text-xs text-neutral-700 space-y-1.5">
               {selectedForecast.radius_km && (
                 <div className="flex items-center gap-1.5">
                   <span>📍</span>

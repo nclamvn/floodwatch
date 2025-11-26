@@ -1,9 +1,9 @@
 'use client'
 
-import { MapPin, MapPinned, Wind, Loader2, Info } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { MapPin, MapPinned, Wind, Loader2, Info, Map, Satellite, Globe, Mountain, ChevronRight, ChevronLeft } from 'lucide-react'
 import { MapStyleSwitcher } from './MapStyleSwitcher'
 import { LocationInfoPopup } from './LocationInfoPopup'
-import { HeaderVoicePlayer } from './HeaderVoicePlayer'
 import { type BaseMapStyleId } from '@/lib/mapProvider'
 import { useLocation } from '@/contexts/LocationContext'
 
@@ -15,185 +15,218 @@ interface MapControlsGroupProps {
   aiForecastActive?: boolean
   onLegendClick: () => void
   legendActive?: boolean
+  onLocationClick?: (lat: number, lon: number) => void
 }
 
-export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onAIForecastClick, aiForecastActive, onLegendClick, legendActive }: MapControlsGroupProps) {
+// Map style icon mapping
+const MAP_STYLE_ICONS: Record<BaseMapStyleId, React.ComponentType<{ className?: string }>> = {
+  streets: Map,
+  hybrid: Satellite,
+  satellite: Globe,
+  outdoors: Mountain,
+}
+
+export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onAIForecastClick, aiForecastActive, onLegendClick, legendActive, onLocationClick }: MapControlsGroupProps) {
   const { userLocation, isLocating, requestLocation } = useLocation()
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [showLocationInfo, setShowLocationInfo] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Get current map style icon
+  const CurrentMapIcon = MAP_STYLE_ICONS[baseMapStyle] || Map
+
+  // Component mount debug
+  useEffect(() => {
+    console.log('[MapControlsGroup] Component mounted', {
+      hasLocationCallback: !!onLocationClick,
+      userLocation: userLocation ? `${userLocation.latitude}, ${userLocation.longitude}` : null
+    })
+  }, [])
+
+  // Handle My Location button click - pan map to location
+  const handleLocationClick = () => {
+    console.log('[MapControlsGroup] Location button clicked', { userLocation, hasCallback: !!onLocationClick })
+
+    if (userLocation) {
+      // If location exists, pan the map to it
+      console.log('[MapControlsGroup] Panning to existing location:', userLocation.latitude, userLocation.longitude)
+      onLocationClick?.(userLocation.latitude, userLocation.longitude)
+      // Also show the popup
+      setShowLocationInfo(true)
+    } else {
+      // If no location yet, request it
+      console.log('[MapControlsGroup] Requesting new location...')
+      requestLocation()
+    }
+  }
+
+  // Track isExpanded state changes
+  useEffect(() => {
+    console.log('[MapControlsGroup] isExpanded changed to:', isExpanded)
+  }, [isExpanded])
+
+  // When location is acquired, automatically pan to it
+  useEffect(() => {
+    if (userLocation && onLocationClick) {
+      console.log('[MapControlsGroup] Location acquired, auto-panning to:', userLocation.latitude, userLocation.longitude)
+      onLocationClick(userLocation.latitude, userLocation.longitude)
+    }
+  }, [userLocation?.timestamp, onLocationClick])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!isExpanded) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsExpanded(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside as any)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside as any)
+    }
+  }, [isExpanded])
 
   return (
     <>
-      {/* Desktop: Single row with all buttons */}
-      <div className="hidden sm:flex absolute top-4 left-4 z-40 flex-row gap-2 relative">
-        {/* Legend Button - Frosted Glass (MOVED TO FAR LEFT) */}
-        <button
-          onClick={onLegendClick}
-          className={`
-            w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
-            flex items-center justify-center
-            transition-all duration-200 hover:scale-105 active:scale-95
-            ${
-              legendActive
-                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 dark:border-white/10'
-            }
-          `}
-          title="Chú giải bản đồ"
-        >
-          <Info className="w-4 h-4" />
-        </button>
-
-        {/* Map Style Switcher - 4 buttons */}
-        <MapStyleSwitcher value={baseMapStyle} onChange={onStyleChange} />
-
-        {/* My Location Button - Frosted Glass */}
-        <button
-          onClick={requestLocation}
-          disabled={isLocating}
-          className={`
-            w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
-            flex items-center justify-center
-            transition-all duration-200
-            ${
-              userLocation
-                ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 dark:border-white/10'
-            }
-            ${isLocating ? 'cursor-wait opacity-70' : 'hover:scale-105 active:scale-95'}
-          `}
-          title={userLocation ? 'Vị trí hiện tại' : 'Lấy vị trí của tôi'}
-        >
-          {isLocating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : userLocation ? (
-            <MapPinned className="w-4 h-4" />
-          ) : (
-            <MapPin className="w-4 h-4" />
-          )}
-        </button>
-
-        {/* Windy Button - Frosted Glass */}
-        <button
-          onClick={onWindyClick}
-          className="w-9 h-9 rounded-full shadow-sm backdrop-blur-md border bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-          title="Xem dự báo thời tiết Windy"
-        >
-          <Wind className="w-4 h-4" />
-        </button>
-
-        {/* AI Forecast Button - Frosted Glass */}
-        <button
-          onClick={onAIForecastClick}
-          className={`
-            w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
-            flex items-center justify-center
-            transition-all duration-200 hover:scale-105 active:scale-95
-            ${
-              aiForecastActive
-                ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500'
-                : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700/90 dark:border-white/10'
-            }
-          `}
-          title="Dự báo AI"
-        >
-          <span className="text-xs font-bold">AI</span>
-        </button>
-
-        {/* Audio News Player */}
-        <HeaderVoicePlayer key="map-controls-audio" />
-
-        {/* Location Info Popup */}
-        <LocationInfoPopup />
-      </div>
-
-      {/* Mobile: Three rows - better organization */}
-      <div className="sm:hidden absolute top-3 left-3 right-20 z-40 flex flex-col gap-2">
-        {/* Row 1: Map Styles (4 buttons) */}
-        <div className="flex flex-row gap-2 justify-start">
-          <MapStyleSwitcher value={baseMapStyle} onChange={onStyleChange} />
-        </div>
-
-        {/* Row 2: Action buttons (4 buttons) */}
-        <div className="flex flex-row gap-2 justify-start">
-          {/* Legend - Frosted Glass (MOVED TO FAR LEFT) */}
+      {/* Hamburger Menu Container - positioned after header left controls with gap-2 spacing */}
+      <div ref={containerRef} className="absolute top-4 left-[360px] z-40">
+        {!isExpanded ? (
+          /* Collapsed State - Show current map style icon + arrow with 3D shadow effect */
           <button
-            onClick={onLegendClick}
-            className={`
-              w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
-              flex items-center justify-center
-              transition-all duration-200 active:scale-95
-              ${
-                legendActive
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                  : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30'
-              }
-            `}
-            title="Chú giải"
+            onClick={() => {
+              console.log('[MapControlsGroup] Hamburger button clicked, expanding menu...')
+              setIsExpanded(true)
+            }}
+            className="flex items-center gap-1.5 px-3 py-2.5 h-10 rounded-full backdrop-blur-xl bg-white/70 dark:bg-gray-800/70 hover:bg-white/80 dark:hover:bg-gray-700/80 border border-neutral-300/50 dark:border-neutral-700/50 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),0_1px_4px_rgba(0,0,0,0.2)] transition-all duration-ui ease-smooth hover:scale-105 active:scale-95"
+            title="Mở menu bản đồ"
           >
-            <Info className="w-4 h-4" />
+            <CurrentMapIcon className="w-5 h-5 text-gray-900 dark:text-gray-200" />
+            <ChevronRight className="w-3.5 h-3.5 text-gray-900 dark:text-gray-200" />
           </button>
+        ) : (
+          /* Expanded State - Horizontal pill tray with all 8 buttons with 3D shadow */
+          <div className="flex items-center gap-2 px-3 py-2 rounded-full backdrop-blur-2xl bg-white/70 dark:bg-gray-800/70 border border-neutral-300/50 dark:border-neutral-700/50 shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),0_1px_4px_rgba(0,0,0,0.2)] animate-in zoom-in-95 duration-200">
+            {/* Collapse Button - ChevronLeft */}
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="w-8 h-8 rounded-full backdrop-blur-xl border bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-700/70 dark:text-gray-200 dark:hover:bg-gray-600/80 dark:border-neutral-700/50 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+              title="Thu gọn menu"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
 
-          {/* My Location - Frosted Glass */}
-          <button
-            onClick={requestLocation}
-            disabled={isLocating}
-            className={`
-              w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
-              flex items-center justify-center
-              transition-all duration-200
-              ${
-                userLocation
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-500'
-                  : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30'
-              }
-              ${isLocating ? 'cursor-wait opacity-70' : 'active:scale-95'}
-            `}
-            title="Vị trí"
-          >
-            {isLocating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : userLocation ? (
-              <MapPinned className="w-4 h-4" />
-            ) : (
-              <MapPin className="w-4 h-4" />
-            )}
-          </button>
+            {/* Legend Button */}
+            <button
+              onClick={() => {
+                onLegendClick()
+                setIsExpanded(false)
+              }}
+              className={`
+                w-8 h-8 rounded-full backdrop-blur-xl border
+                flex items-center justify-center
+                transition-all duration-200 hover:scale-105 active:scale-95
+                ${
+                  legendActive
+                    ? 'bg-neutral-600 hover:bg-neutral-700 text-white border-neutral-500'
+                    : 'bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-700/70 dark:text-gray-200 dark:hover:bg-gray-600/80 dark:border-neutral-700/50'
+                }
+              `}
+              title="Chú giải"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
 
-          {/* Windy - Frosted Glass */}
-          <button
-            onClick={onWindyClick}
-            className="w-9 h-9 rounded-full shadow-sm backdrop-blur-md border bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 flex items-center justify-center transition-all duration-200 active:scale-95"
-            title="Windy"
-          >
-            <Wind className="w-4 h-4" />
-          </button>
+            {/* Map Style Buttons */}
+            {Object.entries(MAP_STYLE_ICONS).map(([styleId, IconComponent]) => (
+              <button
+                key={styleId}
+                onClick={() => {
+                  onStyleChange(styleId as BaseMapStyleId)
+                }}
+                className={`
+                  w-8 h-8 rounded-full backdrop-blur-xl border
+                  flex items-center justify-center
+                  transition-all duration-200 hover:scale-105 active:scale-95
+                  ${
+                    baseMapStyle === styleId
+                      ? 'bg-neutral-600 hover:bg-neutral-700 text-white border-neutral-500'
+                      : 'bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-700/70 dark:text-gray-200 dark:hover:bg-gray-600/80 dark:border-neutral-700/50'
+                  }
+                `}
+                title={styleId === 'streets' ? 'Đường phố' : styleId === 'hybrid' ? 'Vệ tinh + đường' : styleId === 'satellite' ? 'Vệ tinh' : 'Địa hình'}
+              >
+                <IconComponent className="w-3.5 h-3.5" />
+              </button>
+            ))}
 
-          {/* AI Forecast - Frosted Glass */}
-          <button
-            onClick={onAIForecastClick}
-            className={`
-              w-9 h-9 rounded-full shadow-sm backdrop-blur-md border
-              flex items-center justify-center
-              transition-all duration-200 active:scale-95
-              ${
-                aiForecastActive
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-500'
-                  : 'bg-white/80 hover:bg-white/95 text-gray-900 border-white/30'
-              }
-            `}
-            title="AI"
-          >
-            <span className="text-xs font-bold">AI</span>
-          </button>
-        </div>
+            {/* My Location Button */}
+            <button
+              onClick={(e) => {
+                console.log('[MapControlsGroup] Location button onClick fired!', {
+                  isLocating,
+                  hasUserLocation: !!userLocation,
+                  disabled: isLocating
+                })
+                handleLocationClick()
+              }}
+              disabled={isLocating}
+              className={`
+                w-8 h-8 rounded-full backdrop-blur-xl border
+                flex items-center justify-center
+                transition-all duration-200
+                ${
+                  showLocationInfo && userLocation
+                    ? 'bg-neutral-600 hover:bg-neutral-700 text-white border-neutral-500'
+                    : 'bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-700/70 dark:text-gray-200 dark:hover:bg-gray-600/80 dark:border-neutral-700/50'
+                }
+                ${isLocating ? 'cursor-wait opacity-70' : 'hover:scale-105 active:scale-95'}
+              `}
+              title="Vị trí của tôi"
+            >
+              {isLocating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : userLocation ? (
+                <MapPinned className="w-3.5 h-3.5" />
+              ) : (
+                <MapPin className="w-3.5 h-3.5" />
+              )}
+            </button>
 
-        {/* Row 3: Audio News Player - Left aligned, auto width */}
-        <div className="flex justify-start">
-          <HeaderVoicePlayer key="map-controls-audio-mobile" className="!rounded-full !px-3 !py-1.5 !bg-gray-500/40 hover:!bg-gray-500/50 active:!bg-gray-500/60" showLabel={true} />
-        </div>
+            {/* AI Forecast Button */}
+            <button
+              onClick={() => {
+                onAIForecastClick()
+                setIsExpanded(false)
+              }}
+              className={`
+                w-8 h-8 rounded-full backdrop-blur-xl border
+                flex items-center justify-center
+                transition-all duration-200 hover:scale-105 active:scale-95
+                ${
+                  aiForecastActive
+                    ? 'bg-neutral-600 hover:bg-neutral-700 text-white border-neutral-500'
+                    : 'bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-700/70 dark:text-gray-200 dark:hover:bg-gray-600/80 dark:border-neutral-700/50'
+                }
+              `}
+              title="Dự báo AI"
+            >
+              <span className="text-[13px] font-bold">AI</span>
+            </button>
+          </div>
+        )}
 
-        {/* Location Info Popup - below audio player on mobile */}
-        <div className="flex justify-start">
-          <LocationInfoPopup />
+        {/* Location Info Popup - Toggleable */}
+        <div className="mt-2">
+          <LocationInfoPopup
+            isVisible={showLocationInfo}
+            onClose={() => setShowLocationInfo(false)}
+          />
         </div>
       </div>
     </>

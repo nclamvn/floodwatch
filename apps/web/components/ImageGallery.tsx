@@ -1,22 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
+
+// Minimum image dimension (width or height) to display
+const MIN_IMAGE_SIZE = 320
 
 interface ImageGalleryProps {
   images: string[]
   alt?: string
+  minSize?: number  // Minimum width/height in pixels (default: 320)
 }
 
-export default function ImageGallery({ images, alt = 'Report image' }: ImageGalleryProps) {
+export default function ImageGallery({ images, alt = 'Report image', minSize = MIN_IMAGE_SIZE }: ImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [currentImage, setCurrentImage] = useState(0)
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set())
+  const [smallImages, setSmallImages] = useState<Set<number>>(new Set())  // Images too small
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set())  // Track loaded images
 
   if (!images || images.length === 0) return null
 
-  const validImages = images.filter((_, index) => !imageErrors.has(index))
-  if (validImages.length === 0) return null
+  // Filter out errored images AND images that are too small
+  const validImages = images.filter((_, index) =>
+    !imageErrors.has(index) && !smallImages.has(index)
+  )
+
+  // Show nothing if all images are invalid or too small
+  if (validImages.length === 0 && loadedImages.size === images.length) return null
 
   const openLightbox = (index: number) => {
     setCurrentImage(index)
@@ -37,6 +48,23 @@ export default function ImageGallery({ images, alt = 'Report image' }: ImageGall
 
   const handleImageError = (index: number) => {
     setImageErrors(prev => new Set(prev).add(index))
+    setLoadedImages(prev => new Set(prev).add(index))
+  }
+
+  // Check image dimensions on load - reject images smaller than minSize
+  const handleImageLoad = (index: number, event: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = event.currentTarget
+    const naturalWidth = img.naturalWidth
+    const naturalHeight = img.naturalHeight
+
+    // Mark as loaded
+    setLoadedImages(prev => new Set(prev).add(index))
+
+    // Check if image is too small (either dimension < minSize)
+    if (naturalWidth < minSize && naturalHeight < minSize) {
+      console.log(`[ImageGallery] Image ${index} too small: ${naturalWidth}x${naturalHeight} (min: ${minSize}px)`)
+      setSmallImages(prev => new Set(prev).add(index))
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -47,26 +75,31 @@ export default function ImageGallery({ images, alt = 'Report image' }: ImageGall
 
   return (
     <>
-      {/* Image Grid */}
+      {/* Image Grid - Only show valid images (not errored and >= minSize) */}
       <div className={`grid gap-2 ${
         validImages.length === 1 ? 'grid-cols-1' :
         validImages.length === 2 ? 'grid-cols-2' :
         'grid-cols-2 md:grid-cols-3'
       }`}>
         {images.map((image, index) => {
-          if (imageErrors.has(index)) return null
+          // Skip errored or too-small images
+          if (imageErrors.has(index) || smallImages.has(index)) return null
+
+          // Find the actual index in validImages for lightbox
+          const validIndex = validImages.indexOf(image)
 
           return (
             <div
               key={index}
-              className="relative aspect-video bg-neutral-800 rounded-lg overflow-hidden cursor-pointer group"
-              onClick={() => openLightbox(index)}
+              className="relative aspect-video bg-neutral-900 rounded-lg overflow-hidden cursor-pointer group"
+              onClick={() => validIndex >= 0 && openLightbox(validIndex)}
             >
               <img
                 src={image}
                 alt={`${alt} ${index + 1}`}
                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 onError={() => handleImageError(index)}
+                onLoad={(e) => handleImageLoad(index, e)}
                 loading="lazy"
               />
               {/* Overlay on hover */}

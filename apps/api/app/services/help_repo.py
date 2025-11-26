@@ -89,7 +89,7 @@ class HelpRequestRepository:
             lat, lng, radius_km: Spatial filter (find requests within radius)
             limit: Max results
             offset: Pagination offset
-            sort_by: Sort field ('created_at', 'urgency', 'distance')
+            sort_by: Sort field ('created_at', 'urgency', 'priority', 'distance')
 
         Returns:
             (requests, total_count, distances_km)
@@ -145,7 +145,10 @@ class HelpRequestRepository:
         total = query.count()
 
         # Sorting
-        if sort_by == 'urgency':
+        if sort_by == 'priority':
+            # Order by priority score DESC (highest priority first), then by created_at DESC
+            query = query.order_by(HelpRequest.priority_score.desc(), HelpRequest.created_at.desc())
+        elif sort_by == 'urgency':
             # Order by urgency DESC (critical first), then by created_at DESC
             query = query.order_by(HelpRequest.urgency.desc(), HelpRequest.created_at.desc())
         elif sort_by == 'distance' and lat is not None and lng is not None:

@@ -20,6 +20,11 @@ interface FormData {
   contact_name: string
   contact_phone: string
   contact_email: string
+  has_children: boolean
+  has_elderly: boolean
+  has_disabilities: boolean
+  water_level_cm: number | null
+  building_floor: number | null
 }
 
 export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
@@ -32,7 +37,12 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
     people_count: null,
     contact_name: '',
     contact_phone: '',
-    contact_email: ''
+    contact_email: '',
+    has_children: false,
+    has_elderly: false,
+    has_disabilities: false,
+    water_level_cm: null,
+    building_floor: null
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -54,7 +64,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
     { value: 'critical', label: 'Khẩn cấp', color: 'text-red-600' },
     { value: 'high', label: 'Cao', color: 'text-orange-600' },
     { value: 'medium', label: 'Trung bình', color: 'text-yellow-600' },
-    { value: 'low', label: 'Thấp', color: 'text-blue-600' }
+    { value: 'low', label: 'Thấp', color: 'text-neutral-600' }
   ]
 
   const handleGetLocation = () => {
@@ -122,10 +132,16 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         contact_name: formData.contact_name.trim(),
         contact_phone: formData.contact_phone.trim(),
         ...(formData.people_count && { people_count: formData.people_count }),
-        ...(formData.contact_email.trim() && { contact_email: formData.contact_email.trim() })
+        ...(formData.contact_email.trim() && { contact_email: formData.contact_email.trim() }),
+        has_children: formData.has_children,
+        has_elderly: formData.has_elderly,
+        has_disabilities: formData.has_disabilities,
+        ...(formData.water_level_cm !== null && { water_level_cm: formData.water_level_cm }),
+        ...(formData.building_floor !== null && { building_floor: formData.building_floor })
       }
 
-      const response = await fetch('/api/help/requests', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+      const response = await fetch(`${apiUrl}/help/requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +166,12 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         people_count: null,
         contact_name: '',
         contact_phone: '',
-        contact_email: ''
+        contact_email: '',
+        has_children: false,
+        has_elderly: false,
+        has_disabilities: false,
+        water_level_cm: null,
+        building_floor: null
       })
 
       // Call success callback
@@ -169,8 +190,8 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg p-6">
-      <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+    <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-6">
+      <h2 className="text-xl font-bold text-slate-900 dark:text-neutral-50 mb-4 flex items-center gap-2">
         <AlertCircle className="w-5 h-5 text-red-600" />
         Yêu cầu cứu trợ
       </h2>
@@ -178,14 +199,14 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Location */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Vị trí <span className="text-red-600">*</span>
           </label>
           <button
             type="button"
             onClick={handleGetLocation}
             disabled={isGettingLocation}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-neutral-600 hover:bg-neutral-700 disabled:bg-neutral-400 text-white rounded-md transition-colors"
           >
             <MapPin className="w-4 h-4" />
             {isGettingLocation ? 'Đang lấy vị trí...' :
@@ -196,13 +217,13 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
 
         {/* Needs Type */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Loại trợ giúp cần <span className="text-red-600">*</span>
           </label>
           <select
             value={formData.needs_type}
             onChange={(e) => setFormData(prev => ({ ...prev, needs_type: e.target.value as NeedsType }))}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 focus:ring-2 focus:ring-red-600 focus:border-transparent"
           >
             {needsTypeOptions.map(option => (
               <option key={option.value} value={option.value}>
@@ -214,13 +235,13 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
 
         {/* Urgency */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Mức độ khẩn cấp <span className="text-red-600">*</span>
           </label>
           <select
             value={formData.urgency}
             onChange={(e) => setFormData(prev => ({ ...prev, urgency: e.target.value as UrgencyLevel }))}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 focus:ring-2 focus:ring-red-600 focus:border-transparent"
           >
             {urgencyOptions.map(option => (
               <option key={option.value} value={option.value}>
@@ -232,7 +253,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Mô tả chi tiết <span className="text-red-600">*</span>
           </label>
           <textarea
@@ -240,31 +261,45 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             placeholder="Mô tả tình huống và những gì bạn cần (ít nhất 10 ký tự)"
             rows={4}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent resize-none"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent resize-none"
           />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
             {formData.description.length}/10 ký tự tối thiểu
           </p>
         </div>
 
         {/* People Count */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Số người cần giúp
           </label>
-          <input
-            type="number"
-            min="1"
-            value={formData.people_count || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, people_count: e.target.value ? parseInt(e.target.value) : null }))}
-            placeholder="Ví dụ: 5"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              min="1"
+              value={formData.people_count || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, people_count: e.target.value ? parseInt(e.target.value) : null }))}
+              placeholder="Ví dụ: 5"
+              className="number-input-modern w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            />
+          </div>
+          <style jsx>{`
+            .number-input-modern::-webkit-inner-spin-button,
+            .number-input-modern::-webkit-outer-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
+
+            .number-input-modern[type=number] {
+              -moz-appearance: textfield;
+              appearance: textfield;
+            }
+          `}</style>
         </div>
 
         {/* Contact Name */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Tên liên hệ <span className="text-red-600">*</span>
           </label>
           <input
@@ -272,13 +307,13 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
             value={formData.contact_name}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_name: e.target.value }))}
             placeholder="Họ và tên của bạn"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
           />
         </div>
 
         {/* Contact Phone */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Số điện thoại <span className="text-red-600">*</span>
           </label>
           <input
@@ -286,13 +321,13 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
             value={formData.contact_phone}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
             placeholder="Số điện thoại liên hệ"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
           />
         </div>
 
         {/* Contact Email (Optional) */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Email (tùy chọn)
           </label>
           <input
@@ -300,8 +335,79 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
             value={formData.contact_email}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
             placeholder="Email của bạn"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
           />
+        </div>
+
+        {/* Special Conditions */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
+            Điều kiện đặc biệt
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.has_children}
+                onChange={(e) => setFormData(prev => ({ ...prev, has_children: e.target.checked }))}
+                className="w-4 h-4 text-red-600 border-neutral-300 rounded focus:ring-red-600"
+              />
+              <span className="text-sm text-slate-900 dark:text-neutral-50">Có trẻ em</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.has_elderly}
+                onChange={(e) => setFormData(prev => ({ ...prev, has_elderly: e.target.checked }))}
+                className="w-4 h-4 text-red-600 border-neutral-300 rounded focus:ring-red-600"
+              />
+              <span className="text-sm text-slate-900 dark:text-neutral-50">Có người cao tuổi</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.has_disabilities}
+                onChange={(e) => setFormData(prev => ({ ...prev, has_disabilities: e.target.checked }))}
+                className="w-4 h-4 text-red-600 border-neutral-300 rounded focus:ring-red-600"
+              />
+              <span className="text-sm text-slate-900 dark:text-neutral-50">Có người khuyết tật</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Water Level */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
+            Mức nước hiện tại (cm)
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={formData.water_level_cm || ''}
+            onChange={(e) => setFormData(prev => ({ ...prev, water_level_cm: e.target.value ? parseInt(e.target.value) : null }))}
+            placeholder="Ví dụ: 80"
+            className="number-input-modern w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+          />
+          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
+            Độ cao mực nước tại vị trí (quan trọng cho ưu tiên cứu hộ)
+          </p>
+        </div>
+
+        {/* Building Floor */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
+            Tầng của tòa nhà
+          </label>
+          <input
+            type="number"
+            value={formData.building_floor || ''}
+            onChange={(e) => setFormData(prev => ({ ...prev, building_floor: e.target.value ? parseInt(e.target.value) : null }))}
+            placeholder="Ví dụ: 1, 2, 3..."
+            className="number-input-modern w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+          />
+          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
+            Tầng hiện tại của bạn (phục vụ lập kế hoạch sơ tán)
+          </p>
         </div>
 
         {/* Error Message */}

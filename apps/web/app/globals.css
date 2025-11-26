@@ -4,22 +4,23 @@
 
 /* ========================================
    Design Tokens: CSS Custom Properties
+   UPDATED: Navy-Slate dark theme, Apple-inspired
    ======================================== */
 
 :root {
-  /* Light Mode Colors */
-  --color-bg-primary: 255, 255, 255;
-  --color-bg-secondary: 250, 250, 250;
-  --color-bg-tertiary: 245, 245, 245;
+  /* Light Mode Colors - HIGH CONTRAST */
+  --color-bg-primary: 255, 255, 255;       /* Pure white */
+  --color-bg-secondary: 248, 250, 252;     /* slate-50 */
+  --color-bg-tertiary: 241, 245, 249;      /* slate-100 */
 
-  --color-text-primary: 23, 23, 23;
-  --color-text-secondary: 82, 82, 82;
-  --color-text-tertiary: 163, 163, 163;
+  --color-text-primary: 15, 23, 42;        /* slate-900 - DARK for high contrast */
+  --color-text-secondary: 51, 65, 85;      /* slate-700 - Medium dark */
+  --color-text-tertiary: 100, 116, 139;    /* slate-500 - Still readable */
 
-  --color-border-subtle: 229, 229, 229;
-  --color-border-default: 212, 212, 212;
+  --color-border-subtle: 226, 232, 240;    /* slate-200 */
+  --color-border-default: 203, 213, 225;   /* slate-300 */
 
-  --color-accent: 59, 130, 246;
+  --color-accent: 59, 130, 246;            /* primary-500 */
 
   /* Shadows */
   --shadow-soft: 0 2px 8px 0 rgb(0 0 0 / 0.04);
@@ -32,27 +33,25 @@
   --radius-sheet: 20px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark Mode Colors */
-    --color-bg-primary: 10, 10, 10;
-    --color-bg-secondary: 23, 23, 23;
-    --color-bg-tertiary: 38, 38, 38;
+.dark {
+  /* Dark Mode Colors - HIGH CONTRAST Neutral Gray theme (no blue tint) */
+  --color-bg-primary: 10, 10, 10;        /* neutral-950 - Very dark, true black */
+  --color-bg-secondary: 23, 23, 23;      /* neutral-900 - Pure dark gray */
+  --color-bg-tertiary: 38, 38, 38;       /* neutral-800 - Medium dark gray */
 
-    --color-text-primary: 250, 250, 250;
-    --color-text-secondary: 212, 212, 212;
-    --color-text-tertiary: 115, 115, 115;
+  --color-text-primary: 250, 250, 250;   /* neutral-50 - BRIGHT white for high contrast */
+  --color-text-secondary: 229, 229, 229; /* neutral-200 - Still bright, neutral */
+  --color-text-tertiary: 163, 163, 163;  /* neutral-400 - Readable on dark, neutral */
 
-    --color-border-subtle: 38, 38, 38;
-    --color-border-default: 64, 64, 64;
+  --color-border-subtle: 64, 64, 64;     /* neutral-700 - Visible, neutral */
+  --color-border-default: 82, 82, 82;    /* neutral-600 - More visible, neutral */
 
-    --color-accent: 96, 165, 250;
+  --color-accent: 96, 165, 250;          /* primary-400 - Brighter for dark mode */
 
-    /* Shadows (more pronounced in dark mode) */
-    --shadow-soft: 0 2px 8px 0 rgb(0 0 0 / 0.3);
-    --shadow-soft-md: 0 4px 12px 0 rgb(0 0 0 / 0.4);
-    --shadow-soft-lg: 0 8px 24px 0 rgb(0 0 0 / 0.5);
-  }
+  /* Shadows (more pronounced in dark mode) */
+  --shadow-soft: 0 2px 8px 0 rgb(0 0 0 / 0.3);
+  --shadow-soft-md: 0 4px 12px 0 rgb(0 0 0 / 0.4);
+  --shadow-soft-lg: 0 8px 24px 0 rgb(0 0 0 / 0.5);
 }
 
 body {
@@ -91,6 +90,19 @@ body {
 .dark .modern-popup .mapboxgl-popup-content {
   background-color: rgba(23, 23, 23, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(250, 250, 250, 0.95) !important;
+}
+
+/* Force light text color for all elements inside dark mode popup */
+.dark .modern-popup .maplibregl-popup-content *,
+.dark .modern-popup .mapboxgl-popup-content * {
+  color: rgba(250, 250, 250, 0.9) !important;
+}
+
+/* Exception: Copyright text should be more muted/subtle */
+.dark .modern-popup .maplibregl-popup-content div.border-t,
+.dark .modern-popup .mapboxgl-popup-content div.border-t {
+  color: rgba(115, 115, 115, 0.7) !important; /* neutral-500 with transparency */
 }
 
 .modern-popup .maplibregl-popup-close-button,
@@ -129,6 +141,34 @@ body {
 .modern-popup .maplibregl-popup-tip,
 .modern-popup .mapboxgl-popup-tip {
   border-top-color: rgb(var(--color-bg-primary));
+}
+
+/* Dark mode: popup arrow should match dark popup background */
+/* Handle each anchor position separately to preserve triangle shape */
+/* Using rgba(23, 23, 23, 0.95) to closely match popup background rgba(23, 23, 23, 0.85) */
+
+/* Popup below pin - arrow points UP */
+.dark .modern-popup.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.dark .modern-popup.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+  border-bottom-color: rgba(23, 23, 23, 0.95) !important;
+}
+
+/* Popup above pin - arrow points DOWN */
+.dark .modern-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.dark .modern-popup.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  border-top-color: rgba(23, 23, 23, 0.95) !important;
+}
+
+/* Popup to the right of pin - arrow points LEFT */
+.dark .modern-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip,
+.dark .modern-popup.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: rgba(23, 23, 23, 0.95) !important;
+}
+
+/* Popup to the left of pin - arrow points RIGHT */
+.dark .modern-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip,
+.dark .modern-popup.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: rgba(23, 23, 23, 0.95) !important;
 }
 
 /* AI Forecast Popup - Responsive width to prevent text overflow */
@@ -202,6 +242,19 @@ body {
 .dark .maplibregl-ctrl-group button:hover,
 .dark .mapboxgl-ctrl-group button:hover {
   background-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+/* Light icons/text in dark mode for visibility */
+.dark .maplibregl-ctrl-group button,
+.dark .mapboxgl-ctrl-group button {
+  color: rgba(255, 255, 255, 0.9) !important;
+  filter: invert(1) brightness(1.2) !important;
+}
+
+/* Reset filter for light mode to keep dark icons */
+.maplibregl-ctrl-group button,
+.mapboxgl-ctrl-group button {
+  filter: none;
 }
 
 /* Scale control styling */
@@ -340,49 +393,91 @@ body {
 }
 
 /* ========================================
-   Pill Component Utilities
+   Glass Morphism Utility - Premium Design
+   UPDATED: Higher opacity for better contrast
    ======================================== */
 
-:root {
-  --surface-pill: 0.85;
+/* Standardized glass effect for cards, sheets, controls - Premium 2025 */
+.glass {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  background: rgba(255, 255, 255, 0.7); /* Premium glass transparency */
+  border: 1px solid rgba(163, 163, 163, 0.5); /* neutral-400 border */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-pill: 0.85;
+.dark .glass {
+  background: rgba(38, 38, 38, 0.7); /* neutral-800 - Premium glass transparency */
+  border: 1px solid rgba(115, 115, 115, 0.5); /* neutral-500 - Neutral gray border */
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(24px)) {
+  .glass {
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  .dark .glass {
+    background: rgba(38, 38, 38, 0.85); /* neutral-800 - Fallback */
   }
 }
 
-/* Reusable pill class for overlay controls */
-.pill {
-  border-radius: 9999px;
-  background: color-mix(in oklab, white var(--surface-pill), transparent);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.08);
-  border: 1px solid rgb(0 0 0 / 0.05);
+/* ========================================
+   Semantic Background Utilities
+   Design System 2025 - Clear naming for background contexts
+   ======================================== */
+
+/* Page Background - Main app background */
+.bg-page {
+  @apply bg-white dark:bg-slate-950;
 }
 
-.dark .pill {
-  background: color-mix(in oklab, rgb(23 23 23) var(--surface-pill), transparent);
-  border-color: rgb(255 255 255 / 0.06);
+/* Surface Background - Cards, panels, containers */
+.bg-surface {
+  @apply bg-white dark:bg-slate-900;
 }
 
-/* Enhanced backdrop blur support */
-@supports (backdrop-filter: blur(8px)) {
-  .pill {
-    backdrop-filter: blur(8px);
-  }
+/* Elevated Background - Raised cards, modals, dropdowns */
+.bg-elevated {
+  @apply bg-slate-50 dark:bg-slate-800;
 }
 
-@supports not (backdrop-filter: blur(8px)) {
-  .pill {
-    background: rgb(255 255 255 / 0.95);
-  }
+/* Subtle Background - Hover states, selected items */
+.bg-subtle {
+  @apply bg-slate-100 dark:bg-slate-700;
+}
 
-  .dark .pill {
-    background: rgb(23 23 23 / 0.95);
-  }
+/* ========================================
+   Semantic Text Color Utilities
+   Automatically pairs with background contexts
+   ======================================== */
+
+/* Primary Text - Headings, important content */
+.text-primary {
+  @apply text-slate-900 dark:text-slate-50;
+}
+
+/* Secondary Text - Body text, descriptions */
+.text-secondary {
+  @apply text-slate-700 dark:text-slate-200;
+}
+
+/* Tertiary Text - Meta information, labels */
+.text-tertiary {
+  @apply text-slate-500 dark:text-slate-400;
+}
+
+/* ========================================
+   Semantic Border Utilities
+   ======================================== */
+
+/* Subtle Border - Light dividers */
+.border-subtle {
+  @apply border-slate-200 dark:border-slate-700;
+}
+
+/* Default Border - Standard borders */
+.border-default {
+  @apply border-slate-300 dark:border-slate-600;
 }
 
 /* ========================================

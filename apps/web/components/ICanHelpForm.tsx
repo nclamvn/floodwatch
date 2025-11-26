@@ -8,6 +8,7 @@ interface ICanHelpFormProps {
 }
 
 type ServiceType = 'rescue' | 'transportation' | 'medical' | 'shelter' | 'food_water' | 'supplies' | 'volunteer' | 'donation' | 'other'
+type VehicleType = 'boat' | 'truck' | 'helicopter' | 'ambulance' | 'car' | 'motorcycle' | 'other' | ''
 
 interface FormData {
   lat: number | null
@@ -21,6 +22,8 @@ interface FormData {
   contact_phone: string
   contact_email: string
   organization: string
+  vehicle_type: VehicleType
+  available_capacity: number | null
 }
 
 export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
@@ -35,7 +38,9 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
     contact_name: '',
     contact_phone: '',
     contact_email: '',
-    organization: ''
+    organization: '',
+    vehicle_type: '',
+    available_capacity: null
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -127,10 +132,13 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
         ...(formData.capacity && { capacity: formData.capacity }),
         ...(formData.coverage_radius_km && { coverage_radius_km: formData.coverage_radius_km }),
         ...(formData.contact_email.trim() && { contact_email: formData.contact_email.trim() }),
-        ...(formData.organization.trim() && { organization: formData.organization.trim() })
+        ...(formData.organization.trim() && { organization: formData.organization.trim() }),
+        ...(formData.vehicle_type && { vehicle_type: formData.vehicle_type }),
+        ...(formData.available_capacity && { available_capacity: formData.available_capacity })
       }
 
-      const response = await fetch('/api/help/offers', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+      const response = await fetch(`${apiUrl}/help/offers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +165,9 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
         contact_name: '',
         contact_phone: '',
         contact_email: '',
-        organization: ''
+        organization: '',
+        vehicle_type: '',
+        available_capacity: null
       })
 
       // Call success callback
@@ -176,8 +186,8 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-lg p-6">
-      <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
+    <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-6">
+      <h2 className="text-xl font-bold text-slate-900 dark:text-neutral-50 mb-4 flex items-center gap-2">
         <Heart className="w-5 h-5 text-green-600" />
         Đề nghị hỗ trợ
       </h2>
@@ -185,14 +195,14 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Location */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Vị trí của bạn <span className="text-red-600">*</span>
           </label>
           <button
             type="button"
             onClick={handleGetLocation}
             disabled={isGettingLocation}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-neutral-600 hover:bg-neutral-700 disabled:bg-neutral-400 text-white rounded-md transition-colors"
           >
             <MapPin className="w-4 h-4" />
             {isGettingLocation ? 'Đang lấy vị trí...' :
@@ -203,13 +213,13 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
 
         {/* Service Type */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Loại hỗ trợ <span className="text-red-600">*</span>
           </label>
           <select
             value={formData.service_type}
             onChange={(e) => setFormData(prev => ({ ...prev, service_type: e.target.value as ServiceType }))}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           >
             {serviceTypeOptions.map(option => (
               <option key={option.value} value={option.value}>
@@ -221,7 +231,7 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Mô tả chi tiết <span className="text-red-600">*</span>
           </label>
           <textarea
@@ -229,16 +239,16 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             placeholder="Mô tả những gì bạn có thể giúp (ít nhất 10 ký tự)"
             rows={4}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent resize-none"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent resize-none"
           />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
             {formData.description.length}/10 ký tự tối thiểu
           </p>
         </div>
 
         {/* Capacity */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Số lượng người có thể giúp
           </label>
           <input
@@ -247,13 +257,13 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             value={formData.capacity || ''}
             onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value ? parseInt(e.target.value) : null }))}
             placeholder="Ví dụ: 10"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
         </div>
 
         {/* Coverage Radius */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Bán kính hỗ trợ (km)
           </label>
           <input
@@ -262,16 +272,16 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             value={formData.coverage_radius_km || ''}
             onChange={(e) => setFormData(prev => ({ ...prev, coverage_radius_km: e.target.value ? parseFloat(e.target.value) : null }))}
             placeholder="Khoảng cách bạn có thể di chuyển để giúp"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
             Bạn có thể giúp đỡ trong bán kính bao xa từ vị trí của bạn?
           </p>
         </div>
 
         {/* Availability */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Thời gian có thể giúp <span className="text-red-600">*</span>
           </label>
           <input
@@ -279,13 +289,13 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             value={formData.availability}
             onChange={(e) => setFormData(prev => ({ ...prev, availability: e.target.value }))}
             placeholder="Ví dụ: 8h-17h hàng ngày, Cuối tuần, 24/7"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
         </div>
 
         {/* Organization (Optional) */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Tổ chức (nếu có)
           </label>
           <input
@@ -293,13 +303,55 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             value={formData.organization}
             onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
             placeholder="Tên tổ chức, nhóm tình nguyện"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
+        </div>
+
+        {/* Vehicle Type */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
+            Loại phương tiện (nếu có)
+          </label>
+          <select
+            value={formData.vehicle_type}
+            onChange={(e) => setFormData(prev => ({ ...prev, vehicle_type: e.target.value as VehicleType }))}
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+          >
+            <option value="">-- Chọn loại phương tiện --</option>
+            <option value="boat">Thuyền/Xuồng</option>
+            <option value="truck">Xe tải</option>
+            <option value="helicopter">Trực thăng</option>
+            <option value="ambulance">Xe cứu thương</option>
+            <option value="car">Ô tô</option>
+            <option value="motorcycle">Xe máy</option>
+            <option value="other">Khác</option>
+          </select>
+          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
+            Phương tiện có sẵn để hỗ trợ cứu hộ/vận chuyển
+          </p>
+        </div>
+
+        {/* Available Capacity */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
+            Sức chứa hiện có
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={formData.available_capacity || ''}
+            onChange={(e) => setFormData(prev => ({ ...prev, available_capacity: e.target.value ? parseInt(e.target.value) : null }))}
+            placeholder="Số người có thể giúp ngay lúc này"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+          />
+          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
+            Số người bạn có thể giúp được ngay bây giờ (khác với tổng sức chứa)
+          </p>
         </div>
 
         {/* Contact Name */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Tên liên hệ <span className="text-red-600">*</span>
           </label>
           <input
@@ -307,13 +359,13 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             value={formData.contact_name}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_name: e.target.value }))}
             placeholder="Họ và tên của bạn"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
         </div>
 
         {/* Contact Phone */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Số điện thoại <span className="text-red-600">*</span>
           </label>
           <input
@@ -321,13 +373,13 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             value={formData.contact_phone}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
             placeholder="Số điện thoại liên hệ"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
         </div>
 
         {/* Contact Email (Optional) */}
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
             Email (tùy chọn)
           </label>
           <input
@@ -335,7 +387,7 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             value={formData.contact_email}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
             placeholder="Email của bạn"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
         </div>
 

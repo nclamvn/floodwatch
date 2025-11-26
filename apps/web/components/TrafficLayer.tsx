@@ -264,8 +264,13 @@ export default function TrafficLayer({
           anchor="center"
           onClick={(e) => {
             e.originalEvent.stopPropagation()
-            setSelectedDisruption(disruption)
-            onDisruptionClick?.(disruption)
+            // Toggle: click lại pin đang mở sẽ đóng popup
+            if (selectedDisruption?.id === disruption.id) {
+              setSelectedDisruption(null)
+            } else {
+              setSelectedDisruption(disruption)
+              onDisruptionClick?.(disruption)
+            }
           }}
         >
           <div className="cursor-pointer transform hover:scale-125 transition-all duration-200">
@@ -363,12 +368,12 @@ export default function TrafficLayer({
 
             {/* Alternative Route */}
             {selectedDisruption.alternative_route && (
-              <div className="mb-3 pb-3 border-b border-neutral-200 bg-blue-50 dark:bg-blue-900/20 -mx-4 px-4 py-3">
+              <div className="mb-3 pb-3 border-b border-neutral-200 bg-neutral-50 dark:bg-neutral-900/20 -mx-4 px-4 py-3">
                 <div className="flex items-start gap-2">
                   <span className="text-lg flex-shrink-0">↪️</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-blue-700 dark:text-blue-400 font-semibold">Đường thay thế:</div>
-                    <div className="text-sm text-blue-900 dark:text-blue-300 mt-1 leading-relaxed break-words whitespace-normal">
+                    <div className="text-xs text-neutral-700 dark:text-neutral-400 font-semibold">Đường thay thế:</div>
+                    <div className="text-sm text-neutral-900 dark:text-neutral-300 mt-1 leading-relaxed break-words whitespace-normal">
                       {selectedDisruption.alternative_route}
                     </div>
                   </div>

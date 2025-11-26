@@ -98,7 +98,7 @@ export function VoiceNewsPlayer({ isOpen, onClose }: VoiceNewsPlayerProps) {
                   {bulletin.regions_affected.map((region, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                      className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-xs font-medium"
                     >
                       {region}
                     </span>

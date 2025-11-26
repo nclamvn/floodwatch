@@ -225,8 +225,13 @@ export default function HazardLayer({ hazards, visible = true, onHazardClick }: 
           anchor="center"
           onClick={(e) => {
             e.originalEvent.stopPropagation()
-            setSelectedHazard(hazard)
-            onHazardClick?.(hazard)
+            // Toggle: click lại pin đang mở sẽ đóng popup
+            if (selectedHazard?.id === hazard.id) {
+              setSelectedHazard(null)
+            } else {
+              setSelectedHazard(hazard)
+              onHazardClick?.(hazard)
+            }
           }}
         >
           <div className="cursor-pointer transform hover:scale-125 transition-all duration-200">

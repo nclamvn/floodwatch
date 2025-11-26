@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { MapPin, Images, Pause } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { MapPin, Pause } from 'lucide-react'
 import { decodeHTML } from '@/lib/htmlDecode'
+import { deduplicateReports } from '@/lib/newsDedup'
 
 interface Report {
   id: string
@@ -13,6 +14,8 @@ interface Report {
   created_at: string
   trust_score: number
   source: string
+  source_domain?: string
+  normalized_title?: string
   status: string
   lat?: number
   lon?: number
@@ -27,11 +30,54 @@ interface MediaCarouselProps {
 export default function MediaCarousel({ reports, onReportClick }: MediaCarouselProps) {
   const [isPaused, setIsPaused] = useState(false)
 
-  // Filter reports with media AND exclude traffic/non-disaster content
-  const mediaReports = reports
+  // Layer 3: Frontend deduplication before filtering
+  const dedupedReports = useMemo(() => {
+    const { reports: unique } = deduplicateReports(reports as unknown as import('@/lib/newsDedup').Report[])
+    return unique as unknown as Report[]
+  }, [reports])
+
+  // Helper to check if image URL is valid (not placeholder, thumbnail, or broken)
+  const isValidImageUrl = (url: string): boolean => {
+    if (!url || url.trim() === '' || url === '#') return false
+
+    const urlLower = url.toLowerCase()
+
+    // Skip thumbnails and low-quality indicators
+    const invalidPatterns = [
+      'thumb', 'thumbnail', 'ico', 'icon', 'avatar', 'logo', 'banner', 'ads',
+      'placeholder', 'pixel.gif', '1x1', 'spacer', 'blank', 'tracking',
+      '/w100', '/w150', '/w200', '/w250', 'w100_', 'w150_', 'w200_', 'w250_',
+      'r1x1', 'data:image', 'base64,', 'undefined', 'null',
+      '/50x', '/100x', '/150x', '/200x', '/250x', '/300x',
+      '_thumb', '_small', '_mini', '_xs', '_sm', '_tiny',
+      'size=s', 'size=m', 'resize=', 'width=1', 'height=1',
+      '/icon/', '/logo/', '/ads/', '/banner/', '/widget/'
+    ]
+    if (invalidPatterns.some(p => urlLower.includes(p))) return false
+
+    // Must have valid image extension
+    const validExtensions = ['.jpg', '.jpeg', '.webp', '.png']
+    const hasValidExt = validExtensions.some(ext =>
+      urlLower.includes(ext + '?') || urlLower.endsWith(ext)
+    )
+    if (!hasValidExt) return false
+
+    // Must be a valid URL
+    try {
+      new URL(url)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // Filter reports with VALID media AND exclude traffic/non-disaster content
+  const mediaReports = dedupedReports
     .filter(r => {
-      // Must have media
+      // Must have media with at least one valid image URL
       if (!r.media || r.media.length === 0) return false
+      const hasValidImage = r.media.some(url => isValidImageUrl(url))
+      if (!hasValidImage) return false
 
       // Decode HTML entities before filtering to ensure keyword matching works
       const decodedTitle = decodeHTML(r.title)
@@ -65,16 +111,19 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
 
       // Show disaster-related reports with lower threshold for more content
       if (r.type === 'ALERT' || r.type === 'SOS') {
-        return r.trust_score >= 0.2  // Lowered from 0.3 to show more content
+        return r.trust_score >= 0.15  // Lowered further for more content
       }
       if (r.type === 'RAIN') {
-        return r.trust_score >= 0.25  // Lowered from 0.4 to show more content
+        return r.trust_score >= 0.2  // Lowered for more content
       }
       if (r.type === 'ROAD') {
-        return r.trust_score >= 0.3  // Now included - road conditions are relevant
+        return r.trust_score >= 0.25  // Now included - road conditions are relevant
       }
-      // Exclude only NEEDS - not disaster-related
-      return false
+      if (r.type === 'NEEDS') {
+        return r.trust_score >= 0.4  // Include high-trust NEEDS reports
+      }
+      // Include other types with high trust
+      return r.trust_score >= 0.5
     })
     .sort((a, b) => {
       // Prioritize news with description (summary)
@@ -99,9 +148,15 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       if (severityB !== severityA) return severityB - severityA
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
-    .slice(0, 30) // Increased from 20 to 30 for more variety
+    .slice(0, 50) // Increased to 50 for more variety
 
   if (mediaReports.length === 0) return null
+
+  // Only duplicate for seamless scroll if we have enough items (4+)
+  // For 2-3 items, show them 3 times to reduce obvious duplication
+  const itemsToShow = mediaReports.length >= 4
+    ? [...mediaReports, ...mediaReports] // 2x duplication for 4+ items
+    : [...mediaReports, ...mediaReports, ...mediaReports] // 3x duplication for 2-3 items
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -129,15 +184,20 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
         }}
       >
         {/* Duplicate items for seamless loop */}
-        {[...mediaReports, ...mediaReports].map((report, index) => (
+        {itemsToShow.map((report, index) => {
+          // Get first valid image URL
+          const validImageUrl = report.media?.find(url => isValidImageUrl(url)) || report.media?.[0]
+          if (!validImageUrl) return null
+
+          return (
           <div
-            key={`${report.id}-${index}`}
+            key={`carousel-${report.id}-${index}`}
             className="relative flex-shrink-0 h-full w-[200px] overflow-hidden rounded-lg cursor-pointer group"
             onClick={() => onReportClick?.(report)}
           >
             {/* Background Image */}
             <img
-              src={report.media![0]}
+              src={validImageUrl}
               alt={report.title}
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
@@ -161,16 +221,11 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
                   </span>
                 )}
                 <span>{formatTime(report.created_at)}</span>
-                {report.media && report.media.length > 1 && (
-                  <span className="flex items-center gap-0.5">
-                    <Images className="w-2.5 h-2.5" />
-                    <span>+{report.media.length - 1}</span>
-                  </span>
-                )}
               </div>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Play/Pause Indicator */}

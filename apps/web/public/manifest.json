@@ -1,0 +1,27 @@
+{
+  "name": "Thông tin mưa lũ",
+  "short_name": "TTML",
+  "description": "Hệ thống cảnh báo và theo dõi mưa lũ thời gian thực tại Việt Nam",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a4a7c",
+  "theme_color": "#0a4a7c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["weather", "news", "utilities"],
+  "lang": "vi",
+  "dir": "ltr"
+}

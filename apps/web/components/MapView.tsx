@@ -48,7 +48,7 @@ export default function MapView({ reports }: MapViewProps) {
             <>
               <p className="mb-4">Để hiển thị bản đồ Mapbox:</p>
               <ol className="list-decimal list-inside space-y-2 mb-4 text-sm">
-                <li>Truy cập: <a href="https://account.mapbox.com/auth/signup" target="_blank" className="text-blue-600 underline">Mapbox Signup</a></li>
+                <li>Truy cập: <a href="https://account.mapbox.com/auth/signup" target="_blank" className="text-neutral-600 underline">Mapbox Signup</a></li>
                 <li>Đăng ký miễn phí (50,000 lượt tải/tháng)</li>
                 <li>Lấy token → Thêm vào <code className="bg-gray-100 px-1">.env</code>:</li>
               </ol>
@@ -60,7 +60,7 @@ export default function MapView({ reports }: MapViewProps) {
             <>
               <p className="mb-4">Để hiển thị bản đồ Goong Maps:</p>
               <ol className="list-decimal list-inside space-y-2 mb-4 text-sm">
-                <li>Truy cập: <a href="https://goong.io" target="_blank" className="text-blue-600 underline">Goong.io</a></li>
+                <li>Truy cập: <a href="https://goong.io" target="_blank" className="text-neutral-600 underline">Goong.io</a></li>
                 <li>Đăng ký (cần 24h approve)</li>
                 <li>Lấy API key → Thêm vào <code className="bg-gray-100 px-1">.env</code>:</li>
               </ol>
@@ -150,7 +150,7 @@ export default function MapView({ reports }: MapViewProps) {
                 selectedReport.type === 'ALERT' ? 'bg-red-100 text-red-800' :
                 selectedReport.type === 'SOS' ? 'bg-orange-100 text-orange-800' :
                 selectedReport.type === 'ROAD' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-blue-100 text-blue-800'
+                'bg-neutral-100 text-neutral-800'
               }`}>
                 {selectedReport.type}
               </span>

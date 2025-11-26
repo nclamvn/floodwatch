@@ -50,8 +50,8 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
       case 'SOS': return 'bg-red-600/20 text-red-500 border-red-600/30'
       case 'ALERT': return 'bg-red-500/20 text-red-400 border-red-500/30'
       case 'ROAD': return 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-      case 'RAIN': return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-      case 'NEEDS': return 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+      case 'RAIN': return 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
+      case 'NEEDS': return 'bg-neutral-500/20 text-neutral-400 border-neutral-500/30'
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
   }
@@ -77,11 +77,11 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-lg max-w-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
+          className="bg-white/90 dark:bg-neutral-950/90 backdrop-blur-md border border-white/30 dark:border-neutral-700/30 rounded-2xl shadow-lg max-w-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-6 py-5 border-b border-neutral-200/50 dark:border-neutral-700 flex items-start justify-between">
+          <div className="px-6 py-5 border-b border-slate-200/50 dark:border-neutral-700 flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-semibold ${getTypeColor(report.type)}`}>
@@ -95,7 +95,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
                   {(report.trust_score * 100).toFixed(0)}% tin cậy
                 </span>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-neutral-50 leading-tight">
                 {decodeHTML(report.title)}
               </h2>
             </div>
@@ -103,7 +103,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
             {/* Close button */}
             <button
               onClick={onClose}
-              className="ml-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-800 active:bg-gray-300 dark:active:bg-neutral-700 transition-colors text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+              className="ml-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-900 active:bg-gray-300 dark:active:bg-neutral-700 transition-colors text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
               aria-label="Đóng"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,7 +119,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
               <h3 className="text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-2">
                 Tóm tắt
               </h3>
-              <p className="text-gray-900 dark:text-white leading-relaxed whitespace-pre-wrap">
+              <p className="text-gray-900 dark:text-neutral-50 leading-relaxed whitespace-pre-wrap">
                 {report.description ? decodeHTML(report.description) : 'Nhấn "Nguồn tin" bên dưới để xem chi tiết đầy đủ.'}
               </p>
             </div>
@@ -140,7 +140,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
                 <h3 className="text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-1">
                   Địa phương
                 </h3>
-                <p className="text-gray-900 dark:text-white flex items-center gap-1">
+                <p className="text-gray-900 dark:text-neutral-50 flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
                   {report.province ? decodeHTML(report.province) : 'Không rõ'}
                 </p>
@@ -150,7 +150,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
                 <h3 className="text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-1">
                   Thời gian
                 </h3>
-                <p className="text-gray-900 dark:text-white">
+                <p className="text-gray-900 dark:text-neutral-50">
                   {new Date(report.created_at).toLocaleString('vi-VN', {
                     year: 'numeric',
                     month: 'long',
@@ -166,7 +166,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
                   <h3 className="text-sm font-semibold text-gray-600 dark:text-neutral-400 uppercase tracking-wide mb-1">
                     Tọa độ
                   </h3>
-                  <p className="text-gray-900 dark:text-white text-sm font-mono">
+                  <p className="text-gray-900 dark:text-neutral-50 text-sm font-mono">
                     {report.lat.toFixed(4)}, {report.lon.toFixed(4)}
                   </p>
                 </div>
@@ -179,7 +179,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
                 Độ tin cậy
               </h3>
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 bg-gray-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-gray-200 dark:bg-neutral-900 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all duration-500 ${
                       report.trust_score >= 0.8 ? 'bg-green-500' :
@@ -189,7 +189,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
                     style={{ width: `${report.trust_score * 100}%` }}
                   />
                 </div>
-                <span className="text-gray-900 dark:text-white font-semibold tabular-nums">
+                <span className="text-gray-900 dark:text-neutral-50 font-semibold tabular-nums">
                   {(report.trust_score * 100).toFixed(0)}%
                 </span>
               </div>
@@ -202,7 +202,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
               </h3>
               <span className={`inline-flex px-3 py-1.5 rounded-lg text-sm font-medium ${
                 report.status === 'verified' ? 'bg-green-500/20 text-green-600 dark:text-green-400' :
-                report.status === 'resolved' ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400' :
+                report.status === 'resolved' ? 'bg-neutral-500/20 text-neutral-600 dark:text-neutral-400' :
                 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
               }`}>
                 {report.status === 'verified' ? '✓ Đã xác minh' :
@@ -213,7 +213,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
           </div>
 
           {/* Footer with action button */}
-          <div className="px-6 py-4 border-t border-neutral-200/50 dark:border-neutral-700 flex items-center justify-between bg-gray-50/50 dark:bg-neutral-900/50">
+          <div className="px-6 py-4 border-t border-slate-200/50 dark:border-neutral-700 flex items-center justify-between bg-gray-50/50 dark:bg-neutral-950/50">
             <p className="text-sm text-gray-600 dark:text-neutral-400">
               ID: <span className="font-mono text-xs">{report.id.slice(0, 8)}</span>
             </p>
@@ -224,7 +224,7 @@ export default function ReportDetailModal({ report, isOpen, onClose }: ReportDet
                 href={report.source}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg font-semibold transition-colors text-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white rounded-lg font-semibold transition-colors text-sm"
               >
                 <span>Nguồn tin</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

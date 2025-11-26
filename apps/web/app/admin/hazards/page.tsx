@@ -171,7 +171,7 @@ export default function HazardsAdminPage() {
       case 'high': return 'bg-orange-100 text-orange-800 border-orange-300'
       case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
       case 'low': return 'bg-green-100 text-green-800 border-green-300'
-      case 'info': return 'bg-blue-100 text-blue-800 border-blue-300'
+      case 'info': return 'bg-neutral-100 text-neutral-800 border-neutral-300'
     }
   }
 
@@ -193,7 +193,7 @@ export default function HazardsAdminPage() {
                 setEditingHazard(null)
                 resetForm()
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-4 py-2 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors font-medium"
             >
               + Tạo sự kiện mới
             </button>
@@ -379,7 +379,7 @@ export default function HazardsAdminPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Đang xử lý...' : (editingHazard ? 'Cập nhật' : 'Tạo sự kiện')}
                 </button>
@@ -474,7 +474,7 @@ export default function HazardsAdminPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleEdit(hazard)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
+                          className="text-neutral-600 hover:text-neutral-900 mr-4"
                         >
                           Sửa
                         </button>

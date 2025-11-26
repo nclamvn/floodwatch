@@ -18,7 +18,7 @@ export default function LocateMeButton() {
           transition-all duration-200
           ${
             userLocation
-              ? 'bg-primary-600 hover:bg-primary-700 text-white'
+              ? 'bg-neutral-600 hover:bg-neutral-700 text-white'
               : 'bg-white/90 hover:bg-white text-neutral-800'
           }
           ${isLocating ? 'cursor-wait opacity-70' : 'cursor-pointer'}
@@ -125,7 +125,7 @@ export default function LocateMeButton() {
         <div
           className="
             absolute top-0 right-16
-            bg-white/95 dark:bg-neutral-900/95
+            bg-white/95 dark:bg-neutral-950/95
             px-4 py-2 rounded-lg shadow-lg
             text-xs
             max-w-xs
@@ -133,8 +133,8 @@ export default function LocateMeButton() {
             border border-white/20
           "
         >
-          <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-semibold mb-1">
-            <span className="inline-block w-2 h-2 bg-primary-600 rounded-full animate-pulse" />
+          <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400 font-semibold mb-1">
+            <span className="inline-block w-2 h-2 bg-neutral-600 rounded-full animate-pulse" />
             Vị trí của bạn
           </div>
           <div className="text-neutral-600 dark:text-neutral-400">
