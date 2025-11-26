@@ -14,6 +14,10 @@ import { useRescueFilters } from '@/hooks/useRescueFilters'
 import { useLocation } from '@/contexts/LocationContext'
 import { getMapConfig, getStyleUrlWithToken } from '@/lib/mapProvider'
 
+interface RescueMapProps {
+  onCountsChange?: (requestsCount: number, offersCount: number) => void
+}
+
 /**
  * RescueMap Component
  *
@@ -27,7 +31,7 @@ import { getMapConfig, getStyleUrlWithToken } from '@/lib/mapProvider'
  * - Geolocation button
  * - Glass morphism UI matching Design System 2025
  */
-export default function RescueMap() {
+export default function RescueMap({ onCountsChange }: RescueMapProps = {}) {
   // Use LocationContext instead of local state
   const { userLocation: locationData, isLocating, requestLocation } = useLocation()
 
@@ -126,6 +130,11 @@ export default function RescueMap() {
       offer.organization?.toLowerCase().includes(query)
     )
   }, [allOffers, filters.searchQuery])
+
+  // Notify parent of count changes
+  useEffect(() => {
+    onCountsChange?.(requests.length, offers.length)
+  }, [requests.length, offers.length, onCountsChange])
 
   // Update bounds when map moves (for clustering)
   const handleMove = useCallback((evt: any) => {
@@ -411,8 +420,10 @@ export default function RescueMap() {
           bounds={mapBounds}
         />
 
-        {/* Navigation Controls */}
-        <NavigationControl position="top-right" />
+        {/* Navigation Controls - Desktop only */}
+        <div className="hidden sm:block">
+          <NavigationControl position="top-right" />
+        </div>
 
         {/* User Location Marker */}
         <UserLocationMarker />
@@ -471,8 +482,8 @@ export default function RescueMap() {
         </button>
       </div>
 
-      {/* Breathing Stats Pills - Bottom Right */}
-      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-1.5">
+      {/* Breathing Stats Pills - Bottom Right - Desktop only */}
+      <div className="hidden sm:flex absolute bottom-4 right-4 z-10 flex-col gap-1.5">
         {/* Request Pill - Red Breathing */}
         <div className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-3xl rounded-full shadow-xl px-3 py-1.5 flex items-center gap-2">
           <div className="relative">

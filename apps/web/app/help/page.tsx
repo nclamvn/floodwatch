@@ -38,6 +38,10 @@ export default function HelpConnectionPage() {
   const [needHelpFormHeight, setNeedHelpFormHeight] = useState<number | null>(null)
   const [canHelpFormHeight, setCanHelpFormHeight] = useState<number | null>(null)
 
+  // Rescue map counters for mobile header
+  const [rescueRequestsCount, setRescueRequestsCount] = useState(0)
+  const [rescueOffersCount, setRescueOffersCount] = useState(0)
+
   const needHelpFormRef = useRef<HTMLDivElement>(null)
   const canHelpFormRef = useRef<HTMLDivElement>(null)
 
@@ -47,6 +51,12 @@ export default function HelpConnectionPage() {
 
   const handleOfferSubmitted = () => {
     setRefreshOffers(prev => prev + 1)
+  }
+
+  // Callback to receive counts from RescueMap
+  const handleRescueCountsChange = (requests: number, offers: number) => {
+    setRescueRequestsCount(requests)
+    setRescueOffersCount(offers)
   }
 
   // Measure form heights and sync with list boxes
@@ -98,7 +108,7 @@ export default function HelpConnectionPage() {
         <div className="container mx-auto px-4" style={{ paddingTop: '8px', paddingBottom: '8px' }}>
           {/* Mobile Header - New Design */}
           <div className="lg:hidden">
-            {/* Back Button, Slogan, and Dark Mode Toggle */}
+            {/* Back Button, Slogan/Counters, and Dark Mode Toggle */}
             <div className="flex justify-between items-center mb-4">
               <Link
                 href="/map"
@@ -106,10 +116,39 @@ export default function HelpConnectionPage() {
               >
                 <ArrowLeft className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
               </Link>
-              {/* Slogan - Centered */}
-              <span className="text-xs text-neutral-500 dark:text-neutral-400 italic">
-                Lá lành đùm lá rách
-              </span>
+
+              {/* Content changes based on active tab */}
+              {activeTab === 'rescue-map' ? (
+                /* Rescue Map Tab: Show counters (60% size, no border) */
+                <div className="flex items-center gap-3">
+                  {/* Red counter - requests */}
+                  <div className="flex items-center gap-1">
+                    <div className="relative">
+                      <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                      <div className="absolute inset-0 w-1 h-1 rounded-full bg-red-500 animate-ping opacity-75" />
+                    </div>
+                    <span className="text-sm font-bold text-red-600 dark:text-red-500 tabular-nums">
+                      {rescueRequestsCount}
+                    </span>
+                  </div>
+                  {/* Green counter - offers */}
+                  <div className="flex items-center gap-1">
+                    <div className="relative">
+                      <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
+                      <div className="absolute inset-0 w-1 h-1 rounded-full bg-green-500 animate-ping opacity-75" />
+                    </div>
+                    <span className="text-sm font-bold text-green-600 dark:text-green-500 tabular-nums">
+                      {rescueOffersCount}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Other tabs: Show slogan */
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 italic">
+                  Lá lành đùm lá rách
+                </span>
+              )}
+
               <DarkModeToggle />
             </div>
 
@@ -280,7 +319,7 @@ export default function HelpConnectionPage() {
           /* Rescue Map - Full Screen */
           <div className="w-full h-[calc(100dvh-64px)]">
             <LocationProvider>
-              <RescueMap />
+              <RescueMap onCountsChange={handleRescueCountsChange} />
             </LocationProvider>
           </div>
         )}
