@@ -105,10 +105,11 @@ class DistressReportRepository:
         total = query.count()
 
         # Order by urgency (critical first), then created_at (newest first)
-        # Cast enum to text for array_position comparison
+        # Use literal array with explicit type for PostgreSQL array_position
+        urgency_order = sa.literal(['critical', 'high', 'medium', 'low']).cast(sa.ARRAY(sa.Text))
         query = query.order_by(
             func.array_position(
-                func.cast(func.array(['critical', 'high', 'medium', 'low']), type_=sa.ARRAY(sa.Text)),
+                urgency_order,
                 func.cast(DistressReport.urgency, sa.Text)
             ),
             DistressReport.created_at.desc()
@@ -179,10 +180,11 @@ class DistressReportRepository:
             query = query.filter(DistressReport.urgency.in_(urgencies))
 
         # Order by urgency (critical first), then distance (closest first)
-        # Cast enum to text for array_position comparison
+        # Use literal array with explicit type for PostgreSQL array_position
+        urgency_order = sa.literal(['critical', 'high', 'medium', 'low']).cast(sa.ARRAY(sa.Text))
         query = query.order_by(
             func.array_position(
-                func.cast(func.array(['critical', 'high', 'medium', 'low']), type_=sa.ARRAY(sa.Text)),
+                urgency_order,
                 func.cast(DistressReport.urgency, sa.Text)
             ),
             distance_m
