@@ -39,15 +39,34 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
   }, [reports])
 
   // Filter and sort for hot news (disaster-related only)
+  // STRICT: Only show news from last 36 hours, Vietnam only, no traffic accidents
+  const MAX_AGE_HOURS = 36
+  const now = new Date()
+
   const hotNews = dedupedReports
     .filter(r => {
+      // TIME FILTER: Only show news from last 36 hours - STRICT
+      const reportDate = new Date(r.created_at)
+      const ageHours = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60)
+      if (ageHours > MAX_AGE_HOURS) return false
+
       // Exclude reports that are already in the carousel
       if (excludeReportIds.includes(r.id)) return false
 
       const textToCheck = `${r.title} ${r.description || ''}`.toLowerCase()
 
       // Exclude very short titles (likely spam or incomplete)
-      if (r.title.length < 10) return false  // Lowered from 15 to 10
+      if (r.title.length < 10) return false
+
+      // LOCATION FILTER: Exclude foreign/irrelevant locations - STRICT
+      const foreignKeywords = [
+        'hong kong', 'hồng kông', 'trung quốc', 'trung quoc', 'china', 'taiwan', 'đài loan', 'dai loan',
+        'thái lan', 'thai lan', 'thailand', 'philippines', 'malaysia', 'indonesia', 'singapore',
+        'nhật bản', 'nhat ban', 'japan', 'hàn quốc', 'han quoc', 'korea', 'mỹ', 'usa', 'america',
+        'châu âu', 'chau au', 'europe', 'úc', 'australia', 'ấn độ', 'an do', 'india',
+        'myanmar', 'lào', 'lao', 'campuchia', 'cambodia', 'bắc kinh', 'bac kinh', 'thượng hải', 'thuong hai'
+      ]
+      if (foreignKeywords.some(keyword => textToCheck.includes(keyword))) return false
 
       // Exclude English-only titles (check if mostly English characters)
       const vietnameseChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
@@ -57,26 +76,26 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
       const isEnglishOnly = !hasVietnamese && englishWordCount > totalWordCount * 0.7
       if (isEnglishOnly) return false
 
-      // Exclude traffic/accident reports
-      const trafficKeywords = ['container', 'va chạm', 'va cham', 'tai nạn', 'tai nan', 'giao thông', 'giao thong', 'xe tải', 'xe tai', 'ô tô', 'o to', 'xe máy', 'xe may', 'đường bộ', 'duong bo', 'xe buýt', 'xe buyt', 'xe khách', 'xe khach']
-      const hasTrafficKeyword = trafficKeywords.some(keyword => textToCheck.includes(keyword))
-      if (hasTrafficKeyword) return false
+      // TRAFFIC FILTER: Exclude traffic/accident reports - STRICT
+      const trafficKeywords = [
+        'container', 'va chạm', 'va cham', 'tai nạn', 'tai nan', 'giao thông', 'giao thong',
+        'xe tải', 'xe tai', 'ô tô', 'o to', 'xe máy', 'xe may', 'đường bộ', 'duong bo',
+        'xe buýt', 'xe buyt', 'xe khách', 'xe khach', 'CSGT', 'csgt', 'tông', 'tong',
+        'đâm', 'dam', 'lật xe', 'lat xe', 'cháy xe', 'chay xe', 'nổ xe', 'no xe',
+        'tử vong giao thông', 'chết giao thông', 'thương vong giao thông'
+      ]
+      if (trafficKeywords.some(keyword => textToCheck.includes(keyword.toLowerCase()))) return false
 
       // Exclude government documents (not disaster consequences)
       const govDocKeywords = ['văn bản', 'van ban', 'công văn', 'cong van', 'thông tư', 'thong tu', 'quyết định', 'quyet dinh', 'chỉ thị', 'chi thi', 'nghị định', 'nghi dinh', 'quyết toán', 'quyet toan', 'hội nghị', 'hoi nghi', 'cuộc họp', 'cuoc hop']
-      const hasGovDocKeyword = govDocKeywords.some(keyword => textToCheck.includes(keyword))
-      if (hasGovDocKeyword) return false
-
-      // Prioritize disaster consequence news
-      const consequenceKeywords = ['thiệt hại', 'thiet hai', 'ngập úng', 'ngap ung', 'cô lập', 'co lap', 'sơ tán', 'so tan', 'di dời', 'di doi', 'thiệt mạng', 'thiet mang', 'mất tích', 'mat tich', 'cứu hộ', 'cuu ho', 'cứu nạn', 'cuu nan', 'hậu quả', 'hau qua', 'ảnh hưởng', 'anh huong', 'sập', 'sap', 'vùi lấp', 'vui lap']
-      const hasConsequenceKeyword = consequenceKeywords.some(keyword => textToCheck.includes(keyword))
+      if (govDocKeywords.some(keyword => textToCheck.includes(keyword))) return false
 
       // Show disaster-related reports with lower threshold for consequence news
       if (r.type === 'ALERT' || r.type === 'SOS') {
-        return r.trust_score >= 0.3  // Lowered from 0.4/0.5
+        return r.trust_score >= 0.3
       }
       if (r.type === 'RAIN') {
-        return r.trust_score >= 0.4  // Lowered from 0.5/0.6
+        return r.trust_score >= 0.4
       }
       // Exclude ROAD and NEEDS - not disaster-related
       return false

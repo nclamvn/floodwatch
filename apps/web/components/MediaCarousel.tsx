@@ -125,10 +125,15 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       const isEnglishOnly = !hasVietnamese && englishWordCount > totalWordCount * 0.7
       if (isEnglishOnly) return false
 
-      // Exclude traffic/accident reports
-      const trafficKeywords = ['container', 'va chạm', 'va cham', 'tai nạn', 'tai nan', 'giao thông', 'giao thong', 'xe tải', 'xe tai', 'ô tô', 'o to', 'xe máy', 'xe may', 'đường bộ', 'duong bo', 'xe buýt', 'xe buyt', 'xe khách', 'xe khach', 'CSGT', 'csgt', 'công nhân', 'cong nhan', 'KCN', 'kcn']
-      const hasTrafficKeyword = trafficKeywords.some(keyword => textToCheck.includes(keyword.toLowerCase()))
-      if (hasTrafficKeyword) return false
+      // TRAFFIC FILTER: Exclude traffic/accident reports - STRICT
+      const trafficKeywords = [
+        'container', 'va chạm', 'va cham', 'tai nạn', 'tai nan', 'giao thông', 'giao thong',
+        'xe tải', 'xe tai', 'ô tô', 'o to', 'xe máy', 'xe may', 'đường bộ', 'duong bo',
+        'xe buýt', 'xe buyt', 'xe khách', 'xe khach', 'CSGT', 'csgt', 'công nhân', 'cong nhan',
+        'KCN', 'kcn', 'tông', 'tong', 'đâm', 'dam', 'lật xe', 'lat xe', 'cháy xe', 'chay xe',
+        'nổ xe', 'no xe', 'tử vong giao thông', 'chết giao thông', 'thương vong giao thông'
+      ]
+      if (trafficKeywords.some(keyword => textToCheck.includes(keyword.toLowerCase()))) return false
 
       // Exclude government documents (not disaster consequences)
       const govDocKeywords = ['văn bản', 'van ban', 'công văn', 'cong van', 'thông tư', 'thong tu', 'quyết định', 'quyet dinh', 'chỉ thị', 'chi thi', 'nghị định', 'nghi dinh', 'quyết toán', 'quyet toan', 'hội nghị', 'hoi nghi', 'cuộc họp', 'cuoc hop']
