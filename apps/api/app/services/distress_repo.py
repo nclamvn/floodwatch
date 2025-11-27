@@ -6,7 +6,8 @@ from typing import List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+import sqlalchemy as sa
+from sqlalchemy import and_, or_, func, Text, ARRAY
 from geoalchemy2.functions import ST_SetSRID, ST_MakePoint, ST_Distance, ST_DWithin
 from geoalchemy2 import Geography
 
@@ -104,10 +105,11 @@ class DistressReportRepository:
         total = query.count()
 
         # Order by urgency (critical first), then created_at (newest first)
+        # Cast enum to text for array_position comparison
         query = query.order_by(
             func.array_position(
-                ['critical', 'high', 'medium', 'low'],
-                DistressReport.urgency
+                func.cast(func.array(['critical', 'high', 'medium', 'low']), type_=sa.ARRAY(sa.Text)),
+                func.cast(DistressReport.urgency, sa.Text)
             ),
             DistressReport.created_at.desc()
         )
@@ -177,10 +179,11 @@ class DistressReportRepository:
             query = query.filter(DistressReport.urgency.in_(urgencies))
 
         # Order by urgency (critical first), then distance (closest first)
+        # Cast enum to text for array_position comparison
         query = query.order_by(
             func.array_position(
-                ['critical', 'high', 'medium', 'low'],
-                DistressReport.urgency
+                func.cast(func.array(['critical', 'high', 'medium', 'low']), type_=sa.ARRAY(sa.Text)),
+                func.cast(DistressReport.urgency, sa.Text)
             ),
             distance_m
         )

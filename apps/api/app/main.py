@@ -124,6 +124,31 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Metrics middleware (records all HTTP requests)
 app.add_middleware(MetricsMiddleware)
 
+# Phase 4: Request timing middleware for performance monitoring
+import time as time_module
+
+@app.middleware("http")
+async def log_request_time(request: Request, call_next):
+    """
+    Phase 4: Performance monitoring middleware
+    - Logs slow requests (>1s) to help identify bottlenecks
+    - Adds X-Response-Time header for client-side debugging
+    """
+    start = time_module.time()
+    response = await call_next(request)
+    duration = time_module.time() - start
+
+    # Log slow requests (>1 second)
+    if duration > 1.0:
+        logger.warning(
+            f"SLOW REQUEST: {request.method} {request.url.path} "
+            f"took {duration:.2f}s"
+        )
+
+    # Add timing header for debugging
+    response.headers["X-Response-Time"] = f"{duration:.3f}s"
+    return response
+
 # Include routers
 app.include_router(telegram_router)
 
@@ -2460,54 +2485,58 @@ async def get_distress_reports(
     """
     Get distress reports with optional spatial and status filtering
     """
-    # Parse comma-separated filters
-    statuses = status.split(',') if status else ['pending', 'acknowledged', 'in_progress']
-    urgencies = urgency.split(',') if urgency else None
+    try:
+        # Parse comma-separated filters
+        statuses = status.split(',') if status else ['pending', 'acknowledged', 'in_progress']
+        urgencies = urgency.split(',') if urgency else None
 
-    if lat is not None and lon is not None:
-        # Spatial query
-        reports, distances = DistressReportRepository.get_nearby(
-            db, lat, lon, radius_km,
-            statuses=statuses,
-            urgencies=urgencies,
-            limit=limit
-        )
+        if lat is not None and lon is not None:
+            # Spatial query
+            reports, distances = DistressReportRepository.get_nearby(
+                db, lat, lon, radius_km,
+                statuses=statuses,
+                urgencies=urgencies,
+                limit=limit
+            )
 
-        # Add distance to each report
-        data = []
-        for report, dist in zip(reports, distances):
-            report_dict = report.to_dict()
-            report_dict['distance_km'] = round(dist, 2)
-            data.append(report_dict)
-    else:
-        # Non-spatial query
-        reports, total = DistressReportRepository.get_active(
-            db,
-            statuses=statuses,
-            urgencies=urgencies,
-            verified_only=verified_only,
-            limit=limit,
-            offset=offset
-        )
-        data = [report.to_dict() for report in reports]
+            # Add distance to each report
+            data = []
+            for report, dist in zip(reports, distances):
+                report_dict = report.to_dict()
+                report_dict['distance_km'] = round(dist, 2)
+                data.append(report_dict)
+        else:
+            # Non-spatial query
+            reports, total = DistressReportRepository.get_active(
+                db,
+                statuses=statuses,
+                urgencies=urgencies,
+                verified_only=verified_only,
+                limit=limit,
+                offset=offset
+            )
+            data = [report.to_dict() for report in reports]
 
-    # Get summary stats
-    stats = DistressReportRepository.get_summary_stats(db)
+        # Get summary stats
+        stats = DistressReportRepository.get_summary_stats(db)
 
-    return {
-        "data": data,
-        "pagination": {
-            "total": len(data),
-            "limit": limit,
-            "offset": offset
-        },
-        "meta": {
-            "critical_count": stats['active_by_urgency'].get('critical', 0),
-            "high_count": stats['active_by_urgency'].get('high', 0),
-            "pending_count": stats['by_status'].get('pending', 0),
-            "total_active": stats['total_active']
+        return {
+            "data": data,
+            "pagination": {
+                "total": len(data),
+                "limit": limit,
+                "offset": offset
+            },
+            "meta": {
+                "critical_count": stats['active_by_urgency'].get('critical', 0),
+                "high_count": stats['active_by_urgency'].get('high', 0),
+                "pending_count": stats['by_status'].get('pending', 0),
+                "total_active": stats['total_active']
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Error in get_distress_reports: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.patch("/distress/{report_id}")
