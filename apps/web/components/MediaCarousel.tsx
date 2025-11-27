@@ -82,8 +82,17 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
   }
 
   // Filter reports with VALID media AND exclude traffic/non-disaster content
+  // Only show news from the last 36 hours
+  const MAX_AGE_HOURS = 36
+  const now = new Date()
+
   const mediaReports = dedupedReports
     .filter(r => {
+      // TIME FILTER: Only show news from last 36 hours
+      const reportDate = new Date(r.created_at)
+      const ageHours = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60)
+      if (ageHours > MAX_AGE_HOURS) return false
+
       // Must have media with at least one valid image URL
       if (!r.media || r.media.length === 0) return false
       const hasValidImage = r.media.some(url => isValidImageUrl(url))
@@ -95,7 +104,18 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       const textToCheck = `${decodedTitle} ${decodedDescription}`.toLowerCase()
 
       // Exclude very short titles (likely spam or incomplete)
-      if (decodedTitle.length < 10) return false  // Lowered from 15 to 10
+      if (decodedTitle.length < 10) return false
+
+      // LOCATION FILTER: Exclude foreign/irrelevant locations
+      const foreignKeywords = [
+        'hong kong', 'hồng kông', 'trung quốc', 'trung quoc', 'china', 'taiwan', 'đài loan', 'dai loan',
+        'thái lan', 'thai lan', 'thailand', 'philippines', 'malaysia', 'indonesia', 'singapore',
+        'nhật bản', 'nhat ban', 'japan', 'hàn quốc', 'han quoc', 'korea', 'mỹ', 'usa', 'america',
+        'châu âu', 'chau au', 'europe', 'úc', 'australia', 'ấn độ', 'an do', 'india',
+        'myanmar', 'lào', 'lao', 'campuchia', 'cambodia', 'bắc kinh', 'bac kinh', 'thượng hải', 'thuong hai'
+      ]
+      const hasForeignKeyword = foreignKeywords.some(keyword => textToCheck.includes(keyword))
+      if (hasForeignKeyword) return false
 
       // Exclude English-only titles (check if mostly English characters)
       const vietnameseChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
@@ -115,22 +135,18 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
       const hasGovDocKeyword = govDocKeywords.some(keyword => textToCheck.includes(keyword))
       if (hasGovDocKeyword) return false
 
-      // Prioritize disaster consequence news
-      const consequenceKeywords = ['thiệt hại', 'thiet hai', 'ngập úng', 'ngap ung', 'cô lập', 'co lap', 'sơ tán', 'so tan', 'di dời', 'di doi', 'thiệt mạng', 'thiet mang', 'mất tích', 'mat tich', 'cứu hộ', 'cuu ho', 'cứu nạn', 'cuu nan', 'hậu quả', 'hau qua', 'ảnh hưởng', 'anh huong', 'sập', 'sap', 'vùi lấp', 'vui lap']
-      const hasConsequenceKeyword = consequenceKeywords.some(keyword => textToCheck.includes(keyword))
-
       // Show disaster-related reports with lower threshold for more content
       if (r.type === 'ALERT' || r.type === 'SOS') {
-        return r.trust_score >= 0.15  // Lowered further for more content
+        return r.trust_score >= 0.15
       }
       if (r.type === 'RAIN') {
-        return r.trust_score >= 0.2  // Lowered for more content
+        return r.trust_score >= 0.2
       }
       if (r.type === 'ROAD') {
-        return r.trust_score >= 0.25  // Now included - road conditions are relevant
+        return r.trust_score >= 0.25
       }
       if (r.type === 'NEEDS') {
-        return r.trust_score >= 0.4  // Include high-trust NEEDS reports
+        return r.trust_score >= 0.4
       }
       // Include other types with high trust
       return r.trust_score >= 0.5
