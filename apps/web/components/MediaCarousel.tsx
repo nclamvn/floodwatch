@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { MapPin, Pause } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { MapPin, Pause, ChevronLeft, ChevronRight } from 'lucide-react'
 import { decodeHTML } from '@/lib/htmlDecode'
 import { deduplicateReports } from '@/lib/newsDedup'
 
@@ -29,6 +29,16 @@ interface MediaCarouselProps {
 
 export default function MediaCarousel({ reports, onReportClick }: MediaCarouselProps) {
   const [isPaused, setIsPaused] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  // Detect mobile on mount
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Layer 3: Frontend deduplication before filtering
   const dedupedReports = useMemo(() => {
@@ -152,7 +162,7 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
 
   if (mediaReports.length === 0) return null
 
-  // Only duplicate for seamless scroll if we have enough items (4+)
+  // Only duplicate for seamless scroll if we have enough items (4+) - for desktop only
   // For 2-3 items, show them 3 times to reduce obvious duplication
   const itemsToShow = mediaReports.length >= 4
     ? [...mediaReports, ...mediaReports] // 2x duplication for 4+ items
@@ -169,6 +179,129 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
     return date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })
   }
 
+  // Render a single news card
+  const renderNewsCard = (report: Report, index: number, keyPrefix: string) => {
+    const validImageUrl = report.media?.find(url => isValidImageUrl(url)) || report.media?.[0]
+    if (!validImageUrl) return null
+
+    return (
+      <div
+        key={`${keyPrefix}-${report.id}-${index}`}
+        className="relative flex-shrink-0 h-full w-[200px] overflow-hidden rounded-lg cursor-pointer group"
+        onClick={() => onReportClick?.(report)}
+      >
+        {/* Background Image */}
+        <img
+          src={validImageUrl}
+          alt={report.title}
+          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+
+        {/* Dark Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
+        {/* Content Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-2">
+          {/* Title */}
+          <h4 className="text-white font-bold text-xs mb-1 line-clamp-2 leading-tight" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+            {decodeHTML(report.title)}
+          </h4>
+
+          {/* Metadata */}
+          <div className="flex items-center gap-2 text-white/90 text-[10px]">
+            {report.province && (
+              <span className="flex items-center gap-0.5">
+                <MapPin className="w-2.5 h-2.5" />
+                <span className="truncate max-w-[60px]">{decodeHTML(report.province)}</span>
+              </span>
+            )}
+            <span>{formatTime(report.created_at)}</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mobile: Swipeable horizontal list (no auto-scroll)
+  if (isMobile) {
+    return (
+      <div className="fixed bottom-[25px] left-0 right-0 z-30 h-[120px]">
+        {/* Swipeable container with native scroll */}
+        <div
+          ref={scrollContainerRef}
+          className="flex items-center h-full gap-2 px-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+          style={{
+            scrollBehavior: 'smooth',
+            WebkitOverflowScrolling: 'touch',
+            scrollSnapType: 'x mandatory'
+          }}
+        >
+          {mediaReports.map((report, index) => {
+            const validImageUrl = report.media?.find(url => isValidImageUrl(url)) || report.media?.[0]
+            if (!validImageUrl) return null
+
+            return (
+              <div
+                key={`mobile-${report.id}-${index}`}
+                className="relative flex-shrink-0 h-full w-[200px] overflow-hidden rounded-lg cursor-pointer group snap-start"
+                onClick={() => onReportClick?.(report)}
+              >
+                {/* Background Image */}
+                <img
+                  src={validImageUrl}
+                  alt={report.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+
+                {/* Dark Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
+                {/* Content Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  {/* Title */}
+                  <h4 className="text-white font-bold text-xs mb-1 line-clamp-2 leading-tight" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                    {decodeHTML(report.title)}
+                  </h4>
+
+                  {/* Metadata */}
+                  <div className="flex items-center gap-2 text-white/90 text-[10px]">
+                    {report.province && (
+                      <span className="flex items-center gap-0.5">
+                        <MapPin className="w-2.5 h-2.5" />
+                        <span className="truncate max-w-[60px]">{decodeHTML(report.province)}</span>
+                      </span>
+                    )}
+                    <span>{formatTime(report.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Scroll indicator dots */}
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+          {mediaReports.slice(0, Math.min(5, mediaReports.length)).map((_, i) => (
+            <div key={i} className="w-1 h-1 rounded-full bg-white/50" />
+          ))}
+          {mediaReports.length > 5 && <div className="w-1 h-1 rounded-full bg-white/30" />}
+        </div>
+
+        {/* Hide scrollbar CSS */}
+        <style jsx>{`
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}</style>
+      </div>
+    )
+  }
+
+  // Desktop: Auto-scrolling carousel
   return (
     <div
       className="fixed bottom-[25px] left-0 right-0 z-30 h-[120px] overflow-hidden"
@@ -184,48 +317,7 @@ export default function MediaCarousel({ reports, onReportClick }: MediaCarouselP
         }}
       >
         {/* Duplicate items for seamless loop */}
-        {itemsToShow.map((report, index) => {
-          // Get first valid image URL
-          const validImageUrl = report.media?.find(url => isValidImageUrl(url)) || report.media?.[0]
-          if (!validImageUrl) return null
-
-          return (
-          <div
-            key={`carousel-${report.id}-${index}`}
-            className="relative flex-shrink-0 h-full w-[200px] overflow-hidden rounded-lg cursor-pointer group"
-            onClick={() => onReportClick?.(report)}
-          >
-            {/* Background Image */}
-            <img
-              src={validImageUrl}
-              alt={report.title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-
-            {/* Dark Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-
-            {/* Content Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-2">
-              {/* Title */}
-              <h4 className="text-white font-bold text-xs mb-1 line-clamp-2 leading-tight" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
-                {decodeHTML(report.title)}
-              </h4>
-
-              {/* Metadata */}
-              <div className="flex items-center gap-2 text-white/90 text-[10px]">
-                {report.province && (
-                  <span className="flex items-center gap-0.5">
-                    <MapPin className="w-2.5 h-2.5" />
-                    <span className="truncate max-w-[60px]">{decodeHTML(report.province)}</span>
-                  </span>
-                )}
-                <span>{formatTime(report.created_at)}</span>
-              </div>
-            </div>
-          </div>
-          )
-        })}
+        {itemsToShow.map((report, index) => renderNewsCard(report, index, 'carousel'))}
       </div>
 
       {/* Play/Pause Indicator */}
