@@ -199,11 +199,12 @@ export function MobileMapControls({
           {/* Menu Panel */}
           <div
             className="
-              absolute top-14 left-0 z-50
+              fixed top-[72px] left-4 z-50
               w-64
-              max-h-[calc(100vh-80px)]
+              max-h-[70vh]
               overflow-y-auto
-              bg-white/80 dark:bg-neutral-900/80
+              overscroll-contain
+              bg-white/90 dark:bg-neutral-900/90
               backdrop-blur-2xl backdrop-saturate-150
               border border-neutral-200/50 dark:border-neutral-700/50
               rounded-2xl
