@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, ChevronDown, ChevronUp, MapPin, MapPinned, Info, Map, Satellite, Globe, Mountain, Loader2, Play, Pause, Newspaper } from 'lucide-react'
-import DarkModeToggle from './DarkModeToggle'
+import {
+  Menu, X, ArrowLeft, MapPin, MapPinned, Info, Map, Satellite, Globe, Mountain,
+  Loader2, Play, Pause, Newspaper, Sun, Moon, Check
+} from 'lucide-react'
 import { type BaseMapStyleId } from '@/lib/mapProvider'
 import { useLocation } from '@/contexts/LocationContext'
 import { useGlobalAudioPlayer } from '@/contexts/AudioPlayerContext'
@@ -26,8 +27,8 @@ const MAP_STYLE_ICONS: Record<BaseMapStyleId, React.ComponentType<{ className?: 
 }
 
 const MAP_STYLE_LABELS: Record<BaseMapStyleId, string> = {
-  streets: 'Đường',
-  hybrid: 'Lai',
+  streets: 'Bản đồ đường',
+  hybrid: 'Vệ tinh + Đường',
   satellite: 'Vệ tinh',
   outdoors: 'Địa hình',
 }
@@ -40,13 +41,34 @@ export function MobileMapControls({
   onLocationClick
 }: MobileMapControlsProps) {
   const { userLocation, isLocating, requestLocation } = useLocation()
-  const { isPlaying, isLoading, play, pause, currentTime, duration } = useGlobalAudioPlayer()
+  const { isPlaying, isLoading, play, pause } = useGlobalAudioPlayer()
   const [isExpanded, setIsExpanded] = useState(false)
   const [isNewsPopupOpen, setIsNewsPopupOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [isDark, setIsDark] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Audio progress for spinning ring
-  const progress = duration > 0 ? currentTime / duration : 0
+  // Initialize dark mode state on mount
+  useEffect(() => {
+    setMounted(true)
+    const htmlElement = document.documentElement
+    setIsDark(htmlElement.classList.contains('dark'))
+  }, [])
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const htmlElement = document.documentElement
+    const newIsDark = !isDark
+    if (newIsDark) {
+      htmlElement.classList.add('dark')
+      localStorage.theme = 'dark'
+    } else {
+      htmlElement.classList.remove('dark')
+      localStorage.theme = 'light'
+    }
+    setIsDark(newIsDark)
+    setIsExpanded(false)
+  }
 
   // Handle My Location button click
   const handleLocationClick = () => {
@@ -55,6 +77,7 @@ export function MobileMapControls({
     } else {
       requestLocation()
     }
+    setIsExpanded(false)
   }
 
   // Handle Audio play/pause
@@ -64,6 +87,7 @@ export function MobileMapControls({
     } else {
       play()
     }
+    setIsExpanded(false)
   }
 
   // When location is acquired, automatically pan to it
@@ -89,140 +113,194 @@ export function MobileMapControls({
     }
   }, [isExpanded])
 
-  // Common button styles
+  // Menu item component
+  const MenuItem = ({
+    icon: Icon,
+    label,
+    onClick,
+    isActive = false,
+    rightElement
+  }: {
+    icon: React.ComponentType<{ className?: string }>
+    label: string
+    onClick: () => void
+    isActive?: boolean
+    rightElement?: React.ReactNode
+  }) => (
+    <button
+      onClick={onClick}
+      className={`
+        w-full flex items-center gap-3 px-4 py-3
+        transition-colors duration-150
+        ${isActive
+          ? 'bg-blue-500/10 dark:bg-blue-400/10'
+          : 'hover:bg-neutral-100/80 dark:hover:bg-neutral-700/50 active:bg-neutral-200/80 dark:active:bg-neutral-600/50'
+        }
+      `}
+    >
+      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-blue-500 dark:text-blue-400' : 'text-neutral-600 dark:text-neutral-300'}`} />
+      <span className={`flex-1 text-left text-[15px] ${isActive ? 'text-blue-500 dark:text-blue-400 font-medium' : 'text-neutral-800 dark:text-neutral-100'}`}>
+        {label}
+      </span>
+      {rightElement}
+      {isActive && !rightElement && (
+        <Check className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+      )}
+    </button>
+  )
+
+  // Section divider
+  const Divider = () => (
+    <div className="h-px bg-neutral-200/60 dark:bg-neutral-700/60 mx-3" />
+  )
+
+  // Section header
+  const SectionHeader = ({ title }: { title: string }) => (
+    <div className="px-4 py-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+      {title}
+    </div>
+  )
+
   const buttonBaseStyle = "w-11 h-11 flex items-center justify-center rounded-full backdrop-blur-xl border shadow-[0_4px_16px_rgba(0,0,0,0.1),0_1px_4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3),0_1px_4px_rgba(0,0,0,0.2)] transition-all duration-200"
   const buttonInactiveStyle = "bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-800/70 dark:text-gray-200 dark:hover:bg-gray-700/80 dark:border-neutral-700/50"
-  const buttonActiveStyle = "bg-neutral-600 hover:bg-neutral-700 text-white border-neutral-500"
 
   return (
-    <div ref={containerRef} className="sm:hidden fixed top-4 left-4 z-50 flex flex-col gap-2">
-      {/* Back Button */}
-      <Link
-        href="/"
-        className={`${buttonBaseStyle} ${buttonInactiveStyle} hover:scale-105 active:scale-95`}
-        aria-label="Quay về trang chủ"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </Link>
-
-      {/* Theme Toggle */}
-      <DarkModeToggle />
-
-      {/* Audio Player Button with Spinning Ring */}
-      <div className="relative w-11 h-11">
-        {/* Spinning ring when playing */}
-        {isPlaying && (
-          <svg
-            className="absolute inset-0 w-full h-full animate-spin-slow"
-            viewBox="0 0 44 44"
-            style={{ animationDuration: '3s' }}
-          >
-            {/* Outer spinning ring */}
-            <circle
-              cx="22"
-              cy="22"
-              r="20"
-              fill="none"
-              stroke="url(#audioGradient)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeDasharray="40 85"
-            />
-            <defs>
-              <linearGradient id="audioGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#3b82f6" />
-                <stop offset="50%" stopColor="#8b5cf6" />
-                <stop offset="100%" stopColor="#ec4899" />
-              </linearGradient>
-            </defs>
-          </svg>
-        )}
-
-        {/* Audio button */}
-        <button
-          onClick={handleAudioClick}
-          disabled={isLoading}
-          className={`${buttonBaseStyle} ${isPlaying ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-transparent' : buttonInactiveStyle} hover:scale-105 active:scale-95 disabled:opacity-50`}
-          aria-label={isPlaying ? 'Tạm dừng' : 'Phát tin tức'}
-        >
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : isPlaying ? (
-            <Pause className="w-5 h-5 fill-current" />
-          ) : (
-            <Play className="w-5 h-5 fill-current ml-0.5" />
-          )}
-        </button>
-      </div>
-
-      {/* Hamburger / Expand Button */}
+    <div ref={containerRef} className="sm:hidden fixed top-4 left-4 z-50">
+      {/* Single Hamburger Button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`${buttonBaseStyle} ${isExpanded ? buttonActiveStyle : buttonInactiveStyle} hover:scale-105 active:scale-95`}
-        aria-label={isExpanded ? "Thu gọn menu" : "Mở menu bản đồ"}
+        className={`${buttonBaseStyle} ${buttonInactiveStyle} hover:scale-105 active:scale-95`}
+        aria-label={isExpanded ? "Đóng menu" : "Mở menu"}
       >
         {isExpanded ? (
-          <ChevronUp className="w-5 h-5" />
+          <X className="w-5 h-5" />
         ) : (
-          <ChevronDown className="w-5 h-5" />
+          <Menu className="w-5 h-5" />
         )}
       </button>
 
-      {/* Expanded Menu - Vertical list of controls */}
+      {/* Apple-style Frosted Glass Dropdown */}
       {isExpanded && (
-        <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
-          {/* Map Style Buttons */}
-          {Object.entries(MAP_STYLE_ICONS).map(([styleId, IconComponent]) => (
-            <button
-              key={styleId}
-              onClick={() => onStyleChange(styleId as BaseMapStyleId)}
-              className={`${buttonBaseStyle} ${baseMapStyle === styleId ? buttonActiveStyle : buttonInactiveStyle} hover:scale-105 active:scale-95`}
-              title={MAP_STYLE_LABELS[styleId as BaseMapStyleId]}
-            >
-              <IconComponent className="w-5 h-5" />
-            </button>
-          ))}
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40"
+            onClick={() => setIsExpanded(false)}
+          />
 
-          {/* My Location Button */}
-          <button
-            onClick={handleLocationClick}
-            disabled={isLocating}
-            className={`${buttonBaseStyle} ${userLocation ? buttonActiveStyle : buttonInactiveStyle} ${isLocating ? 'cursor-wait opacity-70' : 'hover:scale-105 active:scale-95'}`}
-            title="Vị trí của tôi"
+          {/* Menu Panel */}
+          <div
+            className="
+              absolute top-14 left-0 z-50
+              w-64
+              bg-white/80 dark:bg-neutral-900/80
+              backdrop-blur-2xl backdrop-saturate-150
+              border border-neutral-200/50 dark:border-neutral-700/50
+              rounded-2xl
+              shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)]
+              dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.3)]
+              overflow-hidden
+              animate-in fade-in slide-in-from-top-2 duration-200
+            "
           >
-            {isLocating ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : userLocation ? (
-              <MapPinned className="w-5 h-5" />
-            ) : (
-              <MapPin className="w-5 h-5" />
-            )}
-          </button>
+            {/* Navigation */}
+            <div className="py-1">
+              <MenuItem
+                icon={ArrowLeft}
+                label="Trang chủ"
+                onClick={() => {
+                  setIsExpanded(false)
+                  window.location.href = '/'
+                }}
+              />
+            </div>
 
-          {/* Legend Button */}
-          <button
-            onClick={() => {
-              onLegendClick()
-              setIsExpanded(false)
-            }}
-            className={`${buttonBaseStyle} ${legendActive ? buttonActiveStyle : buttonInactiveStyle} hover:scale-105 active:scale-95`}
-            title="Chú giải"
-          >
-            <Info className="w-5 h-5" />
-          </button>
+            <Divider />
 
-          {/* News Button */}
-          <button
-            onClick={() => {
-              setIsNewsPopupOpen(true)
-              setIsExpanded(false)
-            }}
-            className={`${buttonBaseStyle} ${buttonInactiveStyle} hover:scale-105 active:scale-95`}
-            title="Tin tức"
-          >
-            <Newspaper className="w-5 h-5" />
-          </button>
-        </div>
+            {/* Audio & News */}
+            <div className="py-1">
+              <MenuItem
+                icon={isPlaying ? Pause : Play}
+                label={isPlaying ? "Tạm dừng phát" : "Phát tin tức"}
+                onClick={handleAudioClick}
+                isActive={isPlaying}
+                rightElement={
+                  isLoading ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : undefined
+                }
+              />
+              <MenuItem
+                icon={Newspaper}
+                label="Xem tin tức"
+                onClick={() => {
+                  setIsNewsPopupOpen(true)
+                  setIsExpanded(false)
+                }}
+              />
+            </div>
+
+            <Divider />
+
+            {/* Map Styles */}
+            <SectionHeader title="Kiểu bản đồ" />
+            <div className="py-1">
+              {Object.entries(MAP_STYLE_ICONS).map(([styleId, IconComponent]) => (
+                <MenuItem
+                  key={styleId}
+                  icon={IconComponent}
+                  label={MAP_STYLE_LABELS[styleId as BaseMapStyleId]}
+                  onClick={() => {
+                    onStyleChange(styleId as BaseMapStyleId)
+                    setIsExpanded(false)
+                  }}
+                  isActive={baseMapStyle === styleId}
+                />
+              ))}
+            </div>
+
+            <Divider />
+
+            {/* Tools */}
+            <SectionHeader title="Công cụ" />
+            <div className="py-1">
+              <MenuItem
+                icon={userLocation ? MapPinned : MapPin}
+                label={userLocation ? "Vị trí của tôi" : "Xác định vị trí"}
+                onClick={handleLocationClick}
+                isActive={!!userLocation}
+                rightElement={
+                  isLocating ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : undefined
+                }
+              />
+              <MenuItem
+                icon={Info}
+                label="Chú giải bản đồ"
+                onClick={() => {
+                  onLegendClick()
+                  setIsExpanded(false)
+                }}
+                isActive={legendActive}
+              />
+            </div>
+
+            <Divider />
+
+            {/* Theme */}
+            <div className="py-1 pb-2">
+              {mounted && (
+                <MenuItem
+                  icon={isDark ? Moon : Sun}
+                  label={isDark ? "Chế độ tối" : "Chế độ sáng"}
+                  onClick={toggleDarkMode}
+                  rightElement={
+                    <div className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      <span>{isDark ? 'Bật' : 'Tắt'}</span>
+                    </div>
+                  }
+                />
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Full-screen News Popup */}
