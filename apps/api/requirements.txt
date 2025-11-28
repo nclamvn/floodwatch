@@ -21,7 +21,7 @@ lxml_html_clean==0.4.3
 newspaper3k==0.2.8
 requests==2.31.0
 python-dateutil==2.9.0
-structlog==24.1.0
+structlog==25.5.0
 tenacity==8.2.3
 slowapi==0.1.9
 feedparser==6.0.11
