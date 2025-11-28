@@ -2,6 +2,7 @@
 
 import { X, ExternalLink, Navigation, AlertCircle } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 
 interface DirectionsModalProps {
   lat: number
@@ -27,6 +28,8 @@ export default function DirectionsModal({
   destinationName,
   onClose
 }: DirectionsModalProps) {
+  const t = useTranslations('directions')
+  const tCommon = useTranslations('common')
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -73,7 +76,7 @@ export default function DirectionsModal({
               <Navigation className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-neutral-50 truncate">
-                  Chỉ đường đến {destinationName}
+                  {t('title')} - {destinationName}
                 </h2>
                 {address && (
                   <p className="text-sm text-slate-600 dark:text-neutral-400 truncate">
@@ -85,7 +88,7 @@ export default function DirectionsModal({
             <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex-shrink-0"
-              aria-label="Đóng"
+              aria-label={tCommon('close')}
             >
               <X className="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
             </button>
@@ -126,7 +129,7 @@ export default function DirectionsModal({
                         className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
                       >
                         <ExternalLink className="w-5 h-5" />
-                        Mở trong Google Maps
+                        {t('googleMaps')}
                       </a>
                     </div>
                   </div>
@@ -163,7 +166,7 @@ export default function DirectionsModal({
                     className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
                   >
                     <ExternalLink className="w-5 h-5" />
-                    Mở trong Google Maps
+                    {t('googleMaps')}
                   </a>
                 </div>
               </div>
@@ -180,7 +183,7 @@ export default function DirectionsModal({
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
                 >
                   <Navigation className="w-5 h-5" />
-                  Mở trong ứng dụng Google Maps
+                  {t('googleMaps')}
                 </a>
               )}
 
@@ -192,7 +195,7 @@ export default function DirectionsModal({
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
               >
                 <ExternalLink className="w-5 h-5" />
-                {isMobile ? 'Mở trong trình duyệt' : 'Mở trong tab mới'}
+                {t('googleMaps')}
               </a>
 
               {/* Close button */}
@@ -200,7 +203,7 @@ export default function DirectionsModal({
                 onClick={onClose}
                 className="px-4 py-3 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 font-medium rounded-lg transition-colors"
               >
-                Đóng
+                {t('close')}
               </button>
             </div>
           </div>

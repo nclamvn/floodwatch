@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { MapPin, Send, Heart, CheckCircle, AlertCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import ImageUpload from './ImageUpload'
 
 interface ICanHelpFormProps {
   onSubmitSuccess?: () => void
@@ -24,9 +26,13 @@ interface FormData {
   organization: string
   vehicle_type: VehicleType
   available_capacity: number | null
+  images: string[]
 }
 
 export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
+  const t = useTranslations('helpForm')
+  const tHelp = useTranslations('help')
+
   const [formData, setFormData] = useState<FormData>({
     lat: null,
     lon: null,
@@ -40,29 +46,74 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
     contact_email: '',
     organization: '',
     vehicle_type: '',
-    available_capacity: null
+    available_capacity: null,
+    images: []
   })
+
+  // Cloudinary config
+  const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'demo'
+  const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'unsigned_preset'
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  // Field-level validation state
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+
+  const markTouched = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }))
+  }
+
+  // Validation helpers
+  const isLocationValid = formData.lat !== null && formData.lon !== null
+  const isDescriptionValid = formData.description.length >= 10
+  const isAvailabilityValid = formData.availability.trim().length > 0
+  const isNameValid = formData.contact_name.trim().length > 0
+  const isPhoneValid = formData.contact_phone.trim().length > 0
+
+  const getFieldError = (field: string): string | null => {
+    if (!touched[field]) return null
+    switch (field) {
+      case 'location':
+        return !isLocationValid ? t('validation.locationRequired') : null
+      case 'description':
+        return !isDescriptionValid ? t('validation.descriptionMinLength') : null
+      case 'availability':
+        return !isAvailabilityValid ? t('validation.availabilityRequired') : null
+      case 'contact_name':
+        return !isNameValid ? t('validation.nameRequired') : null
+      case 'contact_phone':
+        return !isPhoneValid ? t('validation.phoneRequired') : null
+      default:
+        return null
+    }
+  }
+
+  const getInputClassName = (field: string, baseClass: string) => {
+    const fieldError = getFieldError(field)
+    if (fieldError) {
+      return `${baseClass} border-red-500 dark:border-red-500 focus:ring-red-500`
+    }
+    return baseClass
+  }
+
   const serviceTypeOptions = [
-    { value: 'rescue', label: 'Cứu hộ' },
-    { value: 'transportation', label: 'Vận chuyển' },
-    { value: 'medical', label: 'Y tế' },
-    { value: 'shelter', label: 'Chỗ ở' },
-    { value: 'food_water', label: 'Thực phẩm/Nước' },
-    { value: 'supplies', label: 'Vật tư' },
-    { value: 'volunteer', label: 'Tình nguyện' },
-    { value: 'donation', label: 'Quyên góp' },
-    { value: 'other', label: 'Khác' }
+    { value: 'rescue', label: tHelp('serviceTypes.rescue') },
+    { value: 'transportation', label: tHelp('serviceTypes.transportation') },
+    { value: 'medical', label: tHelp('serviceTypes.medical') },
+    { value: 'shelter', label: tHelp('serviceTypes.shelter') },
+    { value: 'food_water', label: tHelp('serviceTypes.foodWater') },
+    { value: 'supplies', label: tHelp('serviceTypes.supplies') },
+    { value: 'volunteer', label: tHelp('serviceTypes.volunteer') },
+    { value: 'donation', label: tHelp('serviceTypes.donation') },
+    { value: 'other', label: tHelp('serviceTypes.other') }
   ]
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      setError('Trình duyệt không hỗ trợ định vị')
+      setError(t('validation.locationRequired'))
       return
     }
 
@@ -79,7 +130,7 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
         setIsGettingLocation(false)
       },
       (error) => {
-        setError('Không thể lấy vị trí. Vui lòng cho phép truy cập vị trí.')
+        setError(t('validation.locationRequired'))
         setIsGettingLocation(false)
         console.error('Geolocation error:', error)
       },
@@ -94,27 +145,27 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
 
     // Validation
     if (!formData.lat || !formData.lon) {
-      setError('Vui lòng lấy vị trí của bạn')
+      setError(t('validation.locationRequired'))
       return
     }
 
     if (formData.description.length < 10) {
-      setError('Mô tả phải có ít nhất 10 ký tự')
+      setError(t('validation.locationRequired'))
       return
     }
 
     if (!formData.availability.trim()) {
-      setError('Vui lòng nhập thời gian có thể giúp')
+      setError(t('validation.locationRequired'))
       return
     }
 
     if (!formData.contact_name.trim()) {
-      setError('Vui lòng nhập tên liên hệ')
+      setError(t('validation.nameRequired'))
       return
     }
 
     if (!formData.contact_phone.trim()) {
-      setError('Vui lòng nhập số điện thoại')
+      setError(t('validation.phoneRequired'))
       return
     }
 
@@ -134,10 +185,11 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
         ...(formData.contact_email.trim() && { contact_email: formData.contact_email.trim() }),
         ...(formData.organization.trim() && { organization: formData.organization.trim() }),
         ...(formData.vehicle_type && { vehicle_type: formData.vehicle_type }),
-        ...(formData.available_capacity && { available_capacity: formData.available_capacity })
+        ...(formData.available_capacity && { available_capacity: formData.available_capacity }),
+        ...(formData.images.length > 0 && { images: formData.images })
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
       const response = await fetch(`${apiUrl}/help/offers`, {
         method: 'POST',
         headers: {
@@ -148,7 +200,26 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || 'Không thể gửi đề nghị. Vui lòng thử lại.')
+        throw new Error(errorData.detail || t('error'))
+      }
+
+      // Parse response and save submission to localStorage
+      const data = await response.json()
+      if (data.id) {
+        try {
+          const stored = localStorage.getItem('floodwatch_my_offers') || '[]'
+          const submissions = JSON.parse(stored)
+          submissions.unshift({
+            id: data.id,
+            tracking_code: data.tracking_code,
+            service_type: formData.service_type,
+            created_at: new Date().toISOString()
+          })
+          // Keep only last 10 submissions
+          localStorage.setItem('floodwatch_my_offers', JSON.stringify(submissions.slice(0, 10)))
+        } catch (e) {
+          console.warn('Failed to save submission to localStorage:', e)
+        }
       }
 
       setSuccess(true)
@@ -167,7 +238,8 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
         contact_email: '',
         organization: '',
         vehicle_type: '',
-        available_capacity: null
+        available_capacity: null,
+        images: []
       })
 
       // Call success callback
@@ -179,7 +251,7 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
       setTimeout(() => setSuccess(false), 5000)
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi')
+      setError(err instanceof Error ? err.message : t('error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -189,14 +261,14 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
     <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-6">
       <h2 className="text-xl font-bold text-slate-900 dark:text-neutral-50 mb-4 flex items-center gap-2">
         <Heart className="w-5 h-5 text-green-600" />
-        Đề nghị hỗ trợ
+        {t('offerTitle')}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Location */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Vị trí của bạn <span className="text-red-600">*</span>
+            {t('location')} <span className="text-red-600">*</span>
           </label>
           <button
             type="button"
@@ -205,16 +277,16 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-neutral-600 hover:bg-neutral-700 disabled:bg-neutral-400 text-white rounded-md transition-colors"
           >
             <MapPin className="w-4 h-4" />
-            {isGettingLocation ? 'Đang lấy vị trí...' :
-             formData.lat && formData.lon ? `Đã lấy vị trí (${formData.lat.toFixed(6)}, ${formData.lon.toFixed(6)})` :
-             'Lấy vị trí hiện tại'}
+            {isGettingLocation ? t('gettingLocation') :
+             formData.lat && formData.lon ? `${t('gotLocation')} (${formData.lat.toFixed(6)}, ${formData.lon.toFixed(6)})` :
+             t('getLocation')}
           </button>
         </div>
 
         {/* Service Type */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Loại hỗ trợ <span className="text-red-600">*</span>
+            {t('serviceType')} <span className="text-red-600">*</span>
           </label>
           <select
             value={formData.service_type}
@@ -232,161 +304,142 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
         {/* Description */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Mô tả chi tiết <span className="text-red-600">*</span>
+            {t('description')} <span className="text-red-600">*</span>
           </label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Mô tả những gì bạn có thể giúp (ít nhất 10 ký tự)"
+            onBlur={() => markTouched('description')}
+            placeholder={t('descriptionPlaceholder')}
             rows={4}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent resize-none"
+            className={getInputClassName('description', 'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent resize-none')}
           />
-          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
-            {formData.description.length}/10 ký tự tối thiểu
+          <div className="flex justify-between items-center mt-1">
+            {getFieldError('description') ? (
+              <span className="text-xs text-red-500">{getFieldError('description')}</span>
+            ) : (
+              <span className="text-xs text-neutral-400">{t('validation.descriptionHint')}</span>
+            )}
+            <span className={`text-xs ${formData.description.length < 10 ? 'text-red-500' : 'text-neutral-400'}`}>
+              {formData.description.length}/500
+            </span>
+          </div>
+        </div>
+
+        {/* Image Upload */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
+            {t('images')}
+          </label>
+          <ImageUpload
+            onUploadComplete={(urls) => setFormData(prev => ({ ...prev, images: urls }))}
+            maxImages={3}
+            cloudName={CLOUDINARY_CLOUD_NAME}
+            uploadPreset={CLOUDINARY_UPLOAD_PRESET}
+          />
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            {t('imagesHint')}
           </p>
         </div>
 
         {/* Capacity */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Số lượng người có thể giúp
+            {t('vehicleCapacity')}
           </label>
           <input
             type="number"
             min="1"
             value={formData.capacity || ''}
             onChange={(e) => setFormData(prev => ({ ...prev, capacity: e.target.value ? parseInt(e.target.value) : null }))}
-            placeholder="Ví dụ: 10"
+            placeholder="10"
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
-        </div>
-
-        {/* Coverage Radius */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Bán kính hỗ trợ (km)
-          </label>
-          <input
-            type="number"
-            min="1"
-            value={formData.coverage_radius_km || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, coverage_radius_km: e.target.value ? parseFloat(e.target.value) : null }))}
-            placeholder="Khoảng cách bạn có thể di chuyển để giúp"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
-          />
-          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
-            Bạn có thể giúp đỡ trong bán kính bao xa từ vị trí của bạn?
-          </p>
         </div>
 
         {/* Availability */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Thời gian có thể giúp <span className="text-red-600">*</span>
+            {t('availableFrom')} <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
             value={formData.availability}
             onChange={(e) => setFormData(prev => ({ ...prev, availability: e.target.value }))}
-            placeholder="Ví dụ: 8h-17h hàng ngày, Cuối tuần, 24/7"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            onBlur={() => markTouched('availability')}
+            placeholder="8:00 - 17:00, 24/7"
+            className={getInputClassName('availability', 'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent')}
           />
-        </div>
-
-        {/* Organization (Optional) */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Tổ chức (nếu có)
-          </label>
-          <input
-            type="text"
-            value={formData.organization}
-            onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
-            placeholder="Tên tổ chức, nhóm tình nguyện"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
-          />
+          {getFieldError('availability') && (
+            <span className="text-xs text-red-500 mt-1 block">{getFieldError('availability')}</span>
+          )}
         </div>
 
         {/* Vehicle Type */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Loại phương tiện (nếu có)
+            {t('vehicleType')}
           </label>
           <select
             value={formData.vehicle_type}
             onChange={(e) => setFormData(prev => ({ ...prev, vehicle_type: e.target.value as VehicleType }))}
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           >
-            <option value="">-- Chọn loại phương tiện --</option>
-            <option value="boat">Thuyền/Xuồng</option>
-            <option value="truck">Xe tải</option>
-            <option value="helicopter">Trực thăng</option>
-            <option value="ambulance">Xe cứu thương</option>
-            <option value="car">Ô tô</option>
-            <option value="motorcycle">Xe máy</option>
-            <option value="other">Khác</option>
+            <option value="">-- {t('selectVehicle')} --</option>
+            <option value="boat">{t('vehicles.boat')}</option>
+            <option value="truck">{t('vehicles.truck')}</option>
+            <option value="car">{t('vehicles.car')}</option>
+            <option value="motorcycle">{t('vehicles.motorcycle')}</option>
+            <option value="other">{t('vehicles.other')}</option>
           </select>
-          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
-            Phương tiện có sẵn để hỗ trợ cứu hộ/vận chuyển
-          </p>
-        </div>
-
-        {/* Available Capacity */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Sức chứa hiện có
-          </label>
-          <input
-            type="number"
-            min="1"
-            value={formData.available_capacity || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, available_capacity: e.target.value ? parseInt(e.target.value) : null }))}
-            placeholder="Số người có thể giúp ngay lúc này"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
-          />
-          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
-            Số người bạn có thể giúp được ngay bây giờ (khác với tổng sức chứa)
-          </p>
         </div>
 
         {/* Contact Name */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Tên liên hệ <span className="text-red-600">*</span>
+            {t('fullName')} <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
             value={formData.contact_name}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_name: e.target.value }))}
-            placeholder="Họ và tên của bạn"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            onBlur={() => markTouched('contact_name')}
+            placeholder={t('fullNamePlaceholder')}
+            className={getInputClassName('contact_name', 'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent')}
           />
+          {getFieldError('contact_name') && (
+            <span className="text-xs text-red-500 mt-1 block">{getFieldError('contact_name')}</span>
+          )}
         </div>
 
         {/* Contact Phone */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Số điện thoại <span className="text-red-600">*</span>
+            {t('phone')} <span className="text-red-600">*</span>
           </label>
           <input
             type="tel"
             value={formData.contact_phone}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
-            placeholder="Số điện thoại liên hệ"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
+            onBlur={() => markTouched('contact_phone')}
+            placeholder={t('phonePlaceholder')}
+            className={getInputClassName('contact_phone', 'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent')}
           />
+          {getFieldError('contact_phone') && (
+            <span className="text-xs text-red-500 mt-1 block">{getFieldError('contact_phone')}</span>
+          )}
         </div>
 
         {/* Contact Email (Optional) */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Email (tùy chọn)
+            Email
           </label>
           <input
             type="email"
             value={formData.contact_email}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-            placeholder="Email của bạn"
+            placeholder="email@example.com"
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-green-600 focus:border-transparent"
           />
         </div>
@@ -406,7 +459,7 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
           <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
             <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
-              Đề nghị hỗ trợ của bạn đã được ghi nhận thành công!
+              {t('offerSuccess')}
             </p>
           </div>
         )}
@@ -418,7 +471,7 @@ export default function ICanHelpForm({ onSubmitSuccess }: ICanHelpFormProps) {
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-md transition-colors"
         >
           <Send className="w-4 h-4" />
-          {isSubmitting ? 'Đang gửi...' : 'Gửi đề nghị hỗ trợ'}
+          {isSubmitting ? t('submitting') : t('offerSubmit')}
         </button>
       </form>
     </div>

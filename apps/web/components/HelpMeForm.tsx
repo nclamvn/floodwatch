@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { MapPin, Send, AlertCircle, CheckCircle } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import ImageUpload from './ImageUpload'
 
 interface HelpMeFormProps {
   onSubmitSuccess?: () => void
@@ -25,9 +27,14 @@ interface FormData {
   has_disabilities: boolean
   water_level_cm: number | null
   building_floor: number | null
+  images: string[]
 }
 
 export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
+  const t = useTranslations('helpForm')
+  const tHelp = useTranslations('help')
+  const tCommon = useTranslations('common')
+
   const [formData, setFormData] = useState<FormData>({
     lat: null,
     lon: null,
@@ -42,34 +49,76 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
     has_elderly: false,
     has_disabilities: false,
     water_level_cm: null,
-    building_floor: null
+    building_floor: null,
+    images: []
   })
+
+  // Cloudinary config
+  const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'demo'
+  const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'unsigned_preset'
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
+  // Field-level validation state
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+
+  const markTouched = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }))
+  }
+
+  // Validation helpers
+  const isLocationValid = formData.lat !== null && formData.lon !== null
+  const isDescriptionValid = formData.description.length >= 10
+  const isNameValid = formData.contact_name.trim().length > 0
+  const isPhoneValid = formData.contact_phone.trim().length > 0
+
+  const getFieldError = (field: string): string | null => {
+    if (!touched[field]) return null
+    switch (field) {
+      case 'location':
+        return !isLocationValid ? t('validation.locationRequired') : null
+      case 'description':
+        return !isDescriptionValid ? t('validation.descriptionMinLength') : null
+      case 'contact_name':
+        return !isNameValid ? t('validation.nameRequired') : null
+      case 'contact_phone':
+        return !isPhoneValid ? t('validation.phoneRequired') : null
+      default:
+        return null
+    }
+  }
+
+  const getInputClassName = (field: string, baseClass: string) => {
+    const fieldError = getFieldError(field)
+    if (fieldError) {
+      return `${baseClass} border-red-500 dark:border-red-500 focus:ring-red-500`
+    }
+    return baseClass
+  }
+
   const needsTypeOptions = [
-    { value: 'food', label: 'Thực phẩm' },
-    { value: 'water', label: 'Nước uống' },
-    { value: 'shelter', label: 'Chỗ ở' },
-    { value: 'medical', label: 'Y tế' },
-    { value: 'clothing', label: 'Quần áo' },
-    { value: 'transport', label: 'Di chuyển' },
-    { value: 'other', label: 'Khác' }
+    { value: 'food', label: tHelp('needsTypes.food') },
+    { value: 'water', label: tHelp('needsTypes.water') },
+    { value: 'shelter', label: tHelp('needsTypes.shelter') },
+    { value: 'medical', label: tHelp('needsTypes.medical') },
+    { value: 'clothing', label: tHelp('needsTypes.clothing') },
+    { value: 'transport', label: tHelp('needsTypes.transport') },
+    { value: 'other', label: tHelp('needsTypes.other') }
   ]
 
   const urgencyOptions = [
-    { value: 'critical', label: 'Khẩn cấp', color: 'text-red-600' },
-    { value: 'high', label: 'Cao', color: 'text-orange-600' },
-    { value: 'medium', label: 'Trung bình', color: 'text-yellow-600' },
-    { value: 'low', label: 'Thấp', color: 'text-neutral-600' }
+    { value: 'critical', label: t('urgencyLevels.critical'), color: 'text-red-600' },
+    { value: 'high', label: t('urgencyLevels.high'), color: 'text-orange-600' },
+    { value: 'medium', label: t('urgencyLevels.medium'), color: 'text-yellow-600' },
+    { value: 'low', label: t('urgencyLevels.low'), color: 'text-neutral-600' }
   ]
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      setError('Trình duyệt không hỗ trợ định vị')
+      setError(t('validation.locationRequired'))
       return
     }
 
@@ -86,7 +135,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         setIsGettingLocation(false)
       },
       (error) => {
-        setError('Không thể lấy vị trí. Vui lòng cho phép truy cập vị trí.')
+        setError(t('validation.locationRequired'))
         setIsGettingLocation(false)
         console.error('Geolocation error:', error)
       },
@@ -101,22 +150,22 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
 
     // Validation
     if (!formData.lat || !formData.lon) {
-      setError('Vui lòng lấy vị trí của bạn')
+      setError(t('validation.locationRequired'))
       return
     }
 
     if (formData.description.length < 10) {
-      setError('Mô tả phải có ít nhất 10 ký tự')
+      setError(t('validation.locationRequired'))
       return
     }
 
     if (!formData.contact_name.trim()) {
-      setError('Vui lòng nhập tên liên hệ')
+      setError(t('validation.nameRequired'))
       return
     }
 
     if (!formData.contact_phone.trim()) {
-      setError('Vui lòng nhập số điện thoại')
+      setError(t('validation.phoneRequired'))
       return
     }
 
@@ -137,10 +186,11 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         has_elderly: formData.has_elderly,
         has_disabilities: formData.has_disabilities,
         ...(formData.water_level_cm !== null && { water_level_cm: formData.water_level_cm }),
-        ...(formData.building_floor !== null && { building_floor: formData.building_floor })
+        ...(formData.building_floor !== null && { building_floor: formData.building_floor }),
+        ...(formData.images.length > 0 && { images: formData.images })
       }
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
       const response = await fetch(`${apiUrl}/help/requests`, {
         method: 'POST',
         headers: {
@@ -151,7 +201,26 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || 'Không thể gửi yêu cầu. Vui lòng thử lại.')
+        throw new Error(errorData.detail || t('error'))
+      }
+
+      // Parse response and save submission to localStorage
+      const data = await response.json()
+      if (data.id) {
+        try {
+          const stored = localStorage.getItem('floodwatch_my_requests') || '[]'
+          const submissions = JSON.parse(stored)
+          submissions.unshift({
+            id: data.id,
+            tracking_code: data.tracking_code,
+            needs_type: formData.needs_type,
+            created_at: new Date().toISOString()
+          })
+          // Keep only last 10 submissions
+          localStorage.setItem('floodwatch_my_requests', JSON.stringify(submissions.slice(0, 10)))
+        } catch (e) {
+          console.warn('Failed to save submission to localStorage:', e)
+        }
       }
 
       setSuccess(true)
@@ -171,7 +240,8 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         has_elderly: false,
         has_disabilities: false,
         water_level_cm: null,
-        building_floor: null
+        building_floor: null,
+        images: []
       })
 
       // Call success callback
@@ -183,7 +253,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
       setTimeout(() => setSuccess(false), 5000)
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi')
+      setError(err instanceof Error ? err.message : t('error'))
     } finally {
       setIsSubmitting(false)
     }
@@ -193,14 +263,14 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
     <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-6">
       <h2 className="text-xl font-bold text-slate-900 dark:text-neutral-50 mb-4 flex items-center gap-2">
         <AlertCircle className="w-5 h-5 text-red-600" />
-        Yêu cầu cứu trợ
+        {t('requestTitle')}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Location */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Vị trí <span className="text-red-600">*</span>
+            {t('location')} <span className="text-red-600">*</span>
           </label>
           <button
             type="button"
@@ -209,16 +279,16 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-neutral-600 hover:bg-neutral-700 disabled:bg-neutral-400 text-white rounded-md transition-colors"
           >
             <MapPin className="w-4 h-4" />
-            {isGettingLocation ? 'Đang lấy vị trí...' :
-             formData.lat && formData.lon ? `Đã lấy vị trí (${formData.lat.toFixed(6)}, ${formData.lon.toFixed(6)})` :
-             'Lấy vị trí hiện tại'}
+            {isGettingLocation ? t('gettingLocation') :
+             formData.lat && formData.lon ? `${t('gotLocation')} (${formData.lat.toFixed(6)}, ${formData.lon.toFixed(6)})` :
+             t('getLocation')}
           </button>
         </div>
 
         {/* Needs Type */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Loại trợ giúp cần <span className="text-red-600">*</span>
+            {t('helpType')} <span className="text-red-600">*</span>
           </label>
           <select
             value={formData.needs_type}
@@ -236,7 +306,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         {/* Urgency */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Mức độ khẩn cấp <span className="text-red-600">*</span>
+            {t('urgency')} <span className="text-red-600">*</span>
           </label>
           <select
             value={formData.urgency}
@@ -254,24 +324,48 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         {/* Description */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Mô tả chi tiết <span className="text-red-600">*</span>
+            {t('description')} <span className="text-red-600">*</span>
           </label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Mô tả tình huống và những gì bạn cần (ít nhất 10 ký tự)"
+            onBlur={() => markTouched('description')}
+            placeholder={t('descriptionPlaceholder')}
             rows={4}
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent resize-none"
+            className={getInputClassName('description', 'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent resize-none')}
           />
-          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
-            {formData.description.length}/10 ký tự tối thiểu
+          <div className="flex justify-between items-center mt-1">
+            {getFieldError('description') ? (
+              <span className="text-xs text-red-500">{getFieldError('description')}</span>
+            ) : (
+              <span className="text-xs text-neutral-400">{t('validation.descriptionHint')}</span>
+            )}
+            <span className={`text-xs ${formData.description.length < 10 ? 'text-red-500' : 'text-neutral-400'}`}>
+              {formData.description.length}/500
+            </span>
+          </div>
+        </div>
+
+        {/* Image Upload */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
+            {t('images')}
+          </label>
+          <ImageUpload
+            onUploadComplete={(urls) => setFormData(prev => ({ ...prev, images: urls }))}
+            maxImages={3}
+            cloudName={CLOUDINARY_CLOUD_NAME}
+            uploadPreset={CLOUDINARY_UPLOAD_PRESET}
+          />
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+            {t('imagesHint')}
           </p>
         </div>
 
         {/* People Count */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Số người cần giúp
+            {t('peopleCount')}
           </label>
           <div className="relative">
             <input
@@ -279,7 +373,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
               min="1"
               value={formData.people_count || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, people_count: e.target.value ? parseInt(e.target.value) : null }))}
-              placeholder="Ví dụ: 5"
+              placeholder="5"
               className="number-input-modern w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
             />
           </div>
@@ -300,41 +394,49 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         {/* Contact Name */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Tên liên hệ <span className="text-red-600">*</span>
+            {t('fullName')} <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
             value={formData.contact_name}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_name: e.target.value }))}
-            placeholder="Họ và tên của bạn"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            onBlur={() => markTouched('contact_name')}
+            placeholder={t('fullNamePlaceholder')}
+            className={getInputClassName('contact_name', 'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent')}
           />
+          {getFieldError('contact_name') && (
+            <span className="text-xs text-red-500 mt-1 block">{getFieldError('contact_name')}</span>
+          )}
         </div>
 
         {/* Contact Phone */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Số điện thoại <span className="text-red-600">*</span>
+            {t('phone')} <span className="text-red-600">*</span>
           </label>
           <input
             type="tel"
             value={formData.contact_phone}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
-            placeholder="Số điện thoại liên hệ"
-            className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
+            onBlur={() => markTouched('contact_phone')}
+            placeholder={t('phonePlaceholder')}
+            className={getInputClassName('contact_phone', 'w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent')}
           />
+          {getFieldError('contact_phone') && (
+            <span className="text-xs text-red-500 mt-1 block">{getFieldError('contact_phone')}</span>
+          )}
         </div>
 
         {/* Contact Email (Optional) */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Email (tùy chọn)
+            Email
           </label>
           <input
             type="email"
             value={formData.contact_email}
             onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-            placeholder="Email của bạn"
+            placeholder="email@example.com"
             className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
           />
         </div>
@@ -342,7 +444,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
         {/* Special Conditions */}
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Điều kiện đặc biệt
+            {tHelp('form.hasChildren')} / {tHelp('form.hasElderly')} / {tHelp('form.hasDisabilities')}
           </label>
           <div className="space-y-2">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -352,7 +454,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
                 onChange={(e) => setFormData(prev => ({ ...prev, has_children: e.target.checked }))}
                 className="w-4 h-4 text-red-600 border-neutral-300 rounded focus:ring-red-600"
               />
-              <span className="text-sm text-slate-900 dark:text-neutral-50">Có trẻ em</span>
+              <span className="text-sm text-slate-900 dark:text-neutral-50">{tHelp('form.hasChildren')}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -361,7 +463,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
                 onChange={(e) => setFormData(prev => ({ ...prev, has_elderly: e.target.checked }))}
                 className="w-4 h-4 text-red-600 border-neutral-300 rounded focus:ring-red-600"
               />
-              <span className="text-sm text-slate-900 dark:text-neutral-50">Có người cao tuổi</span>
+              <span className="text-sm text-slate-900 dark:text-neutral-50">{tHelp('form.hasElderly')}</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -370,44 +472,9 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
                 onChange={(e) => setFormData(prev => ({ ...prev, has_disabilities: e.target.checked }))}
                 className="w-4 h-4 text-red-600 border-neutral-300 rounded focus:ring-red-600"
               />
-              <span className="text-sm text-slate-900 dark:text-neutral-50">Có người khuyết tật</span>
+              <span className="text-sm text-slate-900 dark:text-neutral-50">{tHelp('form.hasDisabilities')}</span>
             </label>
           </div>
-        </div>
-
-        {/* Water Level */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Mức nước hiện tại (cm)
-          </label>
-          <input
-            type="number"
-            min="0"
-            value={formData.water_level_cm || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, water_level_cm: e.target.value ? parseInt(e.target.value) : null }))}
-            placeholder="Ví dụ: 80"
-            className="number-input-modern w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
-          />
-          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
-            Độ cao mực nước tại vị trí (quan trọng cho ưu tiên cứu hộ)
-          </p>
-        </div>
-
-        {/* Building Floor */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-neutral-300 mb-2">
-            Tầng của tòa nhà
-          </label>
-          <input
-            type="number"
-            value={formData.building_floor || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, building_floor: e.target.value ? parseInt(e.target.value) : null }))}
-            placeholder="Ví dụ: 1, 2, 3..."
-            className="number-input-modern w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md bg-white dark:bg-neutral-700 text-slate-900 dark:text-neutral-50 placeholder-neutral-400 focus:ring-2 focus:ring-red-600 focus:border-transparent"
-          />
-          <p className="text-xs text-slate-700 dark:text-neutral-200 mt-1">
-            Tầng hiện tại của bạn (phục vụ lập kế hoạch sơ tán)
-          </p>
         </div>
 
         {/* Error Message */}
@@ -425,7 +492,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
           <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
             <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
-              Yêu cầu của bạn đã được ghi nhận thành công!
+              {t('success')}
             </p>
           </div>
         )}
@@ -437,7 +504,7 @@ export default function HelpMeForm({ onSubmitSuccess }: HelpMeFormProps) {
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium rounded-md transition-colors"
         >
           <Send className="w-4 h-4" />
-          {isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu cứu trợ'}
+          {isSubmitting ? t('submitting') : t('submit')}
         </button>
       </form>
     </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import axios from 'axios'
 
 interface ImageUploadProps {
@@ -162,11 +163,14 @@ export default function ImageUpload({
       {uploadedUrls.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {uploadedUrls.map((url, index) => (
-            <div key={index} className="relative group">
-              <img
+            <div key={index} className="relative group h-24">
+              <Image
                 src={url}
                 alt={`Upload ${index + 1}`}
-                className="w-full h-24 object-cover rounded-lg"
+                fill
+                sizes="(max-width: 768px) 33vw, 128px"
+                className="object-cover rounded-lg"
+                unoptimized={!url.startsWith('/')}
               />
               <button
                 type="button"

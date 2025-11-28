@@ -1,6 +1,9 @@
 'use client'
 
 import { Phone, MapPin, Users, Clock, AlertTriangle, Heart } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { HelpRequest } from '@/hooks/useHelpRequests'
 import { HelpOffer } from '@/hooks/useHelpOffers'
 
@@ -12,45 +15,25 @@ interface PinPopoverProps {
   onViewDetails: () => void
 }
 
-const urgencyLabels: Record<string, string> = {
-  critical: 'Khẩn cấp',
-  high: 'Cao',
-  medium: 'Trung bình',
-  low: 'Thấp'
-}
-
-const needsTypeLabels: Record<string, string> = {
-  food: 'Thực phẩm',
-  water: 'Nước uống',
-  shelter: 'Chỗ ở',
-  medical: 'Y tế',
-  clothing: 'Quần áo',
-  transport: 'Di chuyển',
-  other: 'Khác'
-}
-
-const serviceTypeLabels: Record<string, string> = {
-  rescue: 'Cứu hộ',
-  transportation: 'Vận chuyển',
-  medical: 'Y tế',
-  shelter: 'Chỗ ở',
-  food_water: 'Thực phẩm/Nước',
-  supplies: 'Vật tư',
-  volunteer: 'Tình nguyện',
-  donation: 'Quyên góp',
-  other: 'Khác'
-}
-
 /**
  * PinPopover Component (Phase 3.1)
  *
  * Quick preview popover that appears when clicking/hovering a pin.
  * Shows essential info (3-4 lines) with action buttons.
+ * Uses React Portal to render at document.body level for proper z-index stacking
  */
 export default function PinPopover({ data, type, position, onClose, onViewDetails }: PinPopoverProps) {
+  const t = useTranslations('pinPopover')
+  const tHelp = useTranslations('help')
+  const tFilter = useTranslations('rescueFilter')
+  const [mounted, setMounted] = useState(false)
   const isRequest = type === 'request'
   const request = isRequest ? (data as HelpRequest) : null
   const offer = !isRequest ? (data as HelpOffer) : null
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Clean JCI ID and [STATION] prefix from description
   const cleanDescription = data.description
@@ -68,25 +51,27 @@ export default function PinPopover({ data, type, position, onClose, onViewDetail
     const diffDays = Math.floor(diffHours / 24)
 
     if (diffMins < 60) {
-      return `${diffMins} phút trước`
+      return t('timeAgo.minutes', { count: diffMins })
     } else if (diffHours < 24) {
-      return `${diffHours} giờ trước`
+      return t('timeAgo.hours', { count: diffHours })
     } else {
-      return `${diffDays} ngày trước`
+      return t('timeAgo.days', { count: diffDays })
     }
   }
 
-  return (
+  if (!mounted) return null
+
+  const popoverContent = (
     <>
       {/* Backdrop - click to close */}
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-[9999]"
         onClick={onClose}
       />
 
       {/* Popover */}
       <div
-        className="fixed z-50 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-3xl rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-700 p-4 w-80"
+        className="fixed z-[10000] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-3xl rounded-xl shadow-2xl border border-neutral-200 dark:border-neutral-700 p-4 w-80"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
@@ -105,22 +90,22 @@ export default function PinPopover({ data, type, position, onClose, onViewDetail
                   'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400'
                 }`}>
                   <AlertTriangle className="w-3 h-3" />
-                  {urgencyLabels[request.urgency]}
+                  {tFilter(`urgency.${request.urgency}`)}
                 </span>
               </div>
             ) : offer ? (
               <div className="flex items-center gap-2 mb-1">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
                   <Heart className="w-3 h-3" />
-                  Sẵn sàng giúp
+                  {t('readyToHelp')}
                 </span>
               </div>
             ) : null}
             <h3 className="text-base font-bold text-slate-900 dark:text-neutral-50">
               {isRequest && request
-                ? `Cần ${needsTypeLabels[request.needs_type]?.toLowerCase() || request.needs_type}`
+                ? t('needs', { type: tHelp(`needsTypes.${request.needs_type}`).toLowerCase() })
                 : offer
-                ? serviceTypeLabels[offer.service_type] || offer.service_type
+                ? tFilter(`services.${offer.service_type}`)
                 : ''
               }
             </h3>
@@ -139,13 +124,13 @@ export default function PinPopover({ data, type, position, onClose, onViewDetail
             {isRequest && request?.people_count && (
               <div className="flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" />
-                <span>{request.people_count} người</span>
+                <span>{request.people_count} {t('people')}</span>
               </div>
             )}
             {!isRequest && offer?.capacity && (
               <div className="flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" />
-                <span>{offer.capacity} người</span>
+                <span>{offer.capacity} {t('people')}</span>
               </div>
             )}
             <div className="flex items-center gap-1">
@@ -161,7 +146,7 @@ export default function PinPopover({ data, type, position, onClose, onViewDetail
             onClick={onViewDetails}
             className="flex-1 px-3 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 text-sm font-medium rounded-lg transition-colors"
           >
-            Chi tiết
+            {t('details')}
           </button>
           <a
             href={`tel:${data.contact_phone}`}
@@ -173,7 +158,7 @@ export default function PinPopover({ data, type, position, onClose, onViewDetail
             onClick={(e) => e.stopPropagation()}
           >
             <Phone className="w-3.5 h-3.5" />
-            Gọi ngay
+            {t('callNow')}
           </a>
         </div>
 
@@ -187,4 +172,7 @@ export default function PinPopover({ data, type, position, onClose, onViewDetail
       </div>
     </>
   )
+
+  // Use portal to render at document.body level, escaping any parent stacking context
+  return createPortal(popoverContent, document.body)
 }

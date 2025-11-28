@@ -325,6 +325,33 @@ def run_zing_scraper():
         return 0
 
 
+def run_english_news_scraper():
+    """Run English news scrapers (VnExpress EN, Vietnam News, ReliefWeb, FloodList)."""
+    try:
+        logger.info("ingestion_job_started", source="english_news")
+        from scrape_english_news import scrape_english_news
+
+        count = scrape_english_news(dry_run=False)
+
+        logger.info(
+            "ingestion_job_completed",
+            source="english_news",
+            reports_created=count,
+            status="success"
+        )
+
+        return count
+
+    except Exception as e:
+        logger.error(
+            "ingestion_job_failed",
+            source="english_news",
+            error=str(e),
+            exc_info=True
+        )
+        return 0
+
+
 def run_routes_sync():
     """
     Run Routes sync - sync traffic-related Reports to RoadSegments.
@@ -567,6 +594,18 @@ def start_scheduler():
         minutes=30,
         id='scraper_zing',
         name='Zing News RSS Scraper',
+        replace_existing=True,
+        max_instances=1,
+        misfire_grace_time=300
+    )
+
+    # English News: Run every 60 minutes (VnExpress EN, Vietnam News, ReliefWeb, FloodList)
+    scheduler.add_job(
+        run_english_news_scraper,
+        trigger='interval',
+        minutes=60,
+        id='scraper_english_news',
+        name='English News Scrapers (International Sources)',
         replace_existing=True,
         max_instances=1,
         misfire_grace_time=300

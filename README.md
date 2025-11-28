@@ -1,5 +1,9 @@
 # 🌊 FloodWatch - Hệ thống Giám sát Mưa Lũ
 
+[![CI](https://github.com/yourname/floodwatch/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/floodwatch/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/yourname/floodwatch/branch/main/graph/badge.svg)](https://codecov.io/gh/yourname/floodwatch)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Real-time flood monitoring and alert system for Vietnam**
 
 FloodWatch là hệ thống giám sát mưa lũ thời gian thực, tích hợp dữ liệu từ KTTV (Trung tâm Khí tượng Thủy văn Quốc gia), cộng đồng, và các nguồn dữ liệu công khai để cung cấp thông tin cảnh báo kịp thời.

@@ -4,7 +4,7 @@ import { RouteSegment, RouteStatus, normalizeStatus } from '@/components/RouteCa
 import { RouteSummary } from '@/components/RouteSummaryBar'
 import { RouteFilters } from '@/components/RouteFilterPanel'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
 
 // Build query string from filters
 function buildQueryString(filters: Partial<RouteFilters>): string {
@@ -313,7 +313,7 @@ export function useNearbyRoutes(
 
 // Default filters
 export const DEFAULT_ROUTE_FILTERS: RouteFilters = {
-  province: 'Tất cả',
+  province: 'all',
   status: [],
   hazardType: '',
   timeRange: '',

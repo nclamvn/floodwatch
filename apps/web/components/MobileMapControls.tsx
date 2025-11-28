@@ -12,8 +12,6 @@ import MobileNewsPopup from './MobileNewsPopup'
 interface MobileMapControlsProps {
   baseMapStyle: BaseMapStyleId
   onStyleChange: (style: BaseMapStyleId) => void
-  onAIForecastClick: () => void
-  aiForecastActive?: boolean
   onLegendClick: () => void
   legendActive?: boolean
   onLocationClick?: (lat: number, lon: number) => void
@@ -37,8 +35,6 @@ const MAP_STYLE_LABELS: Record<BaseMapStyleId, string> = {
 export function MobileMapControls({
   baseMapStyle,
   onStyleChange,
-  onAIForecastClick,
-  aiForecastActive,
   onLegendClick,
   legendActive,
   onLocationClick
@@ -201,18 +197,6 @@ export function MobileMapControls({
             ) : (
               <MapPin className="w-5 h-5" />
             )}
-          </button>
-
-          {/* AI Forecast Button */}
-          <button
-            onClick={() => {
-              onAIForecastClick()
-              setIsExpanded(false)
-            }}
-            className={`${buttonBaseStyle} ${aiForecastActive ? buttonActiveStyle : buttonInactiveStyle} hover:scale-105 active:scale-95`}
-            title="Dự báo AI"
-          >
-            <span className="text-sm font-bold">AI</span>
           </button>
 
           {/* Legend Button */}

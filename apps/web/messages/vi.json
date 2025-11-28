@@ -1,0 +1,701 @@
+{
+  "metadata": {
+    "title": "Thông tin mưa lũ - thongtinmualu.live",
+    "description": "Hệ thống cảnh báo và theo dõi mưa lũ thời gian thực tại Việt Nam. Cập nhật tình trạng ngập lụt, sạt lở, tuyến đường an toàn."
+  },
+  "common": {
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "submit": "Gửi",
+    "close": "Đóng",
+    "back": "Quay lại",
+    "next": "Tiếp",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "reset": "Đặt lại",
+    "confirm": "Xác nhận",
+    "yes": "Có",
+    "no": "Không"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "map": "Bản đồ",
+    "help": "Kết nối cứu trợ",
+    "report": "Báo cáo",
+    "routes": "Tuyến đường",
+    "admin": "Quản trị"
+  },
+  "home": {
+    "title": "Thông tin Mưa lũ",
+    "subtitle": "Hệ thống Giám sát Thời gian Thực",
+    "tagline": "Cảnh báo mưa lũ từ KTTV và cộng đồng. Cập nhật giao thông. Kết nối cứu trợ.",
+    "enterMap": "Vào bản đồ",
+    "cards": {
+      "map": {
+        "title": "Bản đồ",
+        "description": "Theo dõi mưa lũ và cảnh báo nguy hiểm trên bản đồ thời gian thực",
+        "action": "Xem bản đồ"
+      },
+      "routes": {
+        "title": "Tuyến đường",
+        "description": "Tìm tuyến đường an toàn, tránh vùng ngập lụt và sạt lở",
+        "action": "Tìm đường"
+      },
+      "rescue": {
+        "title": "Cứu trợ",
+        "description": "Kết nối người cần giúp đỡ với đội cứu hộ và tình nguyện viên",
+        "action": "Kết nối"
+      }
+    },
+    "features": {
+      "realtime": "Cảnh báo Realtime",
+      "realtimeDesc": "Nhận thông tin cập nhật liên tục từ KTTV",
+      "location": "Định vị chính xác",
+      "locationDesc": "Theo dõi vị trí thời gian thực độ chính xác cao",
+      "community": "Cộng đồng",
+      "communityDesc": "Kết nối người dân địa phương chia sẻ thông tin"
+    }
+  },
+  "newsTicker": {
+    "hotNews": "Tin nóng",
+    "listenVoice": "Nghe bản tin thoại AI",
+    "justNow": "vừa xong",
+    "minutesAgo": "{count} phút trước",
+    "hoursAgo": "{count} giờ trước"
+  },
+  "map": {
+    "title": "Bản đồ thiên tai",
+    "loadingMap": "Đang tải bản đồ...",
+    "legend": "Chú giải",
+    "layers": {
+      "flood": "Lũ lụt",
+      "landslide": "Sạt lở",
+      "rain": "Mưa lớn",
+      "traffic": "Giao thông",
+      "dam": "Xả đập",
+      "storm": "Bão",
+      "tide": "Triều cường",
+      "rescue": "Cứu hộ"
+    },
+    "severity": {
+      "critical": "Nghiêm trọng",
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
+    "sources": {
+      "government": "Chính phủ",
+      "news": "Báo chí",
+      "community": "Cộng đồng"
+    },
+    "controls": {
+      "locate": "Vị trí của tôi",
+      "zoomIn": "Phóng to",
+      "zoomOut": "Thu nhỏ",
+      "layers": "Lớp bản đồ",
+      "style": "Kiểu bản đồ",
+      "alertRadius": "Vùng cảnh báo: {radius} km"
+    },
+    "sidebar": {
+      "title": "Bảng tin",
+      "latestNews": "Tin mới nhận",
+      "reports": "báo cáo",
+      "noData": "Không có dữ liệu",
+      "close": "Đóng",
+      "collapse": "Thu gọn sidebar",
+      "expand": "Mở bảng tin",
+      "unknown": "Không rõ"
+    },
+    "buttons": {
+      "rescue": "Cứu trợ",
+      "routes": "Tuyến đường",
+      "weather": "Thời tiết",
+      "news": "Tin tức",
+      "backHome": "Quay về trang chủ"
+    },
+    "filters": {
+      "interest": "Quan tâm",
+      "alert": "Cảnh báo",
+      "sos": "SOS",
+      "road": "Đường bộ",
+      "needs": "Nhu yếu phẩm",
+      "province": "Địa phương"
+    }
+  },
+  "help": {
+    "title": "Kết nối cứu trợ",
+    "needHelp": "Tôi cần giúp đỡ",
+    "canHelp": "Tôi có thể giúp",
+    "rescueMap": "Bản đồ cứu trợ",
+    "needHelpShort": "Cần giúp",
+    "canHelpShort": "Có thể giúp",
+    "rescueMapShort": "Bản đồ",
+    "helpMe": "Giúp tôi",
+    "iHelp": "Tôi giúp",
+    "mobileSlogan": "Lá lành đùm lá rách",
+    "slogan": {
+      "needHelp": "Bầu ơi thương lấy bí cùng",
+      "canHelp": "Tuy rằng khác giống nhưng chung một giàn",
+      "rescueMap": "Thương người như thể thương thân"
+    },
+    "form": {
+      "name": "Họ tên",
+      "phone": "Số điện thoại",
+      "location": "Vị trí",
+      "description": "Mô tả chi tiết",
+      "urgency": "Mức độ khẩn cấp",
+      "peopleCount": "Số người",
+      "hasChildren": "Có trẻ em",
+      "hasElderly": "Có người cao tuổi",
+      "hasDisabilities": "Có người khuyết tật",
+      "needsType": "Loại nhu cầu",
+      "serviceType": "Loại dịch vụ"
+    },
+    "needsTypes": {
+      "food": "Thực phẩm",
+      "water": "Nước uống",
+      "shelter": "Chỗ ở",
+      "medical": "Y tế",
+      "clothing": "Quần áo",
+      "transport": "Di chuyển",
+      "other": "Khác"
+    },
+    "serviceTypes": {
+      "rescue": "Cứu hộ",
+      "transportation": "Vận chuyển",
+      "medical": "Y tế",
+      "shelter": "Chỗ ở",
+      "foodWater": "Thực phẩm/Nước",
+      "supplies": "Vật tư",
+      "volunteer": "Tình nguyện",
+      "donation": "Quyên góp",
+      "other": "Khác"
+    },
+    "urgencyLevels": {
+      "critical": "Khẩn cấp",
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    }
+  },
+  "report": {
+    "title": "Báo cáo Cộng đồng",
+    "distress": "Báo cáo tình trạng khẩn cấp",
+    "traffic": "Báo cáo giao thông",
+    "success": "Đã gửi báo cáo thành công! Đang chuyển đến bản đồ...",
+    "sending": "Đang gửi...",
+    "submit": "Gửi báo cáo",
+    "submitted": "Đã gửi thành công!",
+    "backToMap": "Bản đồ",
+    "importantNote": "Lưu ý quan trọng",
+    "geoError": "Không thể lấy vị trí",
+    "browserNotSupported": "Trình duyệt không hỗ trợ định vị",
+    "gettingLocation": "Đang lấy vị trí...",
+    "getLocation": "Lấy vị trí hiện tại (GPS)",
+    "hasLocation": "Đã có vị trí",
+    "form": {
+      "type": "Loại báo cáo",
+      "description": "Mô tả chi tiết",
+      "descriptionPlaceholder": "Ví dụ: Gia đình 5 người bị cô lập tại xóm 3, cần thực phẩm và nước uống...",
+      "descriptionHint": "Càng chi tiết càng giúp đội cứu hộ hỗ trợ nhanh hơn",
+      "location": "Vị trí",
+      "province": "Tỉnh",
+      "district": "Huyện",
+      "ward": "Xã/Phường",
+      "selectProvince": "Chọn tỉnh",
+      "districtPlaceholder": "Ví dụ: Phú Vang",
+      "wardPlaceholder": "Ví dụ: Phú Thuận",
+      "media": "Ảnh minh chứng (tùy chọn)",
+      "mediaHint": "Ảnh giúp xác minh tình hình nhanh hơn. Tối đa 3 ảnh, 5MB/ảnh."
+    },
+    "types": {
+      "sos": "SOS - Cần cứu trợ khẩn cấp",
+      "road": "Đường bộ - Sạt lở, ngập, chia cắt",
+      "needs": "Nhu yếu phẩm - Thiếu thức ăn, nước, thuốc"
+    },
+    "validation": {
+      "descriptionRequired": "Vui lòng nhập mô tả",
+      "provinceRequired": "Vui lòng chọn tỉnh",
+      "locationRequired": "Vui lòng cung cấp vị trí (bấm nút \"Lấy vị trí hiện tại\")"
+    },
+    "warnings": {
+      "realEmergency": "Chỉ báo cáo tình huống thực tế, khẩn cấp",
+      "accurate": "Cung cấp thông tin chính xác để đội cứu hộ hỗ trợ nhanh",
+      "callFirst": "Nếu tình huống nguy hiểm, gọi 113/114 trước khi báo cáo"
+    }
+  },
+  "routes": {
+    "title": "Tuyến đường An toàn",
+    "subtitle": "Cập nhật tình trạng giao thông thời gian thực",
+    "loading": "Đang tải dữ liệu...",
+    "updating": "Đang cập nhật...",
+    "importantNote": "Lưu ý quan trọng",
+    "viewMap": "Xem bản đồ",
+    "backHome": "Quay lại trang chủ",
+    "searchPlaceholder": "Tìm kiếm theo tên đường, tỉnh, quận/huyện...",
+    "clear": "Xóa",
+    "clearAll": "Xóa tất cả bộ lọc",
+    "routeCount": "{count} tuyến đường",
+    "searchFor": "tìm kiếm: \"{query}\"",
+    "noRouteFound": "Không tìm thấy tuyến đường",
+    "stableTraffic": "Tình hình giao thông ổn định",
+    "noResultsFor": "Không có kết quả cho \"{query}\". Thử tìm kiếm khác hoặc xóa bộ lọc.",
+    "noWarnings": "Không có cảnh báo đường bộ nào được xác minh trong 3 ngày qua. Hệ thống chỉ hiển thị thông tin có nguồn kiểm chứng để đảm bảo độ tin cậy.",
+    "warnings": {
+      "unverified": "Một số tin chưa có nguồn kiểm chứng: Các thẻ có nền vàng cần được xác nhận thêm",
+      "recent": "Chỉ hiển thị tin trong 3 ngày: Tin cũ hơn đã bị loại bỏ vì có thể không còn chính xác",
+      "call": "BẮT BUỘC gọi 113/114 để xác nhận tình hình thực tế trước khi di chuyển vào vùng nguy hiểm"
+    },
+    "status": {
+      "open": "Thông thoáng",
+      "slow": "Chậm",
+      "blocked": "Tắc nghẽn",
+      "closed": "Đóng"
+    }
+  },
+  "routeSummary": {
+    "title": "Tình trạng đường bộ",
+    "updating": "Đang cập nhật...",
+    "updated": "Cập nhật",
+    "justNow": "vừa xong",
+    "minutesAgo": "{count}p trước",
+    "hoursAgo": "{count}h trước",
+    "refresh": "Làm mới dữ liệu",
+    "total": "Tổng cộng",
+    "routes": "tuyến đường",
+    "clearFilter": "Xóa lọc",
+    "status": {
+      "open": "Thông thoáng",
+      "openShort": "Thông",
+      "limited": "Hạn chế",
+      "limitedShort": "Hạn chế",
+      "dangerous": "Nguy hiểm",
+      "dangerousShort": "Nguy hiểm",
+      "closed": "Đóng",
+      "closedShort": "Đóng"
+    }
+  },
+  "routeFilter": {
+    "title": "Bộ lọc",
+    "filters": "bộ lọc",
+    "clear": "Xóa",
+    "all": "Tất cả",
+    "province": "Tỉnh thành",
+    "status": "Trạng thái",
+    "hazardType": "Loại hiểm họa",
+    "timeRange": "Khoảng thời gian",
+    "sortBy": "Sắp xếp theo",
+    "statusOptions": {
+      "open": "Thông thoáng",
+      "limited": "Hạn chế",
+      "dangerous": "Nguy hiểm",
+      "closed": "Đóng"
+    },
+    "hazardOptions": {
+      "flood": "Ngập lụt",
+      "storm": "Bão",
+      "landslide": "Sạt lở",
+      "other": "Khác"
+    },
+    "timeOptions": {
+      "6h": "6 giờ qua",
+      "12h": "12 giờ qua",
+      "24h": "24 giờ qua",
+      "48h": "48 giờ qua",
+      "7d": "7 ngày qua"
+    },
+    "sortOptions": {
+      "risk_score": "Mức độ rủi ro",
+      "created_at": "Mới nhất",
+      "status": "Trạng thái"
+    }
+  },
+  "news": {
+    "breaking": "Tin nóng",
+    "aiBulletin": "Bản tin thoại AI",
+    "listen": "Nghe",
+    "pause": "Tạm dừng",
+    "priority": {
+      "critical": "KHẨN CẤP",
+      "high": "QUAN TRỌNG",
+      "medium": "CẢNH BÁO",
+      "low": "BÌNH THƯỜNG"
+    }
+  },
+  "time": {
+    "justNow": "vừa xong",
+    "minutesAgo": "{count} phút trước",
+    "hoursAgo": "{count} giờ trước",
+    "daysAgo": "{count} ngày trước"
+  },
+  "errors": {
+    "locationError": "Lỗi không xác định khi lấy vị trí",
+    "audioError": "Lỗi phát âm thanh",
+    "serverError": "Lỗi kết nối server",
+    "networkError": "Lỗi mạng",
+    "unknownError": "Lỗi không xác định"
+  },
+  "storm": {
+    "button": "Bão số 15",
+    "info": "Thông tin Bão số 15"
+  },
+  "hotlines": {
+    "title": "Đường dây nóng",
+    "sos": {
+      "label": "SOS",
+      "description": "Ưu tiên gọi đầu tiên"
+    },
+    "police": {
+      "label": "Cảnh sát",
+      "description": "Cảnh sát & cứu hộ"
+    },
+    "fire": {
+      "label": "Cứu hỏa",
+      "description": "PCCC & cứu nạn"
+    },
+    "emergency": {
+      "label": "Cấp cứu",
+      "description": "Cấp cứu y tế"
+    },
+    "rescue": {
+      "label": "Cứu nạn",
+      "description": "Cứu nạn quốc gia"
+    },
+    "army": {
+      "label": "Quân đội",
+      "description": "Cứu hộ quân đội"
+    },
+    "power": {
+      "label": "Điện lực",
+      "description": "Sự cố điện"
+    },
+    "redCross": {
+      "label": "Hồng Thập Tự",
+      "description": "Hội CTĐ Việt Nam"
+    }
+  },
+  "audio": {
+    "loading": "Đang tải...",
+    "listenNews": "Nghe tin mới nhất",
+    "playing": "Đang phát",
+    "paused": "Đã tạm dừng"
+  },
+  "routeCard": {
+    "status": {
+      "open": "Thông thoáng",
+      "openShort": "Thông",
+      "limited": "Hạn chế",
+      "limitedShort": "Hạn chế",
+      "dangerous": "Nguy hiểm",
+      "dangerousShort": "Nguy hiểm",
+      "closed": "Đóng",
+      "closedShort": "Đóng"
+    },
+    "resolved": "Đã khắc phục",
+    "showMore": "Hiển thị thêm {days} ngày",
+    "directions": "Chỉ đường",
+    "viewDetail": "Xem chi tiết",
+    "noGps": "Không có vị trí GPS",
+    "risk": "Rủi ro",
+    "source": "Nguồn",
+    "noSourceWarning": "Chưa có nguồn kiểm chứng - Gọi 113/114 để xác nhận",
+    "timeAgo": {
+      "justNow": "vừa xong",
+      "minutes": "{count} phút trước",
+      "hours": "{count} giờ trước",
+      "days": "{count} ngày trước"
+    }
+  },
+  "routeFilter": {
+    "title": "Bộ lọc",
+    "clearFilters": "Xóa lọc",
+    "province": "Tỉnh/Thành phố",
+    "allProvinces": "Tất cả",
+    "status": "Trạng thái",
+    "hazardType": "Loại nguy hiểm",
+    "allTypes": "Tất cả",
+    "flood": "Ngập lụt",
+    "landslide": "Sạt lở",
+    "roadDamage": "Hư hỏng đường",
+    "bridge": "Sập cầu",
+    "time": "Thời gian",
+    "24h": "24 giờ",
+    "3days": "3 ngày",
+    "7days": "7 ngày",
+    "all": "Tất cả",
+    "sortBy": "Sắp xếp theo",
+    "sortRisk": "Mức độ rủi ro",
+    "sortTime": "Mới nhất",
+    "sortStatus": "Trạng thái"
+  },
+  "helpForm": {
+    "requestTitle": "Yêu cầu cứu trợ",
+    "requestSubtitle": "Điền thông tin dưới đây để đội cứu hộ tìm đến bạn nhanh nhất",
+    "offerTitle": "Đề nghị hỗ trợ",
+    "offerSubtitle": "Đăng ký tham gia hỗ trợ đội cứu hộ hoặc người cần giúp đỡ",
+    "fullName": "Họ tên",
+    "fullNamePlaceholder": "Nhập họ tên đầy đủ",
+    "phone": "Số điện thoại",
+    "phonePlaceholder": "Nhập số liên lạc",
+    "location": "Vị trí",
+    "locationPlaceholder": "Xóm/thôn, xã/phường, huyện, tỉnh",
+    "getLocation": "Lấy GPS",
+    "gettingLocation": "Đang lấy...",
+    "gotLocation": "Đã có vị trí",
+    "helpType": "Loại trợ giúp cần",
+    "selectHelpType": "Chọn loại trợ giúp",
+    "urgency": "Mức độ khẩn cấp",
+    "selectUrgency": "Chọn mức độ",
+    "peopleCount": "Số người",
+    "description": "Mô tả chi tiết",
+    "descriptionPlaceholder": "Mô tả tình huống, nhu cầu đặc biệt (người già, trẻ em, bệnh...)",
+    "images": "Đính kèm ảnh",
+    "imagesHint": "Tối đa 3 ảnh để xác minh tình trạng",
+    "submit": "Gửi yêu cầu",
+    "submitting": "Đang gửi...",
+    "success": "Gửi yêu cầu thành công!",
+    "successDetail": "Đội cứu hộ sẽ liên lạc với bạn sớm. Hãy bình tĩnh!",
+    "error": "Gửi thất bại",
+    "validation": {
+      "nameRequired": "Vui lòng nhập họ tên",
+      "phoneRequired": "Vui lòng nhập số điện thoại",
+      "phoneInvalid": "Số điện thoại không hợp lệ",
+      "locationRequired": "Vui lòng nhập vị trí",
+      "helpTypeRequired": "Vui lòng chọn loại trợ giúp",
+      "urgencyRequired": "Vui lòng chọn mức độ khẩn cấp",
+      "descriptionMinLength": "Mô tả phải có ít nhất 10 ký tự",
+      "descriptionHint": "Mô tả chi tiết tình huống để nhận hỗ trợ nhanh hơn",
+      "availabilityRequired": "Vui lòng nhập thời gian sẵn sàng"
+    },
+    "helpTypes": {
+      "rescue": "Cứu hộ khẩn cấp",
+      "rescueDesc": "Mắc kẹt, cô lập, nguy hiểm tính mạng",
+      "food": "Thực phẩm/Nước",
+      "foodDesc": "Thiếu đồ ăn, nước uống sạch",
+      "medical": "Y tế",
+      "medicalDesc": "Bị thương, bệnh, cần thuốc",
+      "shelter": "Chỗ ở",
+      "shelterDesc": "Cần nơi trú ẩn an toàn",
+      "transport": "Di chuyển",
+      "transportDesc": "Cần phương tiện sơ tán",
+      "other": "Khác",
+      "otherDesc": "Nhu cầu khác"
+    },
+    "urgencyLevels": {
+      "critical": "Khẩn cấp",
+      "criticalDesc": "Nguy hiểm tính mạng, cần giúp ngay",
+      "high": "Cao",
+      "highDesc": "Cấp bách, cần giúp trong vài giờ",
+      "medium": "Trung bình",
+      "mediumDesc": "Cần giúp trong 1-2 ngày",
+      "low": "Thấp",
+      "lowDesc": "Có thể chờ vài ngày"
+    },
+    "serviceTypes": {
+      "boat": "Thuyền cứu hộ",
+      "boatDesc": "Có thuyền để cứu hộ vùng ngập",
+      "vehicle": "Phương tiện",
+      "vehicleDesc": "Có ô tô/xe tải để vận chuyển",
+      "shelter": "Chỗ ở",
+      "shelterDesc": "Có thể cung cấp chỗ trú ẩn",
+      "supplies": "Vật tư",
+      "suppliesDesc": "Có thể cung cấp thực phẩm, nước, nhu yếu phẩm",
+      "medical": "Y tế",
+      "medicalDesc": "Nhân viên y tế hoặc thuốc men",
+      "volunteer": "Tình nguyện",
+      "volunteerDesc": "Sẵn sàng tham gia hoạt động cứu hộ",
+      "donation": "Quyên góp",
+      "donationDesc": "Quyên góp tiền mặt để hỗ trợ",
+      "other": "Khác",
+      "otherDesc": "Hỗ trợ khác"
+    },
+    "serviceType": "Loại dịch vụ",
+    "selectServiceType": "Chọn loại dịch vụ",
+    "vehicleInfo": "Thông tin phương tiện",
+    "vehicleType": "Loại xe",
+    "selectVehicle": "Chọn loại xe",
+    "vehicleCapacity": "Sức chứa (người)",
+    "availableFrom": "Có mặt từ",
+    "availableTo": "Đến",
+    "vehicles": {
+      "boat": "Thuyền",
+      "car": "Ô tô",
+      "truck": "Xe tải",
+      "motorcycle": "Xe máy",
+      "other": "Khác"
+    },
+    "offerSuccess": "Cảm ơn bạn! Đề nghị hỗ trợ đã được ghi nhận.",
+    "offerSuccessDetail": "Chúng tôi sẽ liên hệ khi cần sự giúp đỡ của bạn.",
+    "offerSubmit": "Đăng ký hỗ trợ"
+  },
+  "rescueMap": {
+    "title": "Bản đồ cứu trợ",
+    "requests": "Yêu cầu",
+    "offers": "Hỗ trợ",
+    "loading": "Đang tải bản đồ...",
+    "filters": "Lọc",
+    "showAll": "Tất cả",
+    "critical": "Khẩn cấp",
+    "pending": "Chờ xử lý",
+    "inProgress": "Đang xử lý",
+    "completed": "Hoàn thành",
+    "reset": "Đặt lại",
+    "resetView": "Quay lại tổng quan",
+    "myLocation": "Vị trí của tôi",
+    "location": "Vị trí",
+    "filter": "Lọc",
+    "filterTitle": "Bộ lọc",
+    "requestsLabel": "yêu cầu",
+    "offersLabel": "đề nghị"
+  },
+  "rescueFilter": {
+    "title": "Bộ lọc",
+    "reset": "Đặt lại",
+    "close": "Đóng",
+    "resetFilters": "Đặt lại bộ lọc",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tên, địa điểm, SĐT...",
+    "radius": "Bán kính",
+    "verifiedOnly": "Chỉ hiển thị đã xác minh",
+    "requestsSection": "Yêu cầu cứu trợ",
+    "offersSection": "Đề nghị hỗ trợ",
+    "showRequests": "Hiển thị yêu cầu",
+    "showOffers": "Hiển thị đề nghị",
+    "urgencyLevel": "Mức độ khẩn cấp",
+    "needsType": "Loại nhu cầu",
+    "serviceType": "Loại dịch vụ",
+    "status": "Trạng thái",
+    "minCapacity": "Sức chứa tối thiểu",
+    "capacityPlaceholder": "Số người",
+    "selectAll": "Chọn tất cả",
+    "deselectAll": "Bỏ chọn tất cả",
+    "results": "Kết quả",
+    "urgency": {
+      "critical": "Khẩn cấp",
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
+    "needs": {
+      "food": "Thực phẩm",
+      "water": "Nước uống",
+      "shelter": "Chỗ ở",
+      "medical": "Y tế",
+      "clothing": "Quần áo",
+      "transport": "Di chuyển",
+      "other": "Khác"
+    },
+    "services": {
+      "rescue": "Cứu hộ",
+      "transportation": "Vận chuyển",
+      "medical": "Y tế",
+      "shelter": "Chỗ ở",
+      "food_water": "Thực phẩm/Nước",
+      "supplies": "Vật tư",
+      "volunteer": "Tình nguyện",
+      "donation": "Quyên góp",
+      "other": "Khác"
+    },
+    "requestStatus": {
+      "active": "Đang chờ",
+      "in_progress": "Đang xử lý",
+      "fulfilled": "Hoàn thành",
+      "expired": "Hết hạn",
+      "cancelled": "Đã hủy"
+    },
+    "offerStatus": {
+      "active": "Sẵn sàng",
+      "in_progress": "Đang hỗ trợ",
+      "fulfilled": "Đã xong",
+      "cancelled": "Đã hủy"
+    }
+  },
+  "mySubmissions": {
+    "title": "Yêu cầu của tôi",
+    "refresh": "Làm mới",
+    "myRequests": "Yêu cầu cứu trợ",
+    "myOffers": "Đề nghị hỗ trợ",
+    "remove": "Xóa khỏi danh sách",
+    "fetchError": "Lỗi tải"
+  },
+  "pinPopover": {
+    "readyToHelp": "Sẵn sàng giúp",
+    "needs": "Cần {type}",
+    "people": "người",
+    "details": "Chi tiết",
+    "callNow": "Gọi ngay",
+    "timeAgo": {
+      "minutes": "{count} phút trước",
+      "hours": "{count} giờ trước",
+      "days": "{count} ngày trước"
+    }
+  },
+  "rescueDetail": {
+    "readyToHelp": "Sẵn sàng giúp",
+    "needs": "Cần {type}",
+    "close": "Đóng",
+    "description": "Mô tả chi tiết",
+    "location": "Vị trí",
+    "coordinates": "Tọa độ",
+    "distance": "Khoảng cách",
+    "peopleNeedHelp": "Số người cần giúp",
+    "capacity": "Sức chứa",
+    "people": "người",
+    "hasChildren": "Có trẻ em",
+    "hasElderly": "Có người cao tuổi",
+    "hasDisabilities": "Có người khuyết tật",
+    "supportRadius": "Bán kính hỗ trợ",
+    "availableTime": "Thời gian có thể giúp",
+    "organization": "Tổ chức",
+    "contactInfo": "Thông tin liên hệ",
+    "contactPerson": "Người liên hệ",
+    "callNow": "Gọi ngay",
+    "directions": "Chỉ đường"
+  },
+  "legend": {
+    "title": "Chú giải",
+    "close": "Đóng",
+    "severityLevels": "Mức độ nghiêm trọng",
+    "severity": {
+      "critical": "Nghiêm trọng",
+      "high": "Cao",
+      "medium": "Trung bình",
+      "low": "Thấp"
+    },
+    "disasterTypes": "Loại thiên tai",
+    "types": {
+      "rain": "Mưa lớn",
+      "flood": "Lũ lụt",
+      "waterlog": "Ngập úng",
+      "landslide": "Sạt lở",
+      "dam": "Xả đập",
+      "storm": "Bão",
+      "tide": "Triều cường",
+      "traffic": "Giao thông",
+      "rescue": "Cứu hộ"
+    },
+    "dataSources": "Nguồn dữ liệu",
+    "sources": {
+      "government": "Chính phủ",
+      "governmentDesc": "KTTV, PCTT",
+      "news": "Báo chí",
+      "newsDesc": "VnExpress, Tuổi Trẻ",
+      "community": "Cộng đồng",
+      "communityDesc": "Báo cáo từ dân"
+    },
+    "lastUpdated": "Cập nhật",
+    "footer": "Thông tin mưa lũ - Lâm Nguyễn"
+  },
+  "directions": {
+    "title": "Chọn ứng dụng chỉ đường",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Apple Maps",
+    "copy": "Sao chép tọa độ",
+    "copied": "Đã sao chép!",
+    "close": "Đóng"
+  }
+}

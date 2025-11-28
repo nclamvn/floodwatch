@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { MapPin, Clock, Navigation, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, ShieldX, AlertOctagon, CheckCircle2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import DirectionsModal from './DirectionsModal'
 
 // 4-Status System (Apple Maps style)
@@ -40,10 +41,8 @@ interface RouteCardProps {
   onDetailClick?: (route: RouteSegment) => void
 }
 
-// Status configuration
-const STATUS_CONFIG: Record<RouteStatus, {
-  label: string
-  labelShort: string
+// Status configuration (styling only - labels come from translations)
+const STATUS_STYLES: Record<RouteStatus, {
   bgColor: string
   textColor: string
   borderColor: string
@@ -51,8 +50,6 @@ const STATUS_CONFIG: Record<RouteStatus, {
   icon: React.ReactNode
 }> = {
   OPEN: {
-    label: 'Thông thoáng',
-    labelShort: 'Thông',
     bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
     textColor: 'text-emerald-700 dark:text-emerald-300',
     borderColor: 'border-emerald-200 dark:border-emerald-800',
@@ -60,8 +57,6 @@ const STATUS_CONFIG: Record<RouteStatus, {
     icon: <ShieldCheck className="w-4 h-4" />
   },
   LIMITED: {
-    label: 'Hạn chế',
-    labelShort: 'Hạn chế',
     bgColor: 'bg-amber-50 dark:bg-amber-950/30',
     textColor: 'text-amber-700 dark:text-amber-300',
     borderColor: 'border-amber-200 dark:border-amber-800',
@@ -69,8 +64,6 @@ const STATUS_CONFIG: Record<RouteStatus, {
     icon: <AlertTriangle className="w-4 h-4" />
   },
   DANGEROUS: {
-    label: 'Nguy hiểm',
-    labelShort: 'Nguy hiểm',
     bgColor: 'bg-orange-50 dark:bg-orange-950/30',
     textColor: 'text-orange-700 dark:text-orange-300',
     borderColor: 'border-orange-200 dark:border-orange-800',
@@ -78,8 +71,6 @@ const STATUS_CONFIG: Record<RouteStatus, {
     icon: <ShieldAlert className="w-4 h-4" />
   },
   CLOSED: {
-    label: 'Đóng',
-    labelShort: 'Đóng',
     bgColor: 'bg-red-50 dark:bg-red-950/30',
     textColor: 'text-red-700 dark:text-red-300',
     borderColor: 'border-red-200 dark:border-red-800',
@@ -98,25 +89,25 @@ export function normalizeStatus(status: string): RouteStatus {
   return 'OPEN'
 }
 
-// Format relative time in Vietnamese
-function formatRelativeTime(dateString?: string): string {
-  if (!dateString) return ''
+// Format relative time - returns raw time data for translation
+function getRelativeTimeData(dateString?: string): { type: 'justNow' | 'minutes' | 'hours' | 'days' | 'date', count?: number, date?: Date } {
+  if (!dateString) return { type: 'justNow' }
 
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMinutes = Math.floor(diffMs / 60000)
 
-  if (diffMinutes < 1) return 'vừa xong'
-  if (diffMinutes < 60) return `${diffMinutes} phút trước`
+  if (diffMinutes < 1) return { type: 'justNow' }
+  if (diffMinutes < 60) return { type: 'minutes', count: diffMinutes }
 
   const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours} giờ trước`
+  if (diffHours < 24) return { type: 'hours', count: diffHours }
 
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays} ngày trước`
+  if (diffDays < 7) return { type: 'days', count: diffDays }
 
-  return date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'short' })
+  return { type: 'date', date }
 }
 
 // Format risk score as percentage
@@ -136,13 +127,27 @@ function getDaysUntilArchive(resolvedAt?: string): number {
 }
 
 export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
+  const t = useTranslations('routeCard')
   const [showDirections, setShowDirections] = useState(false)
 
   const status = normalizeStatus(route.status)
-  const config = STATUS_CONFIG[status]
+  const styles = STATUS_STYLES[status]
   const hasCoordinates = route.lat !== undefined && route.lon !== undefined
   const isResolved = route.lifecycle_status === 'RESOLVED'
   const daysUntilArchive = isResolved ? getDaysUntilArchive(route.resolved_at) : 0
+
+  // Get translated status label
+  const statusLabel = t(`status.${status.toLowerCase()}`)
+
+  // Format time with translations
+  const formatTime = (dateString?: string) => {
+    const timeData = getRelativeTimeData(dateString)
+    if (timeData.type === 'justNow') return t('timeAgo.justNow')
+    if (timeData.type === 'minutes' && timeData.count !== undefined) return t('timeAgo.minutes', { count: timeData.count })
+    if (timeData.type === 'hours' && timeData.count !== undefined) return t('timeAgo.hours', { count: timeData.count })
+    if (timeData.type === 'days' && timeData.count !== undefined) return t('timeAgo.days', { count: timeData.count })
+    return timeData.date?.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) || ''
+  }
 
   return (
     <>
@@ -150,20 +155,20 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
         className={`group relative bg-white dark:bg-neutral-900 rounded-2xl border-2 ${
           isResolved
             ? 'border-emerald-300 dark:border-emerald-700'
-            : config.borderColor
+            : styles.borderColor
         } overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.01]`}
       >
-        {/* RESOLVED Banner - Shows green "Đã khắc phục" */}
+        {/* RESOLVED Banner */}
         {isResolved && (
           <div className="flex items-center justify-between px-4 py-2 bg-emerald-100 dark:bg-emerald-900/40 border-b border-emerald-200 dark:border-emerald-800">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="font-bold text-sm text-emerald-700 dark:text-emerald-300">
-                Đã khắc phục
+                {t('resolved')}
               </span>
             </div>
             <span className="text-xs text-emerald-600 dark:text-emerald-400">
-              Hiển thị thêm {daysUntilArchive} ngày
+              {t('showMore', { days: daysUntilArchive })}
             </span>
           </div>
         )}
@@ -172,29 +177,29 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
         <div className={`flex items-center justify-between px-4 py-2.5 ${
           isResolved
             ? 'bg-neutral-50 dark:bg-neutral-800/50'
-            : config.bgColor
+            : styles.bgColor
         }`}>
           <div className="flex items-center gap-2">
             <div className={`p-1.5 rounded-lg ${
               isResolved
                 ? 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
-                : `${config.iconBg} ${config.textColor}`
+                : `${styles.iconBg} ${styles.textColor}`
             }`}>
-              {config.icon}
+              {styles.icon}
             </div>
             <span className={`font-bold text-sm uppercase tracking-wide ${
               isResolved
                 ? 'text-neutral-500 dark:text-neutral-400 line-through'
-                : config.textColor
+                : styles.textColor
             }`}>
-              {config.label}
+              {statusLabel}
             </span>
           </div>
 
           {/* Time Badge */}
           <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
             <Clock className="w-3.5 h-3.5" />
-            <span>{formatRelativeTime(route.verified_at || route.updated_at || route.created_at)}</span>
+            <span>{formatTime(route.verified_at || route.updated_at || route.created_at)}</span>
           </div>
         </div>
 
@@ -239,7 +244,7 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
                 'text-amber-600 dark:text-amber-400'
               }`}>
                 <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Rủi ro: {formatRiskScore(route.risk_score)}</span>
+                <span>{t('risk')}: {formatRiskScore(route.risk_score)}</span>
               </div>
             )}
           </div>
@@ -253,7 +258,7 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
               >
                 <Navigation className="w-4 h-4" />
-                <span>Chỉ đường</span>
+                <span>{t('directions')}</span>
               </button>
             )}
 
@@ -263,7 +268,7 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
                 onClick={() => onDetailClick(route)}
                 className={`${hasCoordinates ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-sm font-medium rounded-xl transition-colors`}
               >
-                <span>Xem chi tiết</span>
+                <span>{t('viewDetail')}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             )}
@@ -271,7 +276,7 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
             {/* Fallback if no detail handler */}
             {!onDetailClick && !hasCoordinates && (
               <div className="w-full px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-500 text-sm text-center rounded-xl">
-                Không có vị trí GPS
+                {t('noGps')}
               </div>
             )}
           </div>
@@ -287,7 +292,7 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
               className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
               onClick={(e) => e.stopPropagation()}
             >
-              <span>Nguồn: {route.source_domain || route.source}</span>
+              <span>{t('source')}: {route.source_domain || route.source}</span>
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
@@ -295,7 +300,7 @@ export default function RouteCard({ route, onDetailClick }: RouteCardProps) {
           ) : (
             <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
               <AlertTriangle className="w-3 h-3" />
-              <span>Chưa có nguồn kiểm chứng - Gọi 113/114 để xác nhận</span>
+              <span>{t('noSourceWarning')}</span>
             </p>
           )}
         </div>

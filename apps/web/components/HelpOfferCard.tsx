@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Phone, Mail, MapPin, Users, Clock, Building2, Heart, Copy, Trash2, CheckCircle } from 'lucide-react'
 
 interface HelpOffer {
@@ -27,6 +27,33 @@ interface HelpOfferCardProps {
   showDeleteButton?: boolean // Default false for public users
 }
 
+const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
+  active: {
+    label: 'Sẵn sàng',
+    color: 'text-green-700 dark:text-green-400',
+    bgColor: 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700',
+    icon: '✓'
+  },
+  in_progress: {
+    label: 'Đang hỗ trợ',
+    color: 'text-amber-700 dark:text-amber-400',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700',
+    icon: '🔄'
+  },
+  fulfilled: {
+    label: 'Đã xong',
+    color: 'text-blue-700 dark:text-blue-400',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700',
+    icon: '✓'
+  },
+  cancelled: {
+    label: 'Đã hủy',
+    color: 'text-neutral-500 dark:text-neutral-400',
+    bgColor: 'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600',
+    icon: '✕'
+  }
+}
+
 const serviceTypeLabels: Record<string, string> = {
   rescue: 'Cứu hộ',
   transportation: 'Vận chuyển',
@@ -39,12 +66,14 @@ const serviceTypeLabels: Record<string, string> = {
   other: 'Khác'
 }
 
-export default function HelpOfferCard({ offer, onDelete, showDeleteButton = false }: HelpOfferCardProps) {
+// Memoized to prevent re-renders when parent list updates but this card's props haven't changed
+function HelpOfferCardBase({ offer, onDelete, showDeleteButton = false }: HelpOfferCardProps) {
   const [copied, setCopied] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const serviceLabel = serviceTypeLabels[offer.service_type] || offer.service_type
+  const status = statusConfig[offer.status?.toLowerCase()] || statusConfig.active
 
   // Remove JCI ID and [STATION] prefix from description
   const cleanDescription = offer.description
@@ -103,7 +132,7 @@ ${offer.distance_km !== undefined ? `Khoảng cách: ${offer.distance_km < 1 ? `
 
     setIsDeleting(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
       const response = await fetch(`${apiUrl}/help/offers/${offer.id}`, {
         method: 'DELETE'
       })
@@ -129,10 +158,10 @@ ${offer.distance_km !== undefined ? `Khoảng cách: ${offer.distance_km < 1 ? `
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-green-700 dark:text-green-400 bg-white dark:bg-neutral-950 border border-green-300 dark:border-green-700">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${status.color} bg-white dark:bg-neutral-950 border`}>
               <Heart className="w-3 h-3" />
-              Sẵn sàng giúp
+              {status.label}
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-neutral-700 text-slate-700 dark:text-neutral-300">
               {serviceLabel}
@@ -245,3 +274,16 @@ ${offer.distance_km !== undefined ? `Khoảng cách: ${offer.distance_km < 1 ? `
     </div>
   )
 }
+
+// Custom comparison for memo - only re-render if offer data changes
+const HelpOfferCard = memo(HelpOfferCardBase, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render)
+  return (
+    prevProps.offer.id === nextProps.offer.id &&
+    prevProps.offer.status === nextProps.offer.status &&
+    prevProps.offer.capacity === nextProps.offer.capacity &&
+    prevProps.showDeleteButton === nextProps.showDeleteButton
+  )
+})
+
+export default HelpOfferCard

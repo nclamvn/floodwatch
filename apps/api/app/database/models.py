@@ -159,6 +159,11 @@ class Report(Base):
     content_hash = Column(String(64), nullable=True)  # SHA256 of first 500 chars of description
     source_domain = Column(String(100), nullable=True)  # Extracted domain (e.g., 'vnexpress.net')
 
+    # News Quality columns (Phase: News Quality Track)
+    is_deleted = Column(Boolean, default=False, nullable=False, server_default='false')  # Dead source URL (404)
+    content_status = Column(String(20), default='full', nullable=False, server_default='full')  # full/partial/excerpt/failed
+    last_check_at = Column(DateTime(timezone=True), nullable=True)  # Last URL verification timestamp
+
     # Constraints
     __table_args__ = (
         CheckConstraint('trust_score >= 0.0 AND trust_score <= 1.0', name='check_trust_score'),
@@ -190,7 +195,11 @@ class Report(Base):
             # Deduplication fields
             "normalized_title": self.normalized_title,
             "content_hash": self.content_hash,
-            "source_domain": self.source_domain
+            "source_domain": self.source_domain,
+            # News Quality fields
+            "is_deleted": self.is_deleted,
+            "content_status": self.content_status,
+            "last_check_at": self.last_check_at.isoformat() if self.last_check_at else None
         }
 
 

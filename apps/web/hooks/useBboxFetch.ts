@@ -88,7 +88,7 @@ function buildBboxUrl(
   bbox: Bbox,
   params?: Record<string, string | number | boolean>
 ): string {
-  const url = new URL(endpoint, process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+  const url = new URL(endpoint, process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000')
 
   // Add bbox params
   url.searchParams.set('min_lon', bbox[0].toString())

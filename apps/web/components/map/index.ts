@@ -9,7 +9,6 @@ export { default as MapViewClustered } from '../MapViewClustered'
 export { default as RescueMap } from '../RescueMap'
 
 // Map layers
-export { default as AIForecastLayer } from '../AIForecastLayer'
 export { default as HazardLayer } from '../HazardLayer'
 export { default as TrafficLayer } from '../TrafficLayer'
 export { default as DistressLayer } from '../DistressLayer'

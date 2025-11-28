@@ -2,6 +2,7 @@
 
 import { useGlobalAudioPlayer } from '@/contexts/AudioPlayerContext'
 import { Play, Pause } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface HeaderVoicePlayerProps {
   className?: string
@@ -15,6 +16,7 @@ interface HeaderVoicePlayerProps {
  * AudioPlayerContext for seamless playback across UI state changes.
  */
 export function HeaderVoicePlayer({ className = '', showLabel = false }: HeaderVoicePlayerProps = {}) {
+  const t = useTranslations('audio')
   const {
     isPlaying,
     isLoading,
@@ -86,7 +88,7 @@ export function HeaderVoicePlayer({ className = '', showLabel = false }: HeaderV
         <span className="relative z-10 text-xs font-semibold
                          text-neutral-900 dark:text-white
                          whitespace-nowrap select-none">
-          {isLoading ? 'Đang tải...' : 'Nghe tin mới nhất'}
+          {isLoading ? t('loading') : t('listenNews')}
         </span>
 
         {/* Subtle glow effect when playing */}

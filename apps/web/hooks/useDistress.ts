@@ -104,7 +104,7 @@ export function useDistress(options: UseDistressOptions = {}): UseDistressReturn
       if (verified_only) params.append('verified_only', 'true')
       params.append('limit', '100')
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
       const url = `${apiUrl}/distress?${params.toString()}`
 
       // Check cache first (unless force refresh)

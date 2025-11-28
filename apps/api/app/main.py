@@ -52,6 +52,12 @@ from app.utils.logging_config import configure_logging, get_logger
 # Import telegram handler
 from app.telegram_handler import router as telegram_router
 
+# Import client log router
+from app.routes.client_log import router as client_log_router
+
+# Import enhanced request logging middleware
+from app.middleware.request_logging import RequestLoggingMiddleware
+
 # Import ingestion scheduler
 from app.services.ingestion_scheduler import start_scheduler, stop_scheduler, get_scheduler_status
 
@@ -124,6 +130,9 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Metrics middleware (records all HTTP requests)
 app.add_middleware(MetricsMiddleware)
 
+# Enhanced request logging middleware (JSON structured logs with trace_id)
+app.add_middleware(RequestLoggingMiddleware)
+
 # Phase 4: Request timing middleware for performance monitoring
 import time as time_module
 
@@ -151,6 +160,7 @@ async def log_request_time(request: Request, call_next):
 
 # Include routers
 app.include_router(telegram_router)
+app.include_router(client_log_router)
 
 # ==================== MODELS ====================
 
@@ -404,10 +414,12 @@ async def get_reports(
     db: Session = Depends(get_db),
     type: Optional[str] = Query(None, description="Filter by type (ALERT, RAIN, ROAD, SOS, NEEDS)"),
     province: Optional[str] = Query(None, description="Filter by province"),
-    since: Optional[str] = Query(None, description="Filter by time (e.g., '6h', '24h', '7d')"),
+    since: Optional[str] = Query("48h", description="Filter by time (e.g., '6h', '24h', '48h', '7d'). Default: 48h"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    dedupe: bool = Query(True, description="Enable cross-source deduplication (default: true)")
+    dedupe: bool = Query(True, description="Enable cross-source deduplication (default: true)"),
+    include_deleted: bool = Query(False, description="Include deleted articles (default: false)"),
+    min_content_status: Optional[str] = Query(None, description="Minimum content quality: full, partial, excerpt")
 ):
     """
     Get reports with optional filters
@@ -415,10 +427,12 @@ async def get_reports(
     Parameters:
     - type: Filter by report type
     - province: Filter by province name
-    - since: Time filter (e.g., '6h', '24h', '7d')
+    - since: Time filter (e.g., '6h', '24h', '48h', '7d'). Default: 48h
     - limit: Max results per page
     - offset: Pagination offset
     - dedupe: Enable cross-source deduplication (default: true)
+    - include_deleted: Include deleted articles (source URL 404). Default: false
+    - min_content_status: Minimum content quality (full > partial > excerpt > failed)
 
     Note: PII (phone numbers, emails) is scrubbed from public responses
     """
@@ -428,7 +442,9 @@ async def get_reports(
         province=province,
         since=since,
         limit=limit,
-        offset=offset
+        offset=offset,
+        include_deleted=include_deleted,
+        min_content_status=min_content_status
     )
 
     report_dicts = [report.to_dict() for report in reports]
@@ -454,6 +470,36 @@ async def get_reports(
         content=scrubbed_data,
         headers={"Cache-Control": "public, max-age=30, stale-while-revalidate=60"}
     )
+
+
+@app.post("/reports/{report_id}/mark-deleted")
+async def mark_report_deleted(report_id: str, db: Session = Depends(get_db)):
+    """
+    Mark a report as deleted (source URL 404/410/403)
+
+    This endpoint is called when:
+    - Cron job detects dead URL
+    - User clicks source link and it fails
+
+    Parameters:
+    - report_id: UUID of the report to mark as deleted
+    """
+    from uuid import UUID
+    try:
+        report_uuid = UUID(report_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid report ID format")
+
+    report = db.query(Report).filter(Report.id == report_uuid).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    report.is_deleted = True
+    report.last_check_at = datetime.utcnow()
+    db.commit()
+
+    logger.info("report_marked_deleted", report_id=report_id)
+    return {"status": "ok", "report_id": report_id}
 
 
 @app.post("/ingest/alerts")
@@ -2539,6 +2585,49 @@ async def get_distress_reports(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/distress/track/{tracking_code}")
+@limiter.limit("30/minute")
+async def get_distress_by_tracking_code(
+    request: Request,
+    tracking_code: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get distress report status by tracking code
+
+    Tracking code format: DIST-YYYYMMDD-XXXXXXXX (8 char UUID prefix)
+    """
+    # Parse tracking code to extract UUID prefix
+    # Format: DIST-20251128-ABCD1234
+    import re
+    match = re.match(r'^DIST-\d{8}-([A-F0-9]{8})$', tracking_code.upper())
+
+    if not match:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid tracking code format. Expected: DIST-YYYYMMDD-XXXXXXXX"
+        )
+
+    uuid_prefix = match.group(1).lower()
+
+    # Find report by UUID prefix
+    from sqlalchemy import cast, String
+    report = db.query(DistressReport).filter(
+        cast(DistressReport.id, String).like(f'{uuid_prefix}%')
+    ).first()
+
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Return report data with tracking code
+    data = report.to_dict()
+    data['tracking_code'] = tracking_code.upper()
+
+    return {
+        "data": data
+    }
+
+
 @app.patch("/distress/{report_id}")
 @limiter.limit("10/minute")
 async def update_distress_report(
@@ -2716,6 +2805,9 @@ async def create_help_request(
     data = request_data.dict()
     help_request = HelpRequestRepository.create(db, data)
 
+    # Invalidate stats cache after write
+    HelpRequestRepository.invalidate_stats_cache()
+
     logger.info(f"Created help request: {help_request.id} (needs={help_request.needs_type.value}, urgency={help_request.urgency.value})")
 
     return {
@@ -2820,6 +2912,9 @@ async def create_help_offer(
     # Create help offer
     data = offer_data.dict()
     help_offer = HelpOfferRepository.create(db, data)
+
+    # Invalidate stats cache after write
+    HelpOfferRepository.invalidate_stats_cache()
 
     logger.info(f"Created help offer: {help_offer.id} (service={help_offer.service_type.value})")
 
@@ -2926,6 +3021,9 @@ async def delete_help_request(
         db.delete(help_request)
         db.commit()
 
+        # Invalidate stats cache after delete
+        HelpRequestRepository.invalidate_stats_cache()
+
         logger.info(f"Deleted help request: {request_id}")
 
         return {
@@ -2967,6 +3065,9 @@ async def delete_help_offer(
         # Delete the offer
         db.delete(help_offer)
         db.commit()
+
+        # Invalidate stats cache after delete
+        HelpOfferRepository.invalidate_stats_cache()
 
         logger.info(f"Deleted help offer: {offer_id}")
 
@@ -3217,11 +3318,15 @@ async def find_matching_offers(
     """
     Find matching help offers for a specific help request
     Returns offers sorted by suitability score (distance, capacity, type matching)
+
+    Performance: Uses PostGIS ST_DWithin for spatial filtering (index-backed)
+    instead of loading all offers and filtering in Python.
     """
     from uuid import UUID
     from app.database.models import HelpRequest, HelpOffer
-    from app.services.help_repo import HelpRequestRepository
-    from sqlalchemy import or_, and_
+    from sqlalchemy import or_, and_, type_coerce
+    from geoalchemy2 import Geography
+    from geoalchemy2.functions import ST_SetSRID, ST_MakePoint, ST_Distance, ST_DWithin
     from datetime import datetime
 
     try:
@@ -3231,59 +3336,72 @@ async def find_matching_offers(
         if not help_request:
             raise HTTPException(status_code=404, detail="Help request not found")
 
-        # Get active help offers near the request
-        query = db.query(HelpOffer)
+        # Build spatial query using PostGIS ST_DWithin (index-backed)
+        # Convert km to meters
+        radius_m = max_distance_km * 1000
 
-        # Only active offers (not assigned, busy, or offline)
-        query = query.filter(HelpOffer.status == 'active')
+        # Create point from request coordinates
+        request_point = ST_SetSRID(ST_MakePoint(help_request.lon, help_request.lat), 4326)
 
-        # Not expired
+        # Calculate distance in meters using PostGIS
+        distance_m = ST_Distance(
+            type_coerce(HelpOffer.location, Geography),
+            type_coerce(request_point, Geography)
+        )
+
         now = datetime.utcnow()
-        query = query.filter(
+
+        # Query with spatial filter using PostGIS ST_DWithin
+        # This uses the GIST index on location column for fast spatial queries
+        query = db.query(
+            HelpOffer,
+            distance_m.label('distance_m')
+        ).filter(
+            # Active status
+            HelpOffer.status == 'active',
+            # Not expired
             or_(
                 HelpOffer.expires_at.is_(None),
                 HelpOffer.expires_at > now
+            ),
+            # Has location
+            HelpOffer.location.isnot(None),
+            # Within search radius (ST_DWithin uses spatial index)
+            func.ST_DWithin(
+                type_coerce(HelpOffer.location, Geography),
+                type_coerce(request_point, Geography),
+                radius_m
             )
-        )
+        ).order_by(
+            distance_m.asc()  # Closest first
+        ).limit(limit * 2)  # Get extra for scoring reorder
 
-        # Get all potential offers
-        all_offers = query.all()
+        results = query.all()
 
-        # Score and filter offers
+        # Score and build matches (now with pre-filtered spatial results)
         matches = []
-        for offer in all_offers:
-            if not offer.lat or not offer.lon:
-                continue
 
-            # Calculate distance
-            distance_km = HelpRequestRepository._calculate_distance(
-                help_request.lat, help_request.lon,
-                offer.lat, offer.lon
-            )
+        # Service type matching map
+        type_matches = {
+            'food': ['food_water', 'supplies', 'donation'],
+            'water': ['food_water', 'supplies', 'donation'],
+            'shelter': ['shelter'],
+            'medical': ['medical', 'rescue'],
+            'transport': ['transportation', 'rescue'],
+            'rescue': ['rescue', 'transportation']
+        }
 
-            # Skip if too far
-            if distance_km > max_distance_km:
-                continue
+        for offer, dist_m in results:
+            distance_km = dist_m / 1000.0 if dist_m else 0
 
             # Calculate suitability score (0-100, higher is better)
             score = 0.0
 
             # Distance score (50 points max) - closer is better
-            # 0km = 50 points, max_distance_km = 0 points
             distance_score = max(0, 50 * (1 - (distance_km / max_distance_km)))
             score += distance_score
 
             # Service type matching (30 points)
-            # Map needs_type to service_type
-            type_matches = {
-                'food': ['food_water', 'supplies', 'donation'],
-                'water': ['food_water', 'supplies', 'donation'],
-                'shelter': ['shelter'],
-                'medical': ['medical', 'rescue'],
-                'transport': ['transportation', 'rescue'],
-                'rescue': ['rescue', 'transportation']
-            }
-
             needs_type = help_request.needs_type
             if needs_type in type_matches and offer.service_type in type_matches[needs_type]:
                 score += 30
@@ -3302,7 +3420,7 @@ async def find_matching_offers(
                 else:
                     score += 5
 
-            # Add to matches
+            # Build match data
             match_data = offer.to_dict()
             match_data['distance_km'] = round(distance_km, 2)
             match_data['suitability_score'] = round(score, 1)
@@ -3690,13 +3808,17 @@ async def get_ai_forecast_accuracy_stats(
 
     stats = AIForecastRepository.get_forecast_accuracy_stats(db, from_datetime)
 
-    return {
-        "data": stats,
-        "meta": {
-            "from_date": from_date,
-            "description": "Accuracy metrics for verified AI forecasts"
-        }
-    }
+    # Cache for 5 minutes - accuracy stats change infrequently
+    return JSONResponse(
+        content={
+            "data": stats,
+            "meta": {
+                "from_date": from_date,
+                "description": "Accuracy metrics for verified AI forecasts"
+            }
+        },
+        headers={"Cache-Control": "public, max-age=300"}
+    )
 
 
 # ==================== AI NEWS BULLETIN ====================
@@ -4095,6 +4217,12 @@ async def admin_bulk_delete(
 
         db.commit()
 
+        # Invalidate stats cache after bulk delete
+        if bulk_data.type == "requests":
+            HelpRequestRepository.invalidate_stats_cache()
+        else:
+            HelpOfferRepository.invalidate_stats_cache()
+
         logger.info(f"Admin bulk deleted {deleted} {bulk_data.type}")
 
         return {
@@ -4283,7 +4411,11 @@ async def get_routes_summary(
     """
     summary = RoadSegmentRepository.get_summary(db=db, province=province)
 
-    return summary
+    # Cache for 2 minutes - summary data doesn't change frequently
+    return JSONResponse(
+        content=summary,
+        headers={"Cache-Control": "public, max-age=120"}
+    )
 
 
 @app.get("/routes/risk-index/{province}")
@@ -4304,7 +4436,11 @@ async def get_province_risk_index(
     """
     risk_data = RoadSegmentRepository.get_risk_index(db=db, province=province)
 
-    return risk_data
+    # Cache for 2 minutes - risk data updated periodically
+    return JSONResponse(
+        content=risk_data,
+        headers={"Cache-Control": "public, max-age=120"}
+    )
 
 
 @app.get("/routes/nearby")
@@ -4497,7 +4633,13 @@ async def get_lifecycle_stats(db: Session = Depends(get_db)):
 
     Returns counts of ACTIVE, RESOLVED, ARCHIVED alerts.
     """
-    return AlertLifecycleService.get_lifecycle_stats(db)
+    stats = AlertLifecycleService.get_lifecycle_stats(db)
+
+    # Cache for 2 minutes - lifecycle stats don't change frequently
+    return JSONResponse(
+        content=stats,
+        headers={"Cache-Control": "public, max-age=120"}
+    )
 
 
 @app.post("/routes/lifecycle/run")

@@ -53,7 +53,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
   // Collapsed state - 3D Frosted Glass Sphere with Newspaper Icon - Apple Premium Design
   if (!isExpanded) {
     return (
-      <div className="fixed left-1/2 -translate-x-1/2 bottom-[151px] z-30">
+      <div data-testid="regional-summary-button" className="fixed left-1/2 -translate-x-1/2 z-40" style={{ bottom: '207px' }}>
         <button
           onClick={handleExpand}
           className="relative group"
@@ -102,7 +102,7 @@ export default function RegionalSummaryInput({ onSearch, isLoading }: RegionalSu
 
   // Expanded state - Horizontal glass input (no icons, white text)
   return (
-    <div ref={containerRef} className="fixed left-1/2 -translate-x-1/2 bottom-[151px] z-30 w-[65%] max-w-[324px]">
+    <div ref={containerRef} data-testid="regional-summary-expanded" className="fixed left-1/2 -translate-x-1/2 w-[65%] max-w-[324px] z-40" style={{ bottom: '207px' }}>
       <div className="relative">
         {/* Glass container */}
         <div className="relative backdrop-blur-2xl bg-white/60 dark:bg-neutral-800/60 rounded-full border border-neutral-300/50 dark:border-neutral-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.2)] overflow-hidden">

@@ -42,7 +42,9 @@ class ReportRepository:
         province: Optional[str] = None,
         since: Optional[str] = None,
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
+        include_deleted: bool = False,
+        min_content_status: Optional[str] = None
     ) -> tuple[List[Report], int]:
         """
         Get reports with filters
@@ -54,11 +56,29 @@ class ReportRepository:
             since: Time filter (e.g., '6h', '24h', '7d')
             limit: Max results
             offset: Pagination offset
+            include_deleted: Include deleted reports (default: False)
+            min_content_status: Minimum content quality (full, partial, excerpt)
 
         Returns:
             (reports, total_count)
         """
         query = db.query(Report)
+
+        # News Quality filters (Phase: News Quality Track)
+        # By default, exclude deleted reports
+        if not include_deleted:
+            query = query.filter(Report.is_deleted == False)
+
+        # Filter by minimum content status quality
+        if min_content_status:
+            # Status hierarchy: full > partial > excerpt > failed
+            status_order = ['full', 'partial', 'excerpt', 'failed']
+            try:
+                min_idx = status_order.index(min_content_status.lower())
+                allowed_statuses = status_order[:min_idx + 1]
+                query = query.filter(Report.content_status.in_(allowed_statuses))
+            except ValueError:
+                pass  # Invalid status, skip filter
 
         # Apply filters
         if type:

@@ -23,6 +23,9 @@ interface Report {
   trust_score: number
   status: string
   media?: string[]
+  // News Quality fields (Phase: News Quality Track)
+  is_deleted?: boolean
+  content_status?: 'full' | 'partial' | 'excerpt' | 'failed'
 }
 
 interface ArticleReadModalProps {
@@ -51,7 +54,7 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
     const fetchAiSummary = async () => {
       setLoadingSummary(true)
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
         const response = await axios.post(`${API_URL}/reports/${report.id}/generate-summary`)
         setAiSummary(response.data.summary)
       } catch (error) {
@@ -224,28 +227,11 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
 
       {/* Modal Container - Desktop Premium / Mobile Bottom Sheet */}
       <div
-        className="relative w-full mx-2 sm:mx-4 flex flex-col max-h-[calc(100dvh-32px)] rounded-2xl sm:rounded-3xl sm:max-w-[920px] sm:max-h-[85vh] sm:mx-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur-3xl supports-[backdrop-filter]:backdrop-blur-3xl border border-neutral-300/50 dark:border-zinc-700/50 shadow-[0_24px_60px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 p-4 sm:p-7 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="relative w-full mx-2 sm:mx-4 flex flex-col max-h-[calc(100dvh-32px)] rounded-2xl sm:rounded-3xl sm:max-w-[640px] sm:max-h-[85vh] sm:mx-auto bg-white/90 dark:bg-zinc-900/90 backdrop-blur-3xl supports-[backdrop-filter]:backdrop-blur-3xl border border-neutral-300/50 dark:border-zinc-700/50 shadow-[0_24px_60px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300 p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-4 sm:mb-5">
-          {/* Left: Metadata badges */}
-          <div className="flex flex-col gap-2">
-            {/* Region badge */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-200/60 dark:bg-zinc-800/60 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50">
-              <MapPin className="w-3.5 h-3.5 text-neutral-700 dark:text-zinc-300" />
-              <span className="text-xs font-medium text-neutral-800 dark:text-zinc-200">
-                {regionDisplay}
-              </span>
-            </div>
-
-            {/* Timestamp */}
-            <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Cập nhật: {formattedDate}</span>
-            </div>
-          </div>
-
-          {/* Right: Close button - 44px minimum touch target on mobile */}
+        {/* Header - Close button only */}
+        <div className="flex items-start justify-end mb-2">
+          {/* Close button - 44px minimum touch target on mobile */}
           <button
             onClick={onClose}
             className="flex-shrink-0 w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-neutral-200/70 dark:bg-zinc-800/70 hover:bg-neutral-300/80 dark:hover:bg-zinc-700/80 active:bg-neutral-400/80 dark:active:bg-zinc-600/80 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50 flex items-center justify-center transition-all duration-200 group"
@@ -257,26 +243,33 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden pr-2 -mr-2 scrollbar-thin scrollbar-thumb-zinc-700/50 scrollbar-track-transparent">
-          {/* Article Title */}
+          {/* Article Title - 20-22px, weight 650-700, tight tracking */}
           <h1
             id="article-modal-title"
-            className="text-xl sm:text-2xl md:text-[26px] font-bold text-neutral-900 dark:text-white leading-tight mb-3 sm:mb-4 break-words"
+            className="text-[20px] sm:text-[21px] md:text-[22px] font-semibold text-neutral-900 dark:text-white leading-[1.25] tracking-[-0.02em] mb-3 sm:mb-4 break-words"
+            style={{ fontWeight: 660 }}
           >
             {decodeHTML(report.title)}
           </h1>
 
-          {/* Source Info & Link */}
-          <div className="flex flex-wrap items-center gap-3 mb-4 sm:mb-5 pb-4 border-b border-neutral-300/50 dark:border-zinc-700/50">
-            {/* Source badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-200/60 dark:bg-zinc-800/60 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-zinc-500 to-zinc-700 flex items-center justify-center text-[10px] font-bold text-white">
-                {sourceDomain[0].toUpperCase()}
-              </div>
-              <span className="text-xs font-medium text-neutral-800 dark:text-neutral-300">
-                {sourceDomain}
-              </span>
-            </div>
+          {/* Metadata Line - Source · TimeAgo · Location (12.5px, muted) */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-4 text-neutral-500 dark:text-neutral-400" style={{ fontSize: '12.5px' }}>
+            <span className="font-medium text-neutral-600 dark:text-neutral-300">{sourceDomain}</span>
+            <span className="opacity-50">·</span>
+            <span>{formattedDate}</span>
+            {regionDisplay && (
+              <>
+                <span className="opacity-50">·</span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {regionDisplay}
+                </span>
+              </>
+            )}
+          </div>
 
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 sm:mb-5 pb-4 border-b border-neutral-300/50 dark:border-zinc-700/50">
             {/* Original article link */}
             <a
               href={report.source.startsWith('http') ? report.source : `https://${report.source}`}
@@ -315,9 +308,10 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
             </div>
           )}
 
-          {/* Article Content */}
+          {/* Article Content - Body 14.6-15px, weight 420, line-height 1.65 */}
           <article
             className="prose dark:prose-invert prose-sm sm:prose-base max-w-none"
+            style={{ fontSize: '14.8px', fontWeight: 420, lineHeight: 1.65 }}
           >
             {loadingSummary ? (
               <div className="flex items-center gap-2 !text-neutral-900 dark:!text-zinc-100 italic">
@@ -326,6 +320,17 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
               </div>
             ) : paragraphs.length > 0 ? (
               <>
+                {/* Content status warning for partial/excerpt content - Highlight System */}
+                {(report.content_status === 'partial' || report.content_status === 'excerpt') && (
+                  <div className="mb-5 px-4 py-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border-l-4 border-amber-500 dark:border-amber-400">
+                    <p className="!text-amber-800 dark:!text-amber-200 flex items-center gap-2 !mb-0" style={{ fontSize: '13px', fontWeight: 500 }}>
+                      <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>Nội dung rút gọn. Xem bài gốc để đọc đầy đủ.</span>
+                    </p>
+                  </div>
+                )}
                 {!report.description && aiSummary && (
                   <div className="mb-4 p-3 rounded-lg bg-neutral-200/60 dark:bg-zinc-800/60 backdrop-blur-xl border border-neutral-300/50 dark:border-zinc-700/50">
                     <p className="text-xs !text-neutral-600 dark:text-neutral-400 mb-2 flex items-center gap-1">
@@ -335,7 +340,7 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
                   </div>
                 )}
                 {paragraphs.map((paragraph, idx) => (
-                  <p key={idx} className="mb-4 !text-neutral-900 dark:!text-zinc-100">
+                  <p key={idx} className="mb-4 !text-neutral-800 dark:!text-zinc-200" style={{ fontWeight: 420 }}>
                     {decodeHTML(paragraph)}
                   </p>
                 ))}
@@ -351,9 +356,9 @@ export function ArticleReadModal({ report, isOpen, onClose }: ArticleReadModalPr
           <div className="h-4" />
         </div>
 
-        {/* Footer - Disclaimer */}
+        {/* Footer - Disclaimer - 11px, muted */}
         <div className="mt-4 pt-4 border-t border-neutral-300/50 dark:border-zinc-700/30">
-          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+          <p className="text-neutral-500 dark:text-neutral-500 leading-relaxed" style={{ fontSize: '11px', opacity: 0.8 }}>
             Dữ liệu tổng hợp từ các nguồn chính thống. FloodWatch chỉ tái hiện nội dung,
             vui lòng xem chi tiết tại bài gốc nếu cần xác minh thông tin.
           </p>

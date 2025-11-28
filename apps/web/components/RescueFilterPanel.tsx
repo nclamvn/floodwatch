@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, RotateCcw, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { RescueFilters } from '@/hooks/useRescueFilters'
 
 interface RescueFilterPanelProps {
@@ -15,43 +16,18 @@ interface RescueFilterPanelProps {
   offersCount: number
 }
 
-const urgencyOptions = [
-  { value: 'critical', label: 'Khẩn cấp', color: 'text-red-700 dark:text-red-400' },
-  { value: 'high', label: 'Cao', color: 'text-orange-700 dark:text-orange-400' },
-  { value: 'medium', label: 'Trung bình', color: 'text-yellow-700 dark:text-yellow-400' },
-  { value: 'low', label: 'Thấp', color: 'text-neutral-700 dark:text-neutral-400' },
-]
-
-const needsTypeOptions = [
-  { value: 'food', label: 'Thực phẩm' },
-  { value: 'water', label: 'Nước uống' },
-  { value: 'shelter', label: 'Chỗ ở' },
-  { value: 'medical', label: 'Y tế' },
-  { value: 'clothing', label: 'Quần áo' },
-  { value: 'transport', label: 'Di chuyển' },
-  { value: 'other', label: 'Khác' },
-]
-
-const requestStatusOptions = [
-  { value: 'active', label: 'Đang chờ' },
-  { value: 'in_progress', label: 'Đang xử lý' },
-]
-
-const serviceTypeOptions = [
-  { value: 'rescue', label: 'Cứu hộ' },
-  { value: 'transportation', label: 'Vận chuyển' },
-  { value: 'medical', label: 'Y tế' },
-  { value: 'shelter', label: 'Chỗ ở' },
-  { value: 'food_water', label: 'Thực phẩm/Nước' },
-  { value: 'supplies', label: 'Vật tư' },
-  { value: 'volunteer', label: 'Tình nguyện' },
-  { value: 'donation', label: 'Quyên góp' },
-  { value: 'other', label: 'Khác' },
-]
-
-const offerStatusOptions = [
-  { value: 'active', label: 'Sẵn sàng' },
-]
+// Values only - labels will come from translations
+const urgencyValues = ['critical', 'high', 'medium', 'low']
+const urgencyColors: Record<string, string> = {
+  critical: 'text-red-700 dark:text-red-400',
+  high: 'text-orange-700 dark:text-orange-400',
+  medium: 'text-yellow-700 dark:text-yellow-400',
+  low: 'text-neutral-700 dark:text-neutral-400',
+}
+const needsTypeValues = ['food', 'water', 'shelter', 'medical', 'clothing', 'transport', 'other']
+const requestStatusValues = ['active', 'in_progress', 'fulfilled', 'expired', 'cancelled']
+const serviceTypeValues = ['rescue', 'transportation', 'medical', 'shelter', 'food_water', 'supplies', 'volunteer', 'donation', 'other']
+const offerStatusValues = ['active', 'in_progress', 'fulfilled', 'cancelled']
 
 /**
  * RescueFilterPanel Component
@@ -73,6 +49,7 @@ export default function RescueFilterPanel({
   requestsCount,
   offersCount,
 }: RescueFilterPanelProps) {
+  const t = useTranslations('rescueFilter')
   const [searchInput, setSearchInput] = useState(filters.searchQuery)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     requests: true,
@@ -91,20 +68,20 @@ export default function RescueFilterPanel({
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
-  const allUrgencySelected = urgencyOptions.every(opt => filters.requestUrgency.includes(opt.value))
-  const allNeedsTypeSelected = needsTypeOptions.every(opt => filters.requestNeedsType.includes(opt.value))
-  const allServiceTypeSelected = serviceTypeOptions.every(opt => filters.offerServiceType.includes(opt.value))
+  const allUrgencySelected = urgencyValues.every(val => filters.requestUrgency.includes(val))
+  const allNeedsTypeSelected = needsTypeValues.every(val => filters.requestNeedsType.includes(val))
+  const allServiceTypeSelected = serviceTypeValues.every(val => filters.offerServiceType.includes(val))
 
   const toggleAllUrgency = () => {
-    onSetArrayValues('requestUrgency', allUrgencySelected ? [] : urgencyOptions.map(o => o.value))
+    onSetArrayValues('requestUrgency', allUrgencySelected ? [] : urgencyValues)
   }
 
   const toggleAllNeedsType = () => {
-    onSetArrayValues('requestNeedsType', allNeedsTypeSelected ? [] : needsTypeOptions.map(o => o.value))
+    onSetArrayValues('requestNeedsType', allNeedsTypeSelected ? [] : needsTypeValues)
   }
 
   const toggleAllServiceType = () => {
-    onSetArrayValues('offerServiceType', allServiceTypeSelected ? [] : serviceTypeOptions.map(o => o.value))
+    onSetArrayValues('offerServiceType', allServiceTypeSelected ? [] : serviceTypeValues)
   }
 
   return (
@@ -123,22 +100,22 @@ export default function RescueFilterPanel({
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50">
-              Bộ lọc
+              {t('title')}
             </h2>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onReset}
               className="px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors flex items-center gap-1"
-              title="Đặt lại bộ lọc"
+              title={t('resetFilters')}
             >
               <RotateCcw className="w-4 h-4" />
-              <span className="hidden sm:inline">Đặt lại</span>
+              <span className="hidden sm:inline">{t('reset')}</span>
             </button>
             <button
               onClick={onClose}
               className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-              title="Đóng"
+              title={t('close')}
             >
               <X className="w-5 h-5 text-neutral-700 dark:text-neutral-300" />
             </button>
@@ -150,7 +127,7 @@ export default function RescueFilterPanel({
           {/* Search Box */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-              Tìm kiếm
+              {t('search')}
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -158,7 +135,7 @@ export default function RescueFilterPanel({
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Tên, địa điểm, SĐT..."
+                placeholder={t('searchPlaceholder')}
                 className="w-full pl-10 pr-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -167,7 +144,7 @@ export default function RescueFilterPanel({
           {/* Radius Slider */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-              Bán kính: <span className="text-blue-600 dark:text-blue-400 font-bold">{filters.radiusKm}km</span>
+              {t('radius')}: <span className="text-blue-600 dark:text-blue-400 font-bold">{filters.radiusKm}km</span>
             </label>
             <input
               type="range"
@@ -194,7 +171,7 @@ export default function RescueFilterPanel({
                 className="w-4 h-4 text-blue-600 bg-neutral-100 border-neutral-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-neutral-800 focus:ring-2 dark:bg-neutral-700 dark:border-neutral-600"
               />
               <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Chỉ hiển thị đã xác minh
+                {t('verifiedOnly')}
               </span>
             </label>
           </div>
@@ -211,7 +188,7 @@ export default function RescueFilterPanel({
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500" />
                 <span className="font-semibold text-neutral-900 dark:text-neutral-50">
-                  Yêu cầu cứu trợ
+                  {t('requestsSection')}
                 </span>
               </div>
               {expandedSections.requests ? (
@@ -232,7 +209,7 @@ export default function RescueFilterPanel({
                     className="w-4 h-4 text-red-600 bg-neutral-100 border-neutral-300 rounded focus:ring-red-500"
                   />
                   <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                    Hiển thị yêu cầu
+                    {t('showRequests')}
                   </span>
                 </label>
 
@@ -240,26 +217,26 @@ export default function RescueFilterPanel({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                      Mức độ khẩn cấp
+                      {t('urgencyLevel')}
                     </label>
                     <button
                       onClick={toggleAllUrgency}
                       className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      {allUrgencySelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                      {allUrgencySelected ? t('deselectAll') : t('selectAll')}
                     </button>
                   </div>
                   <div className="space-y-1">
-                    {urgencyOptions.map(option => (
-                      <label key={option.value} className="flex items-center gap-2 cursor-pointer py-1">
+                    {urgencyValues.map(value => (
+                      <label key={value} className="flex items-center gap-2 cursor-pointer py-1">
                         <input
                           type="checkbox"
-                          checked={filters.requestUrgency.includes(option.value)}
-                          onChange={() => onToggleArrayValue('requestUrgency', option.value)}
+                          checked={filters.requestUrgency.includes(value)}
+                          onChange={() => onToggleArrayValue('requestUrgency', value)}
                           className="w-4 h-4 text-red-600 bg-neutral-100 border-neutral-300 rounded focus:ring-red-500"
                         />
-                        <span className={`text-sm ${option.color}`}>
-                          {option.label}
+                        <span className={`text-sm ${urgencyColors[value]}`}>
+                          {t(`urgency.${value}`)}
                         </span>
                       </label>
                     ))}
@@ -270,26 +247,26 @@ export default function RescueFilterPanel({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                      Loại nhu cầu
+                      {t('needsType')}
                     </label>
                     <button
                       onClick={toggleAllNeedsType}
                       className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      {allNeedsTypeSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                      {allNeedsTypeSelected ? t('deselectAll') : t('selectAll')}
                     </button>
                   </div>
                   <div className="space-y-1">
-                    {needsTypeOptions.map(option => (
-                      <label key={option.value} className="flex items-center gap-2 cursor-pointer py-1">
+                    {needsTypeValues.map(value => (
+                      <label key={value} className="flex items-center gap-2 cursor-pointer py-1">
                         <input
                           type="checkbox"
-                          checked={filters.requestNeedsType.includes(option.value)}
-                          onChange={() => onToggleArrayValue('requestNeedsType', option.value)}
+                          checked={filters.requestNeedsType.includes(value)}
+                          onChange={() => onToggleArrayValue('requestNeedsType', value)}
                           className="w-4 h-4 text-red-600 bg-neutral-100 border-neutral-300 rounded focus:ring-red-500"
                         />
                         <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                          {option.label}
+                          {t(`needs.${value}`)}
                         </span>
                       </label>
                     ))}
@@ -299,19 +276,19 @@ export default function RescueFilterPanel({
                 {/* Request Status */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                    Trạng thái
+                    {t('status')}
                   </label>
                   <div className="space-y-1">
-                    {requestStatusOptions.map(option => (
-                      <label key={option.value} className="flex items-center gap-2 cursor-pointer py-1">
+                    {requestStatusValues.map(value => (
+                      <label key={value} className="flex items-center gap-2 cursor-pointer py-1">
                         <input
                           type="checkbox"
-                          checked={filters.requestStatus.includes(option.value)}
-                          onChange={() => onToggleArrayValue('requestStatus', option.value)}
+                          checked={filters.requestStatus.includes(value)}
+                          onChange={() => onToggleArrayValue('requestStatus', value)}
                           className="w-4 h-4 text-red-600 bg-neutral-100 border-neutral-300 rounded focus:ring-red-500"
                         />
                         <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                          {option.label}
+                          {t(`requestStatus.${value}`)}
                         </span>
                       </label>
                     ))}
@@ -333,7 +310,7 @@ export default function RescueFilterPanel({
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="font-semibold text-neutral-900 dark:text-neutral-50">
-                  Đề nghị hỗ trợ
+                  {t('offersSection')}
                 </span>
               </div>
               {expandedSections.offers ? (
@@ -354,7 +331,7 @@ export default function RescueFilterPanel({
                     className="w-4 h-4 text-green-600 bg-neutral-100 border-neutral-300 rounded focus:ring-green-500"
                   />
                   <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                    Hiển thị đề nghị
+                    {t('showOffers')}
                   </span>
                 </label>
 
@@ -362,26 +339,26 @@ export default function RescueFilterPanel({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                      Loại dịch vụ
+                      {t('serviceType')}
                     </label>
                     <button
                       onClick={toggleAllServiceType}
                       className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      {allServiceTypeSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                      {allServiceTypeSelected ? t('deselectAll') : t('selectAll')}
                     </button>
                   </div>
                   <div className="space-y-1">
-                    {serviceTypeOptions.map(option => (
-                      <label key={option.value} className="flex items-center gap-2 cursor-pointer py-1">
+                    {serviceTypeValues.map(value => (
+                      <label key={value} className="flex items-center gap-2 cursor-pointer py-1">
                         <input
                           type="checkbox"
-                          checked={filters.offerServiceType.includes(option.value)}
-                          onChange={() => onToggleArrayValue('offerServiceType', option.value)}
+                          checked={filters.offerServiceType.includes(value)}
+                          onChange={() => onToggleArrayValue('offerServiceType', value)}
                           className="w-4 h-4 text-green-600 bg-neutral-100 border-neutral-300 rounded focus:ring-green-500"
                         />
                         <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                          {option.label}
+                          {t(`services.${value}`)}
                         </span>
                       </label>
                     ))}
@@ -391,19 +368,19 @@ export default function RescueFilterPanel({
                 {/* Offer Status */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                    Trạng thái
+                    {t('status')}
                   </label>
                   <div className="space-y-1">
-                    {offerStatusOptions.map(option => (
-                      <label key={option.value} className="flex items-center gap-2 cursor-pointer py-1">
+                    {offerStatusValues.map(value => (
+                      <label key={value} className="flex items-center gap-2 cursor-pointer py-1">
                         <input
                           type="checkbox"
-                          checked={filters.offerStatus.includes(option.value)}
-                          onChange={() => onToggleArrayValue('offerStatus', option.value)}
+                          checked={filters.offerStatus.includes(value)}
+                          onChange={() => onToggleArrayValue('offerStatus', value)}
                           className="w-4 h-4 text-green-600 bg-neutral-100 border-neutral-300 rounded focus:ring-green-500"
                         />
                         <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                          {option.label}
+                          {t(`offerStatus.${value}`)}
                         </span>
                       </label>
                     ))}
@@ -413,14 +390,14 @@ export default function RescueFilterPanel({
                 {/* Min Capacity */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                    Sức chứa tối thiểu
+                    {t('minCapacity')}
                   </label>
                   <input
                     type="number"
                     min="0"
                     value={filters.minCapacity ?? ''}
                     onChange={(e) => onUpdateFilter('minCapacity', e.target.value ? parseInt(e.target.value) : null)}
-                    placeholder="Số người"
+                    placeholder={t('capacityPlaceholder')}
                     className="w-full px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -433,15 +410,15 @@ export default function RescueFilterPanel({
         <div className="p-4 bg-neutral-50 dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700">
           <div className="flex items-center justify-between text-sm">
             <span className="text-neutral-600 dark:text-neutral-400 font-medium">
-              Kết quả:
+              {t('results')}:
             </span>
             <div className="flex items-center gap-3">
               <span className="font-bold text-red-600 dark:text-red-400">
-                {requestsCount} yêu cầu
+                {requestsCount} {t('requestsSection').toLowerCase()}
               </span>
               <span className="text-neutral-400">•</span>
               <span className="font-bold text-green-600 dark:text-green-400">
-                {offersCount} đề nghị
+                {offersCount} {t('offersSection').toLowerCase()}
               </span>
             </div>
           </div>

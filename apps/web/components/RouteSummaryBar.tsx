@@ -1,6 +1,7 @@
 'use client'
 
 import { RefreshCw, Route, ShieldCheck, AlertTriangle, ShieldAlert, ShieldX } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { RouteStatus } from './RouteCard'
 
 export interface RouteSummary {
@@ -17,11 +18,10 @@ interface RouteSummaryBarProps {
   onRefresh?: () => void
 }
 
-// Status configuration for summary cards
+// Status configuration for summary cards (styling only - labels come from translations)
 const STATUS_CARDS: {
   status: RouteStatus
-  label: string
-  labelShort: string
+  key: string
   bgColor: string
   bgColorActive: string
   textColor: string
@@ -30,8 +30,7 @@ const STATUS_CARDS: {
 }[] = [
   {
     status: 'OPEN',
-    label: 'Thông thoáng',
-    labelShort: 'Thông',
+    key: 'open',
     bgColor: 'bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40',
     bgColorActive: 'bg-emerald-200 dark:bg-emerald-800/50 ring-2 ring-emerald-500',
     textColor: 'text-emerald-700 dark:text-emerald-300',
@@ -40,8 +39,7 @@ const STATUS_CARDS: {
   },
   {
     status: 'LIMITED',
-    label: 'Hạn chế',
-    labelShort: 'Hạn chế',
+    key: 'limited',
     bgColor: 'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40',
     bgColorActive: 'bg-amber-200 dark:bg-amber-800/50 ring-2 ring-amber-500',
     textColor: 'text-amber-700 dark:text-amber-300',
@@ -50,8 +48,7 @@ const STATUS_CARDS: {
   },
   {
     status: 'DANGEROUS',
-    label: 'Nguy hiểm',
-    labelShort: 'Nguy hiểm',
+    key: 'dangerous',
     bgColor: 'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-900/40',
     bgColorActive: 'bg-orange-200 dark:bg-orange-800/50 ring-2 ring-orange-500',
     textColor: 'text-orange-700 dark:text-orange-300',
@@ -60,8 +57,7 @@ const STATUS_CARDS: {
   },
   {
     status: 'CLOSED',
-    label: 'Đóng',
-    labelShort: 'Đóng',
+    key: 'closed',
     bgColor: 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40',
     bgColorActive: 'bg-red-200 dark:bg-red-800/50 ring-2 ring-red-500',
     textColor: 'text-red-700 dark:text-red-300',
@@ -70,24 +66,6 @@ const STATUS_CARDS: {
   }
 ]
 
-// Format relative time
-function formatLastUpdate(dateString?: string): string {
-  if (!dateString) return 'Đang cập nhật...'
-
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMinutes = Math.floor(diffMs / 60000)
-
-  if (diffMinutes < 1) return 'vừa xong'
-  if (diffMinutes < 60) return `${diffMinutes}p trước`
-
-  const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours}h trước`
-
-  return date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'short' })
-}
-
 export default function RouteSummaryBar({
   summary,
   isLoading,
@@ -95,6 +73,8 @@ export default function RouteSummaryBar({
   activeStatus,
   onRefresh
 }: RouteSummaryBarProps) {
+  const t = useTranslations('routeSummary')
+
   const handleStatusClick = (status: RouteStatus) => {
     if (!onStatusClick) return
 
@@ -106,6 +86,24 @@ export default function RouteSummaryBar({
     }
   }
 
+  // Format relative time with translations
+  const formatLastUpdate = (dateString?: string): string => {
+    if (!dateString) return t('updating')
+
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMinutes = Math.floor(diffMs / 60000)
+
+    if (diffMinutes < 1) return t('justNow')
+    if (diffMinutes < 60) return t('minutesAgo', { count: diffMinutes })
+
+    const diffHours = Math.floor(diffMinutes / 60)
+    if (diffHours < 24) return t('hoursAgo', { count: diffHours })
+
+    return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  }
+
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
       {/* Header */}
@@ -113,14 +111,14 @@ export default function RouteSummaryBar({
         <div className="flex items-center gap-2">
           <Route className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
           <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide">
-            Tình trạng đường bộ
+            {t('title')}
           </h2>
         </div>
 
         <div className="flex items-center gap-3">
           {/* Last Updated */}
           <span className="text-xs text-neutral-500 dark:text-neutral-500">
-            Cập nhật: {formatLastUpdate(summary?.last_updated)}
+            {t('updated')}: {formatLastUpdate(summary?.last_updated)}
           </span>
 
           {/* Refresh Button */}
@@ -129,7 +127,7 @@ export default function RouteSummaryBar({
               onClick={onRefresh}
               disabled={isLoading}
               className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
-              title="Làm mới dữ liệu"
+              title={t('refresh')}
             >
               <RefreshCw className={`w-4 h-4 text-neutral-500 dark:text-neutral-400 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -170,8 +168,8 @@ export default function RouteSummaryBar({
 
                 {/* Label */}
                 <span className={`text-xs font-medium ${card.textColor} opacity-80`}>
-                  <span className="hidden sm:inline">{card.label}</span>
-                  <span className="sm:hidden">{card.labelShort}</span>
+                  <span className="hidden sm:inline">{t(`status.${card.key}`)}</span>
+                  <span className="sm:hidden">{t(`status.${card.key}Short`)}</span>
                 </span>
 
                 {/* Active indicator */}
@@ -191,13 +189,13 @@ export default function RouteSummaryBar({
         {/* Total Count */}
         <div className="mt-3 flex items-center justify-center gap-2 py-2 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl">
           <span className="text-sm text-neutral-600 dark:text-neutral-400">
-            Tổng cộng:
+            {t('total')}:
           </span>
           <span className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
             {isLoading ? '...' : (summary?.total ?? 0)}
           </span>
           <span className="text-sm text-neutral-500 dark:text-neutral-500">
-            tuyến đường
+            {t('routes')}
           </span>
 
           {/* Clear filter button */}
@@ -206,7 +204,7 @@ export default function RouteSummaryBar({
               onClick={() => onStatusClick(null)}
               className="ml-3 px-2 py-1 text-xs bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-600 dark:text-neutral-300 rounded-lg transition-colors"
             >
-              Xóa lọc
+              {t('clearFilter')}
             </button>
           )}
         </div>

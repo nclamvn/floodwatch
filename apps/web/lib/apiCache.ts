@@ -2,7 +2,7 @@
  * Generic API Response Cache
  *
  * Caches API fetch responses with configurable TTL (default: 60 seconds)
- * Used by data hooks (useHazards, useTraffic, useAIForecasts, useDistress)
+ * Used by data hooks (useHazards, useTraffic, useDistress)
  *
  * Key features:
  * - URL-based cache key

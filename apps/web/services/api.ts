@@ -3,7 +3,8 @@
  * Centralized API configuration and fetch utilities
  */
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+// Fallback to production API if env not set (for local development)
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
 
 export interface ApiResponse<T> {
   data: T

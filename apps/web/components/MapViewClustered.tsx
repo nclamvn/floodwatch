@@ -10,14 +10,12 @@ import UserLocationMarker from './UserLocationMarker'
 import OptimizedHazardLayer from './OptimizedHazardLayer'
 import DistressLayer from './DistressLayer'
 import TrafficLayer from './TrafficLayer'
-import OptimizedAIForecastLayer from './OptimizedAIForecastLayer'
 import LayerControlPanel, { LayerVisibility } from './LayerControlPanel'
 import { MapControlsGroup } from './MapControlsGroup'
 import { MobileMapControls } from './MobileMapControls'
 import { WindyModal } from './WindyModal'
-import MobilePinPopup from './MobilePinPopup'
+// MobilePinPopup is now rendered in page.tsx for proper z-index stacking
 import { useHazards } from '@/hooks/useHazards'
-import { useAIForecasts } from '@/hooks/useAIForecasts'
 
 interface Report {
   id: string
@@ -44,6 +42,9 @@ interface MapViewProps {
   onExpandArticle?: (report: Report) => void
   onLegendClick?: () => void
   legendActive?: boolean
+  // New: Callback for mobile pin popup - lifted to page.tsx level for proper z-index
+  onMobilePinSelect?: (report: Report | null) => void
+  selectedMobileReport?: Report | null
 }
 
 // Helper function to truncate description for popup preview
@@ -165,7 +166,7 @@ const PinMarker = memo(function PinMarker({
   )
 })
 
-export default function MapViewClustered({ reports, radiusFilter, targetViewport, onViewportChange, onMapClick, onClearRadius, onExpandArticle, onLegendClick, legendActive }: MapViewProps) {
+export default function MapViewClustered({ reports, radiusFilter, targetViewport, onViewportChange, onMapClick, onClearRadius, onExpandArticle, onLegendClick, legendActive, onMobilePinSelect, selectedMobileReport }: MapViewProps) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [viewState, setViewState] = useState({
     longitude: 106.0,  // Toàn Việt Nam
@@ -181,7 +182,6 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
   const [baseMapStyle, setBaseMapStyle] = useState<BaseMapStyleId>('streets')
   const [windyModalOpen, setWindyModalOpen] = useState(false)
   const [layerControlOpen, setLayerControlOpen] = useState(false)
-  const [aiForecastOpen, setAiForecastOpen] = useState(true)
   const [isDesktop, setIsDesktop] = useState(false)
 
   // Detect desktop/mobile for zoom controls (debounced)
@@ -205,7 +205,6 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
   // Layer visibility state - all enabled by default
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
     reports: true,
-    aiForecast: true,
     heavyRain: true,
     flood: true,
     landslide: true,
@@ -279,29 +278,6 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       return true
     })
   }, [allHazards, layerVisibility])
-
-  // Fetch AI forecasts using effective location (default or GPS)
-  const { forecasts: aiForecasts, isLoading: forecastsLoading } = useAIForecasts({
-    lat: effectiveLocation.latitude,
-    lng: effectiveLocation.longitude,
-    radius_km: 100, // Larger radius for default center
-    min_confidence: 0.6,
-    active_only: true,
-    refreshInterval: 300000, // Refresh every 5 minutes (forecasts change slower)
-  })
-
-  // Debug logging for AI forecasts (only in development)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🗺️ AI Forecasts Status:', {
-        userLocation: userLocation ? `${userLocation.latitude}, ${userLocation.longitude}` : 'NOT SET',
-        forecastCount: aiForecasts.length,
-        isLoading: forecastsLoading,
-        toggleState: aiForecastOpen,
-        message: !userLocation ? '⚠️ Need to click "Locate Me" button' : aiForecasts.length === 0 ? '⚠️ No forecasts in database' : '✅ Forecasts available'
-      })
-    }
-  }, [userLocation, aiForecasts, forecastsLoading, aiForecastOpen])
 
   // Update last data update timestamp when hazards change
   useEffect(() => {
@@ -552,11 +528,15 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
         previousViewStateRef.current = null
       }
       setSelectedReport(null)
+      // Also notify parent for mobile popup (lifted state)
+      onMobilePinSelect?.(null)
     } else {
       // First click - show popup
       setSelectedReport(report)
+      // Also notify parent for mobile popup (lifted state)
+      onMobilePinSelect?.(report)
     }
-  }, []) // No dependencies needed - ref doesn't cause re-render
+  }, [onMobilePinSelect]) // Add dependency
 
   // Convert km radius to meters for the circle
   const radiusCircleData = radiusFilter ? {
@@ -595,14 +575,12 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       {/* User location tracking */}
       <UserLocationMarker />
 
-      {/* Map controls group - Desktop only - includes map styles, location, windy, AI forecast, and legend buttons */}
+      {/* Map controls group - Desktop only - includes map styles, location, windy, and legend buttons */}
       <div className="hidden sm:block">
         <MapControlsGroup
           baseMapStyle={baseMapStyle}
           onStyleChange={setBaseMapStyle}
           onWindyClick={() => setWindyModalOpen(true)}
-          onAIForecastClick={() => setAiForecastOpen(!aiForecastOpen)}
-          aiForecastActive={aiForecastOpen}
           onLegendClick={() => onLegendClick?.()}
           legendActive={legendActive}
           onLocationClick={handleLocationClick}
@@ -613,8 +591,6 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       <MobileMapControls
         baseMapStyle={baseMapStyle}
         onStyleChange={setBaseMapStyle}
-        onAIForecastClick={() => setAiForecastOpen(!aiForecastOpen)}
-        aiForecastActive={aiForecastOpen}
         onLegendClick={() => onLegendClick?.()}
         legendActive={legendActive}
         onLocationClick={handleLocationClick}
@@ -624,12 +600,6 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       <OptimizedHazardLayer
         hazards={hazards}
         visible={layerVisibility.heavyRain || layerVisibility.flood || layerVisibility.landslide || layerVisibility.damRelease || layerVisibility.storm || layerVisibility.tideSurge}
-      />
-
-      {/* AI Forecast Layer - Optimized Symbol Layer */}
-      <OptimizedAIForecastLayer
-        forecasts={aiForecasts}
-        visible={aiForecastOpen}
       />
 
       {/* Emergency distress reports */}
@@ -892,14 +862,8 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
       initialZoom={viewState.zoom}
     />
 
-    {/* Mobile Pin Popup - Fixed position at center X, 2/3 Y */}
-    {!isDesktop && (
-      <MobilePinPopup
-        report={selectedReport}
-        onClose={() => setSelectedReport(null)}
-        onExpand={onExpandArticle}
-      />
-    )}
+    {/* Mobile Pin Popup is now rendered in page.tsx for proper z-index stacking */}
+    {/* The popup state is lifted to parent via onMobilePinSelect callback */}
   </>
   )
 }

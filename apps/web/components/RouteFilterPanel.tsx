@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Filter, ChevronDown, X, MapPin, Clock, ArrowUpDown, Zap } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { RouteStatus } from './RouteCard'
 
 export interface RouteFilters {
@@ -21,8 +22,9 @@ interface RouteFilterPanelProps {
 }
 
 // Vietnamese provinces (Central region focus + major cities)
+// First item is 'all' (key for translation), rest are province names
 const DEFAULT_PROVINCES = [
-  'Tất cả',
+  'all',
   'Quảng Bình',
   'Quảng Trị',
   'Thừa Thiên Huế',
@@ -40,39 +42,22 @@ const DEFAULT_PROVINCES = [
   'Cần Thơ'
 ]
 
-// Status options for multi-select
-const STATUS_OPTIONS: { value: RouteStatus; label: string; color: string }[] = [
-  { value: 'OPEN', label: 'Thông thoáng', color: 'bg-emerald-500' },
-  { value: 'LIMITED', label: 'Hạn chế', color: 'bg-amber-500' },
-  { value: 'DANGEROUS', label: 'Nguy hiểm', color: 'bg-orange-500' },
-  { value: 'CLOSED', label: 'Đóng', color: 'bg-red-500' }
+// Status options for multi-select (keys for translations)
+const STATUS_OPTIONS: { value: RouteStatus; key: string; color: string }[] = [
+  { value: 'OPEN', key: 'open', color: 'bg-emerald-500' },
+  { value: 'LIMITED', key: 'limited', color: 'bg-amber-500' },
+  { value: 'DANGEROUS', key: 'dangerous', color: 'bg-orange-500' },
+  { value: 'CLOSED', key: 'closed', color: 'bg-red-500' }
 ]
 
-// Hazard type options
-const HAZARD_OPTIONS = [
-  { value: '', label: 'Tất cả' },
-  { value: 'flood', label: 'Ngập lụt' },
-  { value: 'storm', label: 'Bão' },
-  { value: 'landslide', label: 'Sạt lở' },
-  { value: 'other', label: 'Khác' }
-]
+// Hazard type options (keys for translations)
+const HAZARD_OPTIONS = ['', 'flood', 'storm', 'landslide', 'other']
 
-// Time range options
-const TIME_OPTIONS = [
-  { value: '', label: 'Tất cả' },
-  { value: '6h', label: '6 giờ qua' },
-  { value: '12h', label: '12 giờ qua' },
-  { value: '24h', label: '24 giờ qua' },
-  { value: '48h', label: '48 giờ qua' },
-  { value: '7d', label: '7 ngày qua' }
-]
+// Time range options (keys for translations)
+const TIME_OPTIONS = ['', '6h', '12h', '24h', '48h', '7d']
 
-// Sort options
-const SORT_OPTIONS: { value: RouteFilters['sortBy']; label: string }[] = [
-  { value: 'risk_score', label: 'Mức độ rủi ro' },
-  { value: 'created_at', label: 'Mới nhất' },
-  { value: 'status', label: 'Trạng thái' }
-]
+// Sort options (keys for translations)
+const SORT_OPTIONS: RouteFilters['sortBy'][] = ['risk_score', 'created_at', 'status']
 
 export default function RouteFilterPanel({
   filters,
@@ -81,11 +66,12 @@ export default function RouteFilterPanel({
   isCollapsible = true,
   defaultExpanded = true
 }: RouteFilterPanelProps) {
+  const t = useTranslations('routeFilter')
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
 
   // Count active filters
   const activeFilterCount = [
-    filters.province !== 'Tất cả' && filters.province !== '',
+    filters.province !== 'all' && filters.province !== '',
     filters.status.length > 0 && filters.status.length < 4,
     filters.hazardType !== '',
     filters.timeRange !== ''
@@ -109,13 +95,16 @@ export default function RouteFilterPanel({
   // Clear all filters
   const clearFilters = () => {
     onChange({
-      province: 'Tất cả',
+      province: 'all',
       status: [],
       hazardType: '',
       timeRange: '',
       sortBy: 'risk_score'
     })
   }
+
+  // Helper to get province display name
+  const getProvinceLabel = (p: string) => p === 'all' ? t('all') : p
 
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
@@ -130,7 +119,7 @@ export default function RouteFilterPanel({
         <div className="flex items-center gap-2">
           <Filter className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
           <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide">
-            Bộ lọc
+            {t('title')}
           </span>
 
           {/* Active filter badge */}
@@ -151,7 +140,7 @@ export default function RouteFilterPanel({
               }}
               className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
             >
-              Xóa lọc
+              {t('clear')}
             </button>
           )}
 
@@ -174,7 +163,7 @@ export default function RouteFilterPanel({
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
                 <MapPin className="w-3.5 h-3.5" />
-                Tỉnh/Thành phố
+                {t('province')}
               </label>
               <select
                 value={filters.province}
@@ -182,7 +171,7 @@ export default function RouteFilterPanel({
                 className="w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 {provinces.map(p => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>{getProvinceLabel(p)}</option>
                 ))}
               </select>
             </div>
@@ -191,7 +180,7 @@ export default function RouteFilterPanel({
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
                 <Clock className="w-3.5 h-3.5" />
-                Thời gian
+                {t('timeRange')}
               </label>
               <select
                 value={filters.timeRange}
@@ -199,7 +188,7 @@ export default function RouteFilterPanel({
                 className="w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 {TIME_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt} value={opt}>{opt === '' ? t('all') : t(`timeOptions.${opt}`)}</option>
                 ))}
               </select>
             </div>
@@ -208,7 +197,7 @@ export default function RouteFilterPanel({
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
                 <Zap className="w-3.5 h-3.5" />
-                Loại thiên tai
+                {t('hazardType')}
               </label>
               <select
                 value={filters.hazardType}
@@ -216,7 +205,7 @@ export default function RouteFilterPanel({
                 className="w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 {HAZARD_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt} value={opt}>{opt === '' ? t('all') : t(`hazardOptions.${opt}`)}</option>
                 ))}
               </select>
             </div>
@@ -225,7 +214,7 @@ export default function RouteFilterPanel({
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
                 <ArrowUpDown className="w-3.5 h-3.5" />
-                Sắp xếp
+                {t('sortBy')}
               </label>
               <select
                 value={filters.sortBy}
@@ -233,7 +222,7 @@ export default function RouteFilterPanel({
                 className="w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 {SORT_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt} value={opt}>{t(`sortOptions.${opt}`)}</option>
                 ))}
               </select>
             </div>
@@ -242,7 +231,7 @@ export default function RouteFilterPanel({
           {/* Status Multi-Select (below the grid) */}
           <div className="mt-4">
             <label className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-2">
-              Trạng thái (chọn nhiều)
+              {t('status')}
             </label>
             <div className="flex flex-wrap gap-2">
               {STATUS_OPTIONS.map(opt => {
@@ -260,7 +249,7 @@ export default function RouteFilterPanel({
                     `}
                   >
                     <span className={`w-2.5 h-2.5 rounded-full ${opt.color}`} />
-                    {opt.label}
+                    {t(`statusOptions.${opt.key}`)}
                     {isSelected && <X className="w-3.5 h-3.5" />}
                   </button>
                 )

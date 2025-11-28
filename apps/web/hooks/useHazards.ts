@@ -83,7 +83,7 @@ export function useHazards(options: UseHazardsOptions = {}): UseHazardsReturn {
       params.append('limit', '100') // Fetch up to 100 hazards
 
       // Get API URL from env
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
       const url = `${apiUrl}/hazards?${params.toString()}`
 
       // Check cache first (unless force refresh)

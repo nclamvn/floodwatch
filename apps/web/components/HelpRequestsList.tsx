@@ -81,7 +81,7 @@ export default function HelpRequestsList() {
         // Fetch maximum allowed by API (200 items)
         params.append('limit', '200')
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
         const response = await fetch(`${apiUrl}/help/requests?${params.toString()}`)
 
         if (!response.ok) {

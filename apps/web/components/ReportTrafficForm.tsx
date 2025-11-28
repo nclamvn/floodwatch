@@ -62,7 +62,7 @@ export default function ReportTrafficForm({ isOpen, onClose, onSuccess }: Report
     setSuccess(null)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
       const response = await fetch(`${apiUrl}/traffic/disruptions`, {
         method: 'POST',
         headers: {

@@ -1,0 +1,73 @@
+version: 2
+updates:
+  # Web app (Next.js)
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      next-ecosystem:
+        patterns:
+          - "next"
+          - "next-*"
+          - "@next/*"
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-*"
+          - "@types/react*"
+      testing:
+        patterns:
+          - "jest"
+          - "@testing-library/*"
+          - "cypress"
+          - "@types/jest"
+      linting:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+    labels:
+      - "dependencies"
+      - "web"
+
+  # API (Python)
+  - package-ecosystem: "pip"
+    directory: "/apps/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      fastapi:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "starlette"
+          - "pydantic"
+      database:
+        patterns:
+          - "sqlalchemy"
+          - "psycopg*"
+          - "asyncpg"
+          - "alembic"
+      testing:
+        patterns:
+          - "pytest"
+          - "pytest-*"
+    labels:
+      - "dependencies"
+      - "api"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"

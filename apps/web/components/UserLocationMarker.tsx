@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react'
 import { Source, Layer, Marker } from 'react-map-gl/maplibre'
 import { useLocation } from '@/contexts/LocationContext'
+import { useTranslations } from 'next-intl'
 
 /**
  * Generate a GeoJSON circle polygon for a given center and radius
@@ -37,6 +38,7 @@ function createCircleGeoJSON(
 
 export default function UserLocationMarker() {
   const { userLocation, alertRadius } = useLocation()
+  const t = useTranslations('map')
 
   // Generate circle GeoJSON
   const circleGeoJSON = useMemo(() => {
@@ -156,7 +158,7 @@ export default function UserLocationMarker() {
             whitespace-nowrap
           "
         >
-          Vùng cảnh báo: {alertRadius} km
+          {t('controls.alertRadius', { radius: alertRadius })}
         </div>
       </Marker>
     </>

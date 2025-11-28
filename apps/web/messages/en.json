@@ -1,0 +1,701 @@
+{
+  "metadata": {
+    "title": "Vietnam Flood Watch - thongtinmualu.live",
+    "description": "Real-time flood monitoring and warning system in Vietnam. Updates on flooding, landslides, and safe routes."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "submit": "Submit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "home": "Home",
+    "map": "Map",
+    "help": "Rescue Connection",
+    "report": "Report",
+    "routes": "Routes",
+    "admin": "Admin"
+  },
+  "home": {
+    "title": "Flood Watch",
+    "subtitle": "Real-time Monitoring System",
+    "tagline": "Flood warnings from meteorological services and community. Traffic updates. Rescue connections.",
+    "enterMap": "Enter Map",
+    "cards": {
+      "map": {
+        "title": "Map",
+        "description": "Track floods and danger warnings on a real-time map",
+        "action": "View Map"
+      },
+      "routes": {
+        "title": "Routes",
+        "description": "Find safe routes, avoid flooded and landslide areas",
+        "action": "Find Routes"
+      },
+      "rescue": {
+        "title": "Rescue",
+        "description": "Connect people in need with rescue teams and volunteers",
+        "action": "Connect"
+      }
+    },
+    "features": {
+      "realtime": "Real-time Alerts",
+      "realtimeDesc": "Receive continuous updates from meteorological services",
+      "location": "Precise Location",
+      "locationDesc": "High-accuracy real-time position tracking",
+      "community": "Community",
+      "communityDesc": "Connect with locals sharing information"
+    }
+  },
+  "newsTicker": {
+    "hotNews": "Breaking",
+    "listenVoice": "Listen to AI voice news",
+    "justNow": "just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago"
+  },
+  "map": {
+    "title": "Disaster Map",
+    "loadingMap": "Loading map...",
+    "legend": "Legend",
+    "layers": {
+      "flood": "Flood",
+      "landslide": "Landslide",
+      "rain": "Heavy Rain",
+      "traffic": "Traffic",
+      "dam": "Dam Release",
+      "storm": "Storm",
+      "tide": "High Tide",
+      "rescue": "Rescue"
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "sources": {
+      "government": "Government",
+      "news": "News Media",
+      "community": "Community"
+    },
+    "controls": {
+      "locate": "My Location",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "layers": "Map Layers",
+      "style": "Map Style",
+      "alertRadius": "Alert zone: {radius} km"
+    },
+    "sidebar": {
+      "title": "News Feed",
+      "latestNews": "Latest News",
+      "reports": "reports",
+      "noData": "No data available",
+      "close": "Close",
+      "collapse": "Collapse sidebar",
+      "expand": "Open news feed",
+      "unknown": "Unknown"
+    },
+    "buttons": {
+      "rescue": "Rescue",
+      "routes": "Routes",
+      "weather": "Weather",
+      "news": "News",
+      "backHome": "Back to home"
+    },
+    "filters": {
+      "interest": "Interest",
+      "alert": "Alert",
+      "sos": "SOS",
+      "road": "Road",
+      "needs": "Supplies",
+      "province": "Province"
+    }
+  },
+  "help": {
+    "title": "Rescue Connection",
+    "needHelp": "I Need Help",
+    "canHelp": "I Can Help",
+    "rescueMap": "Rescue Map",
+    "needHelpShort": "Need Help",
+    "canHelpShort": "Can Help",
+    "rescueMapShort": "Map",
+    "helpMe": "Help Me",
+    "iHelp": "I Help",
+    "mobileSlogan": "Together We Stand",
+    "slogan": {
+      "needHelp": "Together We Stand",
+      "canHelp": "United We Help",
+      "rescueMap": "Compassion Connects Us"
+    },
+    "form": {
+      "name": "Full Name",
+      "phone": "Phone Number",
+      "location": "Location",
+      "description": "Detailed Description",
+      "urgency": "Urgency Level",
+      "peopleCount": "Number of People",
+      "hasChildren": "Has Children",
+      "hasElderly": "Has Elderly",
+      "hasDisabilities": "Has Disabled",
+      "needsType": "Type of Need",
+      "serviceType": "Service Type"
+    },
+    "needsTypes": {
+      "food": "Food",
+      "water": "Water",
+      "shelter": "Shelter",
+      "medical": "Medical",
+      "clothing": "Clothing",
+      "transport": "Transport",
+      "other": "Other"
+    },
+    "serviceTypes": {
+      "rescue": "Rescue",
+      "transportation": "Transportation",
+      "medical": "Medical",
+      "shelter": "Shelter",
+      "foodWater": "Food/Water",
+      "supplies": "Supplies",
+      "volunteer": "Volunteer",
+      "donation": "Donation",
+      "other": "Other"
+    },
+    "urgencyLevels": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    }
+  },
+  "report": {
+    "title": "Community Report",
+    "distress": "Report Emergency",
+    "traffic": "Report Traffic",
+    "success": "Report submitted successfully! Redirecting to map...",
+    "sending": "Sending...",
+    "submit": "Submit Report",
+    "submitted": "Successfully submitted!",
+    "backToMap": "Map",
+    "importantNote": "Important Note",
+    "geoError": "Cannot get location",
+    "browserNotSupported": "Browser does not support geolocation",
+    "gettingLocation": "Getting location...",
+    "getLocation": "Get Current Location (GPS)",
+    "hasLocation": "Location obtained",
+    "form": {
+      "type": "Report Type",
+      "description": "Detailed Description",
+      "descriptionPlaceholder": "Example: Family of 5 isolated in neighborhood 3, needs food and water...",
+      "descriptionHint": "More details help rescue teams respond faster",
+      "location": "Location",
+      "province": "Province",
+      "district": "District",
+      "ward": "Ward/Commune",
+      "selectProvince": "Select province",
+      "districtPlaceholder": "e.g., Phu Vang",
+      "wardPlaceholder": "e.g., Phu Thuan",
+      "media": "Evidence Photos (optional)",
+      "mediaHint": "Photos help verify the situation faster. Max 3 photos, 5MB each."
+    },
+    "types": {
+      "sos": "SOS - Emergency rescue needed",
+      "road": "Road - Landslide, flooding, blocked",
+      "needs": "Supplies - Need food, water, medicine"
+    },
+    "validation": {
+      "descriptionRequired": "Please enter a description",
+      "provinceRequired": "Please select a province",
+      "locationRequired": "Please provide location (tap \"Get Current Location\")"
+    },
+    "warnings": {
+      "realEmergency": "Only report real, urgent situations",
+      "accurate": "Provide accurate information to help rescue teams respond quickly",
+      "callFirst": "If situation is dangerous, call 113/114 before reporting"
+    }
+  },
+  "routes": {
+    "title": "Safe Routes",
+    "subtitle": "Real-time traffic status updates",
+    "loading": "Loading data...",
+    "updating": "Updating...",
+    "importantNote": "Important Note",
+    "viewMap": "View Map",
+    "backHome": "Back to home",
+    "searchPlaceholder": "Search by road name, province, district...",
+    "clear": "Clear",
+    "clearAll": "Clear all filters",
+    "routeCount": "{count} routes",
+    "searchFor": "search: \"{query}\"",
+    "noRouteFound": "No routes found",
+    "stableTraffic": "Traffic situation is stable",
+    "noResultsFor": "No results for \"{query}\". Try a different search or clear filters.",
+    "noWarnings": "No verified road warnings in the past 3 days. The system only displays verified information to ensure reliability.",
+    "warnings": {
+      "unverified": "Some reports are unverified: Cards with yellow background need additional confirmation",
+      "recent": "Only showing reports from past 3 days: Older reports may no longer be accurate",
+      "call": "REQUIRED to call 113/114 to confirm actual conditions before traveling to dangerous areas"
+    },
+    "status": {
+      "open": "Open",
+      "slow": "Slow",
+      "blocked": "Blocked",
+      "closed": "Closed"
+    }
+  },
+  "routeSummary": {
+    "title": "Road Status",
+    "updating": "Updating...",
+    "updated": "Updated",
+    "justNow": "just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "refresh": "Refresh data",
+    "total": "Total",
+    "routes": "routes",
+    "clearFilter": "Clear filter",
+    "status": {
+      "open": "Clear",
+      "openShort": "Clear",
+      "limited": "Limited",
+      "limitedShort": "Limited",
+      "dangerous": "Dangerous",
+      "dangerousShort": "Danger",
+      "closed": "Closed",
+      "closedShort": "Closed"
+    }
+  },
+  "routeFilter": {
+    "title": "Filters",
+    "filters": "filters",
+    "clear": "Clear",
+    "all": "All",
+    "province": "Province",
+    "status": "Status",
+    "hazardType": "Hazard Type",
+    "timeRange": "Time Range",
+    "sortBy": "Sort by",
+    "statusOptions": {
+      "open": "Clear",
+      "limited": "Limited",
+      "dangerous": "Dangerous",
+      "closed": "Closed"
+    },
+    "hazardOptions": {
+      "flood": "Flooding",
+      "storm": "Storm",
+      "landslide": "Landslide",
+      "other": "Other"
+    },
+    "timeOptions": {
+      "6h": "Last 6 hours",
+      "12h": "Last 12 hours",
+      "24h": "Last 24 hours",
+      "48h": "Last 48 hours",
+      "7d": "Last 7 days"
+    },
+    "sortOptions": {
+      "risk_score": "Risk level",
+      "created_at": "Newest",
+      "status": "Status"
+    }
+  },
+  "news": {
+    "breaking": "Breaking News",
+    "aiBulletin": "AI Voice Bulletin",
+    "listen": "Listen",
+    "pause": "Pause",
+    "priority": {
+      "critical": "CRITICAL",
+      "high": "IMPORTANT",
+      "medium": "WARNING",
+      "low": "NORMAL"
+    }
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{count} min ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
+  },
+  "errors": {
+    "locationError": "Unknown error getting location",
+    "audioError": "Audio playback error",
+    "serverError": "Server connection error",
+    "networkError": "Network error",
+    "unknownError": "Unknown error"
+  },
+  "storm": {
+    "button": "Storm No. 15",
+    "info": "Storm No. 15 Information"
+  },
+  "hotlines": {
+    "title": "Emergency Hotlines",
+    "sos": {
+      "label": "SOS",
+      "description": "Call first priority"
+    },
+    "police": {
+      "label": "Police",
+      "description": "Police & rescue"
+    },
+    "fire": {
+      "label": "Fire",
+      "description": "Fire & rescue"
+    },
+    "emergency": {
+      "label": "Emergency",
+      "description": "Medical emergency"
+    },
+    "rescue": {
+      "label": "Rescue",
+      "description": "National rescue"
+    },
+    "army": {
+      "label": "Military",
+      "description": "Military rescue"
+    },
+    "power": {
+      "label": "Power",
+      "description": "Power outage"
+    },
+    "redCross": {
+      "label": "Red Cross",
+      "description": "Vietnam Red Cross"
+    }
+  },
+  "audio": {
+    "loading": "Loading...",
+    "listenNews": "Listen to latest news",
+    "playing": "Playing",
+    "paused": "Paused"
+  },
+  "routeCard": {
+    "status": {
+      "open": "Open",
+      "openShort": "Open",
+      "limited": "Limited",
+      "limitedShort": "Limited",
+      "dangerous": "Dangerous",
+      "dangerousShort": "Danger",
+      "closed": "Closed",
+      "closedShort": "Closed"
+    },
+    "resolved": "Resolved",
+    "showMore": "Show {days} more days",
+    "directions": "Directions",
+    "viewDetail": "View details",
+    "noGps": "No GPS location",
+    "risk": "Risk",
+    "source": "Source",
+    "noSourceWarning": "No verified source - Call 113/114 to confirm",
+    "timeAgo": {
+      "justNow": "just now",
+      "minutes": "{count} min ago",
+      "hours": "{count}h ago",
+      "days": "{count}d ago"
+    }
+  },
+  "routeFilter": {
+    "title": "Filters",
+    "clearFilters": "Clear filters",
+    "province": "Province/City",
+    "allProvinces": "All",
+    "status": "Status",
+    "hazardType": "Hazard Type",
+    "allTypes": "All",
+    "flood": "Flood",
+    "landslide": "Landslide",
+    "roadDamage": "Road Damage",
+    "bridge": "Bridge Collapse",
+    "time": "Time",
+    "24h": "24 hours",
+    "3days": "3 days",
+    "7days": "7 days",
+    "all": "All",
+    "sortBy": "Sort by",
+    "sortRisk": "Risk level",
+    "sortTime": "Latest",
+    "sortStatus": "Status"
+  },
+  "helpForm": {
+    "requestTitle": "Request Rescue",
+    "requestSubtitle": "Fill in below for rescue teams to reach you quickly",
+    "offerTitle": "Offer Help",
+    "offerSubtitle": "Register to help rescue teams or those in need",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
+    "phone": "Phone Number",
+    "phonePlaceholder": "Enter contact number",
+    "location": "Location",
+    "locationPlaceholder": "Neighborhood/village, ward/commune, district, province",
+    "getLocation": "Get GPS",
+    "gettingLocation": "Getting...",
+    "gotLocation": "Got location",
+    "helpType": "Type of Help Needed",
+    "selectHelpType": "Select type of help",
+    "urgency": "Urgency Level",
+    "selectUrgency": "Select urgency",
+    "peopleCount": "Number of People",
+    "description": "Detailed Description",
+    "descriptionPlaceholder": "Describe situation, special needs (elderly, children, illness...)",
+    "images": "Attach Photos",
+    "imagesHint": "Max 3 photos to help verify",
+    "submit": "Send Request",
+    "submitting": "Sending...",
+    "success": "Request sent successfully!",
+    "successDetail": "Rescue teams will contact you soon. Stay calm!",
+    "error": "Send failed",
+    "validation": {
+      "nameRequired": "Please enter name",
+      "phoneRequired": "Please enter phone",
+      "phoneInvalid": "Invalid phone number",
+      "locationRequired": "Please enter location",
+      "helpTypeRequired": "Please select help type",
+      "urgencyRequired": "Please select urgency",
+      "descriptionMinLength": "Description must be at least 10 characters",
+      "descriptionHint": "Describe your situation in detail for faster help",
+      "availabilityRequired": "Please enter your availability"
+    },
+    "helpTypes": {
+      "rescue": "Emergency Rescue",
+      "rescueDesc": "Stranded, isolated, life-threatening",
+      "food": "Food/Water",
+      "foodDesc": "Lack of food, clean water",
+      "medical": "Medical Help",
+      "medicalDesc": "Injury, illness, need medicine",
+      "shelter": "Shelter",
+      "shelterDesc": "Need safe place to stay",
+      "transport": "Transportation",
+      "transportDesc": "Need vehicle to evacuate",
+      "other": "Other",
+      "otherDesc": "Other needs"
+    },
+    "urgencyLevels": {
+      "critical": "Critical",
+      "criticalDesc": "Life-threatening, immediate help needed",
+      "high": "High",
+      "highDesc": "Urgent, need help within hours",
+      "medium": "Medium",
+      "mediumDesc": "Need help within 1-2 days",
+      "low": "Low",
+      "lowDesc": "Can wait several days"
+    },
+    "serviceTypes": {
+      "boat": "Rescue Boat",
+      "boatDesc": "Have boat to rescue in flooded areas",
+      "vehicle": "Vehicle",
+      "vehicleDesc": "Have car/truck for transport",
+      "shelter": "Shelter",
+      "shelterDesc": "Can provide shelter",
+      "supplies": "Supplies",
+      "suppliesDesc": "Can provide food, water, necessities",
+      "medical": "Medical",
+      "medicalDesc": "Medical personnel or supplies",
+      "volunteer": "Volunteer",
+      "volunteerDesc": "Available for rescue activities",
+      "donation": "Donation",
+      "donationDesc": "Cash donation to help",
+      "other": "Other",
+      "otherDesc": "Other help"
+    },
+    "serviceType": "Service Type",
+    "selectServiceType": "Select service type",
+    "vehicleInfo": "Vehicle Information",
+    "vehicleType": "Vehicle Type",
+    "selectVehicle": "Select vehicle type",
+    "vehicleCapacity": "Capacity (people)",
+    "availableFrom": "Available From",
+    "availableTo": "Available To",
+    "vehicles": {
+      "boat": "Boat",
+      "car": "Car",
+      "truck": "Truck",
+      "motorcycle": "Motorcycle",
+      "other": "Other"
+    },
+    "offerSuccess": "Thank you! Your offer has been registered.",
+    "offerSuccessDetail": "We'll contact you when help is needed.",
+    "offerSubmit": "Register to Help"
+  },
+  "rescueMap": {
+    "title": "Rescue Map",
+    "requests": "Requests",
+    "offers": "Offers",
+    "loading": "Loading map...",
+    "filters": "Filters",
+    "showAll": "Show All",
+    "critical": "Critical",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "reset": "Reset",
+    "resetView": "Reset to overview",
+    "myLocation": "My Location",
+    "location": "Location",
+    "filter": "Filter",
+    "filterTitle": "Filters",
+    "requestsLabel": "requests",
+    "offersLabel": "offers"
+  },
+  "rescueFilter": {
+    "title": "Filters",
+    "reset": "Reset",
+    "close": "Close",
+    "resetFilters": "Reset filters",
+    "search": "Search",
+    "searchPlaceholder": "Name, location, phone...",
+    "radius": "Radius",
+    "verifiedOnly": "Show verified only",
+    "requestsSection": "Rescue Requests",
+    "offersSection": "Help Offers",
+    "showRequests": "Show requests",
+    "showOffers": "Show offers",
+    "urgencyLevel": "Urgency Level",
+    "needsType": "Needs Type",
+    "serviceType": "Service Type",
+    "status": "Status",
+    "minCapacity": "Min Capacity",
+    "capacityPlaceholder": "People",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "results": "Results",
+    "urgency": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "needs": {
+      "food": "Food",
+      "water": "Water",
+      "shelter": "Shelter",
+      "medical": "Medical",
+      "clothing": "Clothing",
+      "transport": "Transport",
+      "other": "Other"
+    },
+    "services": {
+      "rescue": "Rescue",
+      "transportation": "Transport",
+      "medical": "Medical",
+      "shelter": "Shelter",
+      "food_water": "Food/Water",
+      "supplies": "Supplies",
+      "volunteer": "Volunteer",
+      "donation": "Donation",
+      "other": "Other"
+    },
+    "requestStatus": {
+      "active": "Waiting",
+      "in_progress": "In Progress",
+      "fulfilled": "Fulfilled",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
+    "offerStatus": {
+      "active": "Available",
+      "in_progress": "Helping",
+      "fulfilled": "Done",
+      "cancelled": "Cancelled"
+    }
+  },
+  "mySubmissions": {
+    "title": "My Submissions",
+    "refresh": "Refresh",
+    "myRequests": "Help Requests",
+    "myOffers": "Help Offers",
+    "remove": "Remove from list",
+    "fetchError": "Failed to load"
+  },
+  "pinPopover": {
+    "readyToHelp": "Ready to Help",
+    "needs": "Needs {type}",
+    "people": "people",
+    "details": "Details",
+    "callNow": "Call Now",
+    "timeAgo": {
+      "minutes": "{count} min ago",
+      "hours": "{count}h ago",
+      "days": "{count}d ago"
+    }
+  },
+  "rescueDetail": {
+    "readyToHelp": "Ready to Help",
+    "needs": "Needs {type}",
+    "close": "Close",
+    "description": "Detailed Description",
+    "location": "Location",
+    "coordinates": "Coordinates",
+    "distance": "Distance",
+    "peopleNeedHelp": "People needing help",
+    "capacity": "Capacity",
+    "people": "people",
+    "hasChildren": "Has children",
+    "hasElderly": "Has elderly",
+    "hasDisabilities": "Has disabled",
+    "supportRadius": "Support radius",
+    "availableTime": "Available time",
+    "organization": "Organization",
+    "contactInfo": "Contact Information",
+    "contactPerson": "Contact person",
+    "callNow": "Call now",
+    "directions": "Directions"
+  },
+  "legend": {
+    "title": "Legend",
+    "close": "Close",
+    "severityLevels": "Severity Levels",
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "disasterTypes": "Disaster Types",
+    "types": {
+      "rain": "Heavy Rain",
+      "flood": "Flood",
+      "waterlog": "Waterlogging",
+      "landslide": "Landslide",
+      "dam": "Dam Release",
+      "storm": "Storm",
+      "tide": "High Tide",
+      "traffic": "Traffic",
+      "rescue": "Rescue"
+    },
+    "dataSources": "Data Sources",
+    "sources": {
+      "government": "Government",
+      "governmentDesc": "KTTV, PCTT",
+      "news": "News Media",
+      "newsDesc": "VnExpress, Tuoi Tre",
+      "community": "Community",
+      "communityDesc": "Reports from people"
+    },
+    "lastUpdated": "Updated",
+    "footer": "Flood Information - Lam Nguyen"
+  },
+  "directions": {
+    "title": "Choose Directions App",
+    "googleMaps": "Google Maps",
+    "appleMaps": "Apple Maps",
+    "copy": "Copy Coordinates",
+    "copied": "Copied!",
+    "close": "Close"
+  }
+}

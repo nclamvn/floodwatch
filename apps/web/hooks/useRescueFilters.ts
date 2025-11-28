@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { STORAGE_KEYS } from './usePersistedState'
 
 export interface RescueFilters {
   // Common filters
@@ -37,6 +38,32 @@ export const DEFAULT_FILTERS: RescueFilters = {
 
 export function useRescueFilters() {
   const [filters, setFilters] = useState<RescueFilters>(DEFAULT_FILTERS)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load from localStorage on mount (client-side only)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.RESCUE_FILTERS)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        // Merge with defaults to handle any new keys added since storage
+        setFilters({ ...DEFAULT_FILTERS, ...parsed })
+      }
+    } catch (error) {
+      console.warn('Failed to load rescue filters from localStorage:', error)
+    }
+    setIsHydrated(true)
+  }, [])
+
+  // Save to localStorage when filters change
+  useEffect(() => {
+    if (!isHydrated) return // Don't save during initial hydration
+    try {
+      localStorage.setItem(STORAGE_KEYS.RESCUE_FILTERS, JSON.stringify(filters))
+    } catch (error) {
+      console.warn('Failed to save rescue filters to localStorage:', error)
+    }
+  }, [filters, isHydrated])
 
   // Reset all filters to default
   const resetFilters = useCallback(() => {
@@ -134,5 +161,6 @@ export function useRescueFilters() {
     resetFilters,
     activeFiltersCount,
     getApiFilters,
+    isHydrated, // True when filters have been loaded from localStorage
   }
 }

@@ -214,23 +214,6 @@ html, body {
   border-left-color: rgba(23, 23, 23, 0.95) !important;
 }
 
-/* AI Forecast Popup - Responsive width to prevent text overflow */
-.ai-forecast-popup .maplibregl-popup-content,
-.ai-forecast-popup .mapboxgl-popup-content {
-  min-width: 260px !important;
-  max-width: 280px !important;
-  width: auto !important;
-}
-
-/* Desktop: larger popup */
-@media (min-width: 640px) {
-  .ai-forecast-popup .maplibregl-popup-content,
-  .ai-forecast-popup .mapboxgl-popup-content {
-    min-width: 340px !important;
-    max-width: 400px !important;
-  }
-}
-
 /* ========================================
    Map Controls Positioning (Center)
    ======================================== */

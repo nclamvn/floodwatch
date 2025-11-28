@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useMemo } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { decodeHTML } from '@/lib/htmlDecode'
 import { deduplicateReports } from '@/lib/newsDedup'
 
@@ -19,6 +20,9 @@ interface Report {
   lat?: number
   lon?: number
   media?: string[]
+  // News Quality fields (Phase: News Quality Track)
+  is_deleted?: boolean
+  content_status?: 'full' | 'partial' | 'excerpt' | 'failed'
 }
 
 interface NewsTickerProps {
@@ -31,6 +35,9 @@ interface NewsTickerProps {
 export default function NewsTicker({ reports, onReportClick, onVoiceClick, excludeReportIds = [] }: NewsTickerProps) {
   const tickerRef = useRef<HTMLDivElement>(null)
   const [isPaused, setIsPaused] = useState(false)
+  const locale = useLocale()
+  const t = useTranslations('newsTicker')
+  const isEnglish = locale === 'en'
 
   // Layer 3: Frontend deduplication before filtering
   const dedupedReports = useMemo(() => {
@@ -45,6 +52,15 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
 
   const hotNews = dedupedReports
     .filter(r => {
+      // NEWS QUALITY FILTER: Exclude deleted and failed content
+      if (r.is_deleted) return false
+      if (r.content_status === 'failed') return false
+      // NewsTicker is less strict than carousel - allows excerpt and partial
+      // Require minimum description length (relaxed to 80 chars)
+      if (!r.description || r.description.length < 80) return false
+      // Ticker requires decent trust score (0.6+)
+      if (r.trust_score < 0.6) return false
+
       // TIME FILTER: Only show news from last 36 hours - STRICT
       const reportDate = new Date(r.created_at)
       const ageHours = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60)
@@ -68,13 +84,22 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
       ]
       if (foreignKeywords.some(keyword => textToCheck.includes(keyword))) return false
 
-      // Exclude English-only titles (check if mostly English characters)
+      // Language filter based on locale
       const vietnameseChars = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i
       const hasVietnamese = vietnameseChars.test(r.title)
       const englishWordCount = r.title.split(/\s+/).filter(word => /^[a-zA-Z]+$/.test(word)).length
       const totalWordCount = r.title.split(/\s+/).length
       const isEnglishOnly = !hasVietnamese && englishWordCount > totalWordCount * 0.7
-      if (isEnglishOnly) return false
+
+      // For English locale: prefer English articles (from international sources)
+      // For Vietnamese locale: exclude English-only articles
+      if (isEnglish) {
+        // English locale: show both English and Vietnamese news (prefer English)
+        // Don't filter out based on language
+      } else {
+        // Vietnamese locale: exclude English-only articles
+        if (isEnglishOnly) return false
+      }
 
       // TRAFFIC FILTER: Exclude traffic/accident reports - STRICT
       const trafficKeywords = [
@@ -90,14 +115,11 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
       const govDocKeywords = ['văn bản', 'van ban', 'công văn', 'cong van', 'thông tư', 'thong tu', 'quyết định', 'quyet dinh', 'chỉ thị', 'chi thi', 'nghị định', 'nghi dinh', 'quyết toán', 'quyet toan', 'hội nghị', 'hoi nghi', 'cuộc họp', 'cuoc hop']
       if (govDocKeywords.some(keyword => textToCheck.includes(keyword))) return false
 
-      // Show disaster-related reports with lower threshold for consequence news
-      if (r.type === 'ALERT' || r.type === 'SOS') {
-        return r.trust_score >= 0.3
-      }
-      if (r.type === 'RAIN') {
-        return r.trust_score >= 0.4
-      }
+      // Only show disaster-related types (ALERT, SOS, RAIN)
       // Exclude ROAD and NEEDS - not disaster-related
+      if (r.type === 'ALERT' || r.type === 'SOS' || r.type === 'RAIN') {
+        return true
+      }
       return false
     })
     .sort((a, b) => {
@@ -163,10 +185,10 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
     const now = new Date()
     const diffMinutes = Math.floor((now.getTime() - date.getTime()) / 60000)
 
-    if (diffMinutes < 1) return 'vừa xong'
-    if (diffMinutes < 60) return `${diffMinutes} phút trước`
-    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} giờ trước`
-    return date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })
+    if (diffMinutes < 1) return t('justNow')
+    if (diffMinutes < 60) return t('minutesAgo', { count: diffMinutes })
+    if (diffMinutes < 1440) return t('hoursAgo', { count: Math.floor(diffMinutes / 60) })
+    return date.toLocaleDateString(isEnglish ? 'en-US' : 'vi-VN', { month: 'short', day: 'numeric' })
   }
 
   return (
@@ -176,11 +198,11 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* "TIN NÓNG" Label */}
+      {/* "HOT NEWS" Label */}
       <div className="absolute left-0 top-0 bottom-0 flex items-center bg-black/20 px-2 z-10 backdrop-blur-sm gap-2">
         <div className="flex items-center gap-2 px-1">
           <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-wide">Tin nóng</span>
+          <span className="text-xs font-bold uppercase tracking-wide">{t('hotNews')}</span>
         </div>
 
         {/* Voice Button */}
@@ -191,8 +213,8 @@ export default function NewsTicker({ reports, onReportClick, onVoiceClick, exclu
               onVoiceClick()
             }}
             className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-all"
-            aria-label="Nghe bản tin thoại"
-            title="Nghe bản tin thoại AI"
+            aria-label={t('listenVoice')}
+            title={t('listenVoice')}
           >
             <svg
               className="w-3 h-3 text-white"

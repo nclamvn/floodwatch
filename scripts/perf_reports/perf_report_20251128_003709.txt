@@ -1,0 +1,25 @@
+==============================================
+FloodWatch Performance Report
+Date: 2025-11-28 00:37:09
+Runs per endpoint: 3
+Base Web: https://thongtinmualu.live
+Base API: https://api.thongtinmualu.live
+==============================================
+
+Endpoint           Min(ms)    Avg(ms)    Max(ms)    Status     Notes
+--------------------------------------------------------------------------------
+Web Home           270        287        317        OK         
+Web Map            207        272        312        OK         
+Web Help           198        205        210        OK         
+API Health         215        249        272        OK         
+API Hazards        389        494        591        OK         
+API Reports        565        589        626        WARN       avg > 500ms
+API Distress       463        486        507        OK         
+API Routes         596        783        896        WARN       avg > 500ms
+
+==============================================
+Nguong chap nhan:
+- Web: Avg < 500ms = OK, < 2000ms = WARN
+- API: Avg < 500ms = OK, < 800ms = WARN
+==============================================
+

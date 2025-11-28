@@ -76,7 +76,7 @@ export function AudioPlayerProvider({
         setIsLoading(true)
         setError(null)
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
         const response = await fetch(`${apiUrl}/ai-news/latest`)
 
         if (!response.ok) {

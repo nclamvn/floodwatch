@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Phone, Mail, MapPin, Users, Clock, AlertTriangle, Heart, X, Building2, Navigation } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { HelpRequest } from '@/hooks/useHelpRequests'
 import { HelpOffer } from '@/hooks/useHelpOffers'
 import DirectionsModal from '@/components/DirectionsModal'
@@ -12,49 +13,23 @@ interface RescueDetailSheetProps {
   onClose: () => void
 }
 
-const urgencyConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+const urgencyColors: Record<string, { color: string; bgColor: string }> = {
   critical: {
-    label: 'Khẩn cấp',
     color: 'text-red-700 dark:text-red-400',
     bgColor: 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700'
   },
   high: {
-    label: 'Cao',
     color: 'text-orange-700 dark:text-orange-400',
     bgColor: 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700'
   },
   medium: {
-    label: 'Trung bình',
     color: 'text-yellow-700 dark:text-yellow-400',
     bgColor: 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700'
   },
   low: {
-    label: 'Thấp',
     color: 'text-neutral-700 dark:text-neutral-400',
     bgColor: 'bg-neutral-100 dark:bg-neutral-900/30 border-neutral-300 dark:border-neutral-700'
   }
-}
-
-const needsTypeLabels: Record<string, string> = {
-  food: 'Thực phẩm',
-  water: 'Nước uống',
-  shelter: 'Chỗ ở',
-  medical: 'Y tế',
-  clothing: 'Quần áo',
-  transport: 'Di chuyển',
-  other: 'Khác'
-}
-
-const serviceTypeLabels: Record<string, string> = {
-  rescue: 'Cứu hộ',
-  transportation: 'Vận chuyển',
-  medical: 'Y tế',
-  shelter: 'Chỗ ở',
-  food_water: 'Thực phẩm/Nước',
-  supplies: 'Vật tư',
-  volunteer: 'Tình nguyện',
-  donation: 'Quyên góp',
-  other: 'Khác'
 }
 
 /**
@@ -66,6 +41,10 @@ const serviceTypeLabels: Record<string, string> = {
  * - All details including location, contact, metadata
  */
 export default function RescueDetailSheet({ data, type, onClose }: RescueDetailSheetProps) {
+  const t = useTranslations('rescueDetail')
+  const tHelp = useTranslations('help')
+  const tFilter = useTranslations('rescueFilter')
+
   const isRequest = type === 'request'
   const request = isRequest ? (data as HelpRequest) : null
   const offer = !isRequest ? (data as HelpOffer) : null
@@ -101,9 +80,11 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
     .replace(/\n*\[JCI ID: \d+\]\s*$/i, '')
     .trim()
 
+  const tPinPopover = useTranslations('pinPopover')
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return new Intl.DateTimeFormat('vi-VN', {
+    return new Intl.DateTimeFormat(undefined, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -121,15 +102,15 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
     const diffDays = Math.floor(diffHours / 24)
 
     if (diffMins < 60) {
-      return `${diffMins} phút trước`
+      return tPinPopover('timeAgo.minutes', { count: diffMins })
     } else if (diffHours < 24) {
-      return `${diffHours} giờ trước`
+      return tPinPopover('timeAgo.hours', { count: diffHours })
     } else {
-      return `${diffDays} ngày trước`
+      return tPinPopover('timeAgo.days', { count: diffDays })
     }
   }
 
-  const urgency = request ? urgencyConfig[request.urgency] || urgencyConfig.medium : null
+  const urgency = request ? urgencyColors[request.urgency] || urgencyColors.medium : null
 
   return (
     <>
@@ -151,22 +132,22 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold border ${urgency?.bgColor} ${urgency?.color}`}>
                     <AlertTriangle className="w-4 h-4" />
-                    {urgency?.label}
+                    {tFilter(`urgency.${request.urgency}`)}
                   </span>
                 </div>
               ) : offer ? (
                 <div className="flex items-center gap-2 mb-2">
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700">
                     <Heart className="w-4 h-4" />
-                    Sẵn sàng giúp
+                    {t('readyToHelp')}
                   </span>
                 </div>
               ) : null}
               <h2 className="text-2xl font-bold text-slate-900 dark:text-neutral-50">
                 {isRequest && request
-                  ? `Cần ${needsTypeLabels[request.needs_type]?.toLowerCase() || request.needs_type}`
+                  ? t('needs', { type: tHelp(`needsTypes.${request.needs_type}`).toLowerCase() })
                   : offer
-                  ? serviceTypeLabels[offer.service_type] || offer.service_type
+                  ? tFilter(`services.${offer.service_type}`)
                   : ''
                 }
               </h2>
@@ -174,7 +155,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
             <button
               onClick={onClose}
               className="w-11 h-11 sm:w-10 sm:h-10 p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center justify-center"
-              aria-label="Đóng"
+              aria-label={t('close')}
             >
               <X className="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
             </button>
@@ -193,7 +174,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
             {/* Description */}
             <div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50 mb-2">
-                Mô tả chi tiết
+                {t('description')}
               </h3>
               <p className="text-slate-700 dark:text-neutral-200 whitespace-pre-wrap">
                 {cleanDescription}
@@ -203,13 +184,13 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
             {/* Location */}
             <div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50 mb-3">
-                Vị trí
+                {t('location')}
               </h3>
               <div className="space-y-2">
                 <div className="flex items-start gap-2 text-slate-700 dark:text-neutral-200">
                   <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-medium">Tọa độ:</p>
+                    <p className="font-medium">{t('coordinates')}:</p>
                     <p className="text-sm text-slate-600 dark:text-neutral-400 font-mono">
                       {data.lat.toFixed(6)}, {data.lon.toFixed(6)}
                     </p>
@@ -217,7 +198,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                 </div>
                 {data.distance_km !== undefined && (
                   <div className="text-sm text-slate-600 dark:text-neutral-400">
-                    Khoảng cách: {data.distance_km < 1
+                    {t('distance')}: {data.distance_km < 1
                       ? `${Math.round(data.distance_km * 1000)}m`
                       : `${data.distance_km.toFixed(1)}km`}
                   </div>
@@ -229,12 +210,12 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
             {(request?.people_count || offer?.capacity) && (
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50 mb-3">
-                  {isRequest ? 'Số người cần giúp' : 'Sức chứa'}
+                  {isRequest ? t('peopleNeedHelp') : t('capacity')}
                 </h3>
                 <div className="flex items-center gap-2 text-slate-700 dark:text-neutral-200">
                   <Users className="w-5 h-5" />
                   <span className="text-xl font-bold">
-                    {isRequest ? request?.people_count : offer?.capacity} người
+                    {isRequest ? request?.people_count : offer?.capacity} {t('people')}
                   </span>
                 </div>
 
@@ -243,17 +224,17 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                   <div className="mt-3 flex flex-wrap gap-2">
                     {request.has_children && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-                        👶 Có trẻ em
+                        👶 {t('hasChildren')}
                       </span>
                     )}
                     {request.has_elderly && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
-                        👴 Có người cao tuổi
+                        👴 {t('hasElderly')}
                       </span>
                     )}
                     {request.has_disabilities && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">
-                        ♿ Có người khuyết tật
+                        ♿ {t('hasDisabilities')}
                       </span>
                     )}
                   </div>
@@ -267,7 +248,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                 {offer.coverage_radius_km && (
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50 mb-2">
-                      Bán kính hỗ trợ
+                      {t('supportRadius')}
                     </h3>
                     <div className="flex items-center gap-2 text-slate-700 dark:text-neutral-200">
                       <Navigation className="w-5 h-5" />
@@ -279,7 +260,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                 {offer.availability && (
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50 mb-2">
-                      Thời gian có thể giúp
+                      {t('availableTime')}
                     </h3>
                     <p className="text-slate-700 dark:text-neutral-200">{offer.availability}</p>
                   </div>
@@ -288,7 +269,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                 {offer.organization && (
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50 mb-2">
-                      Tổ chức
+                      {t('organization')}
                     </h3>
                     <div className="flex items-center gap-2 text-slate-700 dark:text-neutral-200">
                       <Building2 className="w-5 h-5" />
@@ -302,12 +283,12 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
             {/* Contact Information */}
             <div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50 mb-3">
-                Thông tin liên hệ
+                {t('contactInfo')}
               </h3>
               <div className="space-y-3">
                 <div className="text-slate-700 dark:text-neutral-200">
                   <p className="font-medium text-sm text-slate-600 dark:text-neutral-400 mb-1">
-                    Người liên hệ
+                    {t('contactPerson')}
                   </p>
                   <p className="text-lg font-semibold">{data.contact_name}</p>
                 </div>
@@ -323,7 +304,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                     }`}
                   >
                     <Phone className="w-5 h-5" />
-                    Gọi ngay: {data.contact_phone}
+                    {t('callNow')}: {data.contact_phone}
                   </a>
 
                   <button
@@ -331,7 +312,7 @@ export default function RescueDetailSheet({ data, type, onClose }: RescueDetailS
                     className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium rounded-lg transition-colors"
                   >
                     <Navigation className="w-5 h-5" />
-                    Chỉ đường
+                    {t('directions')}
                   </button>
                 </div>
               </div>

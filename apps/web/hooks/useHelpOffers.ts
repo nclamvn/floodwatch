@@ -104,7 +104,7 @@ export function useHelpOffers(options: UseHelpOffersOptions = {}): UseHelpOffers
         if (verified_only) params.append('verified_only', 'true')
         params.append('limit', '200')
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
         const url = `${apiUrl}/help/offers?${params.toString()}`
 
         const response = await fetch(url)

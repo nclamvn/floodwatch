@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   ChevronDown,
   AlertOctagon,
@@ -27,26 +28,27 @@ import {
  */
 
 export function SidebarHotlineTicker() {
+  const t = useTranslations('hotlines')
   const [isPaused, setIsPaused] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Comprehensive hotline list from user (shortened labels for better visibility)
   const hotlines = [
-    { Icon: AlertOctagon, label: 'SOS', number: '112', description: 'Ưu tiên gọi đầu tiên' },
-    { Icon: Shield, label: 'Cảnh sát', number: '113', description: 'Cảnh sát & cứu hộ' },
-    { Icon: Flame, label: 'Cứu hỏa', number: '114', description: 'Cứu hỏa cứu nạn cứu hộ' },
-    { Icon: Ambulance, label: 'Cấp cứu', number: '115', description: 'Cấp cứu y tế' },
-    { Icon: Phone, label: 'PCTT', number: '1022', description: 'Báo ngập lụt, hỗ trợ địa phương' },
-    { Icon: CloudSun, label: 'Thời tiết', number: '1900 1260', description: 'Cảnh báo bão lũ 24/7' },
-    { Icon: Building2, label: 'BCĐ PCTT', number: '080.43162', description: 'Trung ương' },
-    { Icon: HardHat, label: 'Cứu hộ QP', number: '024.37333664', description: 'Bộ Quốc phòng' },
-    { Icon: Banknote, label: 'Cứu trợ 1', number: '0984 242 025', description: 'Tiếp nhận ủng hộ' },
-    { Icon: HandHeart, label: 'Cứu trợ 2', number: '0933 026 868', description: 'MTTQ Việt Nam' },
-    { Icon: PhoneIncoming, label: 'Cứu trợ 3', number: '0786 675 133', description: 'MTTQ Việt Nam' },
-    { Icon: Smartphone, label: 'Cứu trợ 4', number: '0983 218 721', description: 'MTTQ Việt Nam' },
-    { Icon: PhoneForwarded, label: 'Cứu trợ 5', number: '0819 889 888', description: 'MTTQ Việt Nam' },
-    { Icon: Building, label: 'VP Cứu trợ', number: '024.3826.4368', description: 'MTTQ Trung ương' },
+    { Icon: AlertOctagon, label: t('sos.label'), number: '112', description: t('sos.description') },
+    { Icon: Shield, label: t('police.label'), number: '113', description: t('police.description') },
+    { Icon: Flame, label: t('fire.label'), number: '114', description: t('fire.description') },
+    { Icon: Ambulance, label: t('emergency.label'), number: '115', description: t('emergency.description') },
+    { Icon: Phone, label: 'PCTT', number: '1022', description: t('rescue.description') },
+    { Icon: CloudSun, label: t('power.label'), number: '1900 1260', description: t('power.description') },
+    { Icon: Building2, label: 'BCĐ PCTT', number: '080.43162', description: t('rescue.description') },
+    { Icon: HardHat, label: t('army.label'), number: '024.37333664', description: t('army.description') },
+    { Icon: Banknote, label: t('redCross.label'), number: '0984 242 025', description: t('redCross.description') },
+    { Icon: HandHeart, label: t('redCross.label'), number: '0933 026 868', description: 'MTTQ Việt Nam' },
+    { Icon: PhoneIncoming, label: t('redCross.label'), number: '0786 675 133', description: 'MTTQ Việt Nam' },
+    { Icon: Smartphone, label: t('redCross.label'), number: '0983 218 721', description: 'MTTQ Việt Nam' },
+    { Icon: PhoneForwarded, label: t('redCross.label'), number: '0819 889 888', description: 'MTTQ Việt Nam' },
+    { Icon: Building, label: t('redCross.label'), number: '024.3826.4368', description: 'MTTQ' },
   ]
 
   const handleCall = (number: string) => {

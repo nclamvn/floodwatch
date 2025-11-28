@@ -1,12 +1,14 @@
 """
 Help Connection Repository - Data access layer for help requests and offers
+Phase 3 Performance: Added in-memory caching for stats queries
 """
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from uuid import UUID
+import threading
 
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, type_coerce
+from sqlalchemy import and_, or_, func, type_coerce, case, literal
 from geoalchemy2.functions import ST_SetSRID, ST_MakePoint, ST_Distance
 from geoalchemy2 import Geography
 
@@ -14,6 +16,55 @@ from app.database.models import (
     HelpRequest, HelpOffer,
     NeedsType, ServiceType, HelpStatus, HelpUrgency
 )
+
+
+# ==========================================
+# Phase 3: In-memory cache for stats queries
+# ==========================================
+class StatsCache:
+    """Thread-safe in-memory cache for stats with TTL"""
+
+    def __init__(self, ttl_seconds: int = 300):  # 5 minute default TTL
+        self._cache: Dict[str, Dict[str, Any]] = {}
+        self._lock = threading.Lock()
+        self._ttl = timedelta(seconds=ttl_seconds)
+
+    def get(self, key: str) -> Optional[Dict[str, Any]]:
+        """Get cached value if not expired"""
+        with self._lock:
+            if key not in self._cache:
+                return None
+
+            entry = self._cache[key]
+            if datetime.utcnow() > entry['expires']:
+                del self._cache[key]
+                return None
+
+            return entry['data']
+
+    def set(self, key: str, data: Dict[str, Any]) -> None:
+        """Cache a value with TTL"""
+        with self._lock:
+            self._cache[key] = {
+                'data': data,
+                'expires': datetime.utcnow() + self._ttl
+            }
+
+    def invalidate(self, key: str) -> None:
+        """Invalidate a specific cache key"""
+        with self._lock:
+            if key in self._cache:
+                del self._cache[key]
+
+    def clear(self) -> None:
+        """Clear all cached values"""
+        with self._lock:
+            self._cache.clear()
+
+
+# Global stats cache instances (5 minute TTL)
+_help_request_stats_cache = StatsCache(ttl_seconds=300)
+_help_offer_stats_cache = StatsCache(ttl_seconds=300)
 
 
 class HelpRequestRepository:
@@ -304,32 +355,57 @@ class HelpRequestRepository:
         return query.count()
 
     @staticmethod
-    def get_stats(db: Session) -> dict:
+    def get_stats(db: Session, use_cache: bool = True) -> dict:
         """
         Get statistics about help requests
+
+        Phase 3 Performance: Uses 5-minute cache for stats
+
+        Args:
+            db: Database session
+            use_cache: Whether to use cached stats (default True)
 
         Returns:
             Dictionary with request metrics
         """
-        total = db.query(HelpRequest).count()
-        active = db.query(HelpRequest).filter(HelpRequest.status == 'active').count()
-        fulfilled = db.query(HelpRequest).filter(HelpRequest.status == 'fulfilled').count()
-        verified = db.query(HelpRequest).filter(HelpRequest.is_verified == True).count()
+        cache_key = "help_request_stats"
 
-        critical = db.query(HelpRequest).filter(
-            and_(
-                HelpRequest.status == 'active',
-                HelpRequest.urgency == 'critical'
-            )
-        ).count()
+        # Check cache first
+        if use_cache:
+            cached = _help_request_stats_cache.get(cache_key)
+            if cached:
+                return cached
 
-        return {
-            "total": total,
-            "active": active,
-            "fulfilled": fulfilled,
-            "verified": verified,
-            "critical_urgent": critical
+        # Compute fresh stats with single aggregate query (5 queries → 1)
+        # Performance: Reduces DB round-trips from 5 to 1
+        result = db.query(
+            func.count(HelpRequest.id).label('total'),
+            func.sum(case((HelpRequest.status == 'active', 1), else_=0)).label('active'),
+            func.sum(case((HelpRequest.status == 'fulfilled', 1), else_=0)).label('fulfilled'),
+            func.sum(case((HelpRequest.is_verified == True, 1), else_=0)).label('verified'),
+            func.sum(case(
+                (and_(HelpRequest.status == 'active', HelpRequest.urgency == 'critical'), 1),
+                else_=0
+            )).label('critical')
+        ).first()
+
+        stats = {
+            "total": result.total or 0,
+            "active": result.active or 0,
+            "fulfilled": result.fulfilled or 0,
+            "verified": result.verified or 0,
+            "critical_urgent": result.critical or 0
         }
+
+        # Cache the result
+        _help_request_stats_cache.set(cache_key, stats)
+
+        return stats
+
+    @staticmethod
+    def invalidate_stats_cache() -> None:
+        """Invalidate the stats cache (call after create/update/delete)"""
+        _help_request_stats_cache.invalidate("help_request_stats")
 
 
 class HelpOfferRepository:
@@ -609,21 +685,49 @@ class HelpOfferRepository:
         return query.count()
 
     @staticmethod
-    def get_stats(db: Session) -> dict:
+    def get_stats(db: Session, use_cache: bool = True) -> dict:
         """
         Get statistics about help offers
+
+        Phase 3 Performance: Uses 5-minute cache for stats
+
+        Args:
+            db: Database session
+            use_cache: Whether to use cached stats (default True)
 
         Returns:
             Dictionary with offer metrics
         """
-        total = db.query(HelpOffer).count()
-        active = db.query(HelpOffer).filter(HelpOffer.status == 'active').count()
-        fulfilled = db.query(HelpOffer).filter(HelpOffer.status == 'fulfilled').count()
-        verified = db.query(HelpOffer).filter(HelpOffer.is_verified == True).count()
+        cache_key = "help_offer_stats"
 
-        return {
-            "total": total,
-            "active": active,
-            "fulfilled": fulfilled,
-            "verified": verified
+        # Check cache first
+        if use_cache:
+            cached = _help_offer_stats_cache.get(cache_key)
+            if cached:
+                return cached
+
+        # Compute fresh stats with single aggregate query (4 queries → 1)
+        # Performance: Reduces DB round-trips from 4 to 1
+        result = db.query(
+            func.count(HelpOffer.id).label('total'),
+            func.sum(case((HelpOffer.status == 'active', 1), else_=0)).label('active'),
+            func.sum(case((HelpOffer.status == 'fulfilled', 1), else_=0)).label('fulfilled'),
+            func.sum(case((HelpOffer.is_verified == True, 1), else_=0)).label('verified')
+        ).first()
+
+        stats = {
+            "total": result.total or 0,
+            "active": result.active or 0,
+            "fulfilled": result.fulfilled or 0,
+            "verified": result.verified or 0
         }
+
+        # Cache the result
+        _help_offer_stats_cache.set(cache_key, stats)
+
+        return stats
+
+    @staticmethod
+    def invalidate_stats_cache() -> None:
+        """Invalidate the stats cache (call after create/update/delete)"""
+        _help_offer_stats_cache.invalidate("help_offer_stats")

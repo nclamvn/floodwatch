@@ -11,8 +11,6 @@ interface MapControlsGroupProps {
   baseMapStyle: BaseMapStyleId
   onStyleChange: (style: BaseMapStyleId) => void
   onWindyClick: () => void
-  onAIForecastClick: () => void
-  aiForecastActive?: boolean
   onLegendClick: () => void
   legendActive?: boolean
   onLocationClick?: (lat: number, lon: number) => void
@@ -26,7 +24,7 @@ const MAP_STYLE_ICONS: Record<BaseMapStyleId, React.ComponentType<{ className?: 
   outdoors: Mountain,
 }
 
-export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onAIForecastClick, aiForecastActive, onLegendClick, legendActive, onLocationClick }: MapControlsGroupProps) {
+export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, onLegendClick, legendActive, onLocationClick }: MapControlsGroupProps) {
   const { userLocation, isLocating, requestLocation } = useLocation()
   const [isExpanded, setIsExpanded] = useState(false)
   const [showLocationInfo, setShowLocationInfo] = useState(false)
@@ -197,26 +195,6 @@ export function MapControlsGroup({ baseMapStyle, onStyleChange, onWindyClick, on
               )}
             </button>
 
-            {/* AI Forecast Button - 40px mobile, 32px desktop */}
-            <button
-              onClick={() => {
-                onAIForecastClick()
-                setIsExpanded(false)
-              }}
-              className={`
-                w-10 h-10 sm:w-8 sm:h-8 flex-shrink-0 rounded-full backdrop-blur-xl border
-                flex items-center justify-center
-                transition-all duration-200 hover:scale-105 active:scale-95
-                ${
-                  aiForecastActive
-                    ? 'bg-neutral-600 hover:bg-neutral-700 text-white border-neutral-500'
-                    : 'bg-white/70 hover:bg-white/80 text-gray-900 border-neutral-300/50 dark:bg-gray-700/70 dark:text-gray-200 dark:hover:bg-gray-600/80 dark:border-neutral-700/50'
-                }
-              `}
-              title="Dự báo AI"
-            >
-              <span className="text-sm sm:text-[13px] font-bold">AI</span>
-            </button>
           </div>
         )}
 

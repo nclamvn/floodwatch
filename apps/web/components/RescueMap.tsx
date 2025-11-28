@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import Map, { NavigationControl, MapRef } from 'react-map-gl/maplibre'
 import { RotateCcw, Filter, MapPin, MapPinned, Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import RescueIntelligenceLayer from '@/components/RescueIntelligenceLayer'
 import PinPopover from '@/components/PinPopover'
 import RescueDetailSheet from '@/components/RescueDetailSheet'
@@ -32,6 +33,7 @@ interface RescueMapProps {
  * - Glass morphism UI matching Design System 2025
  */
 export default function RescueMap({ onCountsChange }: RescueMapProps = {}) {
+  const t = useTranslations('rescueMap')
   // Use LocationContext instead of local state
   const { userLocation: locationData, isLocating, requestLocation } = useLocation()
 
@@ -435,11 +437,11 @@ export default function RescueMap({ onCountsChange }: RescueMapProps = {}) {
         <button
           onClick={handleResetView}
           className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-3xl rounded-full shadow-xl px-3 py-2 flex items-center gap-2 hover:scale-105 transition-transform duration-200"
-          title="Quay lại tổng quan"
+          title={t('resetView')}
         >
           <RotateCcw className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />
           <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            Đặt lại
+            {t('reset')}
           </span>
         </button>
 
@@ -450,7 +452,7 @@ export default function RescueMap({ onCountsChange }: RescueMapProps = {}) {
           className={`bg-white/95 dark:bg-neutral-900/95 backdrop-blur-3xl rounded-full shadow-xl px-3 py-2 flex items-center gap-2 transition-transform duration-200 ${
             isLocating ? 'cursor-wait opacity-70' : 'hover:scale-105'
           }`}
-          title="Vị trí của tôi"
+          title={t('myLocation')}
         >
           {isLocating ? (
             <Loader2 className="w-4 h-4 text-neutral-700 dark:text-neutral-300 animate-spin" />
@@ -460,7 +462,7 @@ export default function RescueMap({ onCountsChange }: RescueMapProps = {}) {
             <MapPin className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />
           )}
           <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            Vị trí
+            {t('location')}
           </span>
         </button>
 
@@ -468,11 +470,11 @@ export default function RescueMap({ onCountsChange }: RescueMapProps = {}) {
         <button
           onClick={() => setShowFilterPanel(!showFilterPanel)}
           className="bg-white/95 dark:bg-neutral-900/95 backdrop-blur-3xl rounded-full shadow-xl px-3 py-2 flex items-center gap-2 hover:scale-105 transition-transform duration-200 relative"
-          title="Bộ lọc"
+          title={t('filterTitle')}
         >
           <Filter className="w-4 h-4 text-neutral-700 dark:text-neutral-300" />
           <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            Lọc
+            {t('filter')}
           </span>
           {activeFiltersCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">

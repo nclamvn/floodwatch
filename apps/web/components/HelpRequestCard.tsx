@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Phone, Mail, MapPin, Users, Clock, AlertTriangle, Copy, Trash2, CheckCircle } from 'lucide-react'
+import { useState, memo } from 'react'
+import { Phone, Mail, MapPin, Users, Clock, AlertTriangle, Copy, Trash2, CheckCircle, HandHeart } from 'lucide-react'
+import MatchingOffersModal from './MatchingOffersModal'
 
 interface HelpRequest {
   id: string
@@ -36,6 +37,39 @@ const needsTypeLabels: Record<string, string> = {
   other: 'Khác'
 }
 
+const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: string }> = {
+  active: {
+    label: 'Đang chờ',
+    color: 'text-blue-700 dark:text-blue-400',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700',
+    icon: '⏳'
+  },
+  in_progress: {
+    label: 'Đang xử lý',
+    color: 'text-amber-700 dark:text-amber-400',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700',
+    icon: '🔄'
+  },
+  fulfilled: {
+    label: 'Hoàn thành',
+    color: 'text-green-700 dark:text-green-400',
+    bgColor: 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700',
+    icon: '✓'
+  },
+  expired: {
+    label: 'Hết hạn',
+    color: 'text-neutral-500 dark:text-neutral-400',
+    bgColor: 'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600',
+    icon: '⏱'
+  },
+  cancelled: {
+    label: 'Đã hủy',
+    color: 'text-neutral-500 dark:text-neutral-400',
+    bgColor: 'bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600',
+    icon: '✕'
+  }
+}
+
 const urgencyConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   critical: {
     label: 'Khẩn cấp',
@@ -59,13 +93,16 @@ const urgencyConfig: Record<string, { label: string; color: string; bgColor: str
   }
 }
 
-export default function HelpRequestCard({ request, onDelete, showDeleteButton = false }: HelpRequestCardProps) {
+// Memoized to prevent re-renders when parent list updates but this card's props haven't changed
+function HelpRequestCardBase({ request, onDelete, showDeleteButton = false }: HelpRequestCardProps) {
   const [copied, setCopied] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showMatchingModal, setShowMatchingModal] = useState(false)
 
   const urgency = urgencyConfig[request.urgency] || urgencyConfig.medium
   const needsLabel = needsTypeLabels[request.needs_type] || request.needs_type
+  const status = statusConfig[request.status?.toLowerCase()] || statusConfig.active
 
   // Remove JCI ID from description
   const cleanDescription = request.description.replace(/\n*\[JCI ID: \d+\]\s*$/i, '').trim()
@@ -151,7 +188,7 @@ Thời gian: ${formatDate(request.created_at)}`
 
     setIsDeleting(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://188.166.248.10:8000'
       const response = await fetch(`${apiUrl}/help/requests/${request.id}`, {
         method: 'DELETE'
       })
@@ -190,6 +227,11 @@ Thời gian: ${formatDate(request.created_at)}`
                 {priorityConfig.label}
               </span>
             )}
+            {/* Status Badge */}
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${status.color} ${status.bgColor} border`}>
+              <span className="text-[10px]">{status.icon}</span>
+              {status.label}
+            </span>
           </div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-neutral-50">
             Cần {needsLabel.toLowerCase()}
@@ -274,7 +316,36 @@ Thời gian: ${formatDate(request.created_at)}`
             </a>
           )}
         </div>
+
+        {/* Find Matching Offers Button */}
+        <button
+          onClick={() => setShowMatchingModal(true)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors mt-2"
+        >
+          <HandHeart className="w-4 h-4" />
+          Tìm đề nghị hỗ trợ phù hợp
+        </button>
       </div>
+
+      {/* Matching Offers Modal */}
+      <MatchingOffersModal
+        isOpen={showMatchingModal}
+        onClose={() => setShowMatchingModal(false)}
+        request={request}
+      />
     </div>
   )
 }
+
+// Custom comparison for memo - only re-render if request data changes
+const HelpRequestCard = memo(HelpRequestCardBase, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render)
+  return (
+    prevProps.request.id === nextProps.request.id &&
+    prevProps.request.status === nextProps.request.status &&
+    prevProps.request.priority_score === nextProps.request.priority_score &&
+    prevProps.showDeleteButton === nextProps.showDeleteButton
+  )
+})
+
+export default HelpRequestCard
