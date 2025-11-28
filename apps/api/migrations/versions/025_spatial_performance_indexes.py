@@ -88,30 +88,30 @@ def upgrade() -> None:
     ''')
 
     # ==========================================
-    # Emergency Distress Performance Indexes
+    # Distress Reports Performance Indexes
     # ==========================================
 
-    # Index for distress calls by status
+    # Index for distress reports by status
     op.execute('''
-        CREATE INDEX IF NOT EXISTS idx_emergency_distress_status
-        ON emergency_distress(status, reported_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_distress_reports_status
+        ON distress_reports(status, created_at DESC);
     ''')
 
     # ==========================================
-    # Traffic Events Performance Indexes
+    # Traffic Disruptions Performance Indexes
     # ==========================================
 
-    # Index for traffic events by severity
+    # Index for traffic disruptions by severity
     op.execute('''
-        CREATE INDEX IF NOT EXISTS idx_emergency_traffic_severity
-        ON emergency_traffic(severity, reported_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_traffic_disruptions_severity
+        ON traffic_disruptions(severity, created_at DESC);
     ''')
 
 
 def downgrade() -> None:
     """Remove spatial and performance indexes"""
-    op.execute('DROP INDEX IF EXISTS idx_emergency_traffic_severity;')
-    op.execute('DROP INDEX IF EXISTS idx_emergency_distress_status;')
+    op.execute('DROP INDEX IF EXISTS idx_traffic_disruptions_severity;')
+    op.execute('DROP INDEX IF EXISTS idx_distress_reports_status;')
     op.execute('DROP INDEX IF EXISTS idx_help_offers_active;')
     op.execute('DROP INDEX IF EXISTS idx_help_offers_status_created;')
     op.execute('DROP INDEX IF EXISTS idx_help_requests_active;')
