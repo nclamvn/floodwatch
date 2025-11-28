@@ -201,13 +201,14 @@ export function MobileMapControls({
             className="
               absolute top-14 left-0 z-50
               w-64
+              max-h-[calc(100vh-80px)]
+              overflow-y-auto
               bg-white/80 dark:bg-neutral-900/80
               backdrop-blur-2xl backdrop-saturate-150
               border border-neutral-200/50 dark:border-neutral-700/50
               rounded-2xl
               shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)]
               dark:shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.3)]
-              overflow-hidden
               animate-in fade-in slide-in-from-top-2 duration-200
             "
           >
