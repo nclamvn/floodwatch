@@ -45,6 +45,10 @@ interface MapViewProps {
   // New: Callback for mobile pin popup - lifted to page.tsx level for proper z-index
   onMobilePinSelect?: (report: Report | null) => void
   selectedMobileReport?: Report | null
+  // Mobile hamburger menu action callbacks
+  onWeatherClick?: () => void
+  onStormClick?: () => void
+  isLoadingStorm?: boolean
 }
 
 // Helper function to truncate description for popup preview
@@ -166,7 +170,7 @@ const PinMarker = memo(function PinMarker({
   )
 })
 
-export default function MapViewClustered({ reports, radiusFilter, targetViewport, onViewportChange, onMapClick, onClearRadius, onExpandArticle, onLegendClick, legendActive, onMobilePinSelect, selectedMobileReport }: MapViewProps) {
+export default function MapViewClustered({ reports, radiusFilter, targetViewport, onViewportChange, onMapClick, onClearRadius, onExpandArticle, onLegendClick, legendActive, onMobilePinSelect, selectedMobileReport, onWeatherClick, onStormClick, isLoadingStorm }: MapViewProps) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [viewState, setViewState] = useState({
     longitude: 106.0,  // Toàn Việt Nam
@@ -594,6 +598,9 @@ export default function MapViewClustered({ reports, radiusFilter, targetViewport
         onLegendClick={() => onLegendClick?.()}
         legendActive={legendActive}
         onLocationClick={handleLocationClick}
+        onWeatherClick={onWeatherClick}
+        onStormClick={onStormClick}
+        isLoadingStorm={isLoadingStorm}
       />
 
       {/* Hazard events visualization - Optimized Symbol Layer */}

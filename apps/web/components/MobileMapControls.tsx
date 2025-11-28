@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Menu, X, ArrowLeft, MapPin, MapPinned, Info, Map, Satellite, Globe, Mountain,
-  Loader2, Play, Pause, Newspaper, Sun, Moon, Check
+  Loader2, Play, Pause, Newspaper, Sun, Moon, Check, Heart, Route, Cloud, Wind
 } from 'lucide-react'
+import Link from 'next/link'
 import { type BaseMapStyleId } from '@/lib/mapProvider'
 import { useLocation } from '@/contexts/LocationContext'
 import { useGlobalAudioPlayer } from '@/contexts/AudioPlayerContext'
@@ -16,6 +17,10 @@ interface MobileMapControlsProps {
   onLegendClick: () => void
   legendActive?: boolean
   onLocationClick?: (lat: number, lon: number) => void
+  // Action callbacks for mobile buttons (moved from page.tsx)
+  onWeatherClick?: () => void
+  onStormClick?: () => void
+  isLoadingStorm?: boolean
 }
 
 // Map style icon mapping
@@ -38,7 +43,10 @@ export function MobileMapControls({
   onStyleChange,
   onLegendClick,
   legendActive,
-  onLocationClick
+  onLocationClick,
+  onWeatherClick,
+  onStormClick,
+  isLoadingStorm = false
 }: MobileMapControlsProps) {
   const { userLocation, isLocating, requestLocation } = useLocation()
   const { isPlaying, isLoading, play, pause } = useGlobalAudioPlayer()
@@ -280,6 +288,48 @@ export function MobileMapControls({
                 }}
                 isActive={legendActive}
               />
+            </div>
+
+            <Divider />
+
+            {/* Actions - moved from right side buttons */}
+            <SectionHeader title="Hành động" />
+            <div className="py-1">
+              <Link href="/help" onClick={() => setIsExpanded(false)}>
+                <div className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-100/80 dark:hover:bg-neutral-700/50 active:bg-neutral-200/80 dark:active:bg-neutral-600/50 transition-colors duration-150">
+                  <Heart className="w-5 h-5 flex-shrink-0 text-purple-500" />
+                  <span className="flex-1 text-left text-[15px] text-neutral-800 dark:text-neutral-100">Cứu trợ</span>
+                </div>
+              </Link>
+              <Link href="/routes" onClick={() => setIsExpanded(false)}>
+                <div className="w-full flex items-center gap-3 px-4 py-3 hover:bg-neutral-100/80 dark:hover:bg-neutral-700/50 active:bg-neutral-200/80 dark:active:bg-neutral-600/50 transition-colors duration-150">
+                  <Route className="w-5 h-5 flex-shrink-0 text-blue-500" />
+                  <span className="flex-1 text-left text-[15px] text-neutral-800 dark:text-neutral-100">Tuyến đường</span>
+                </div>
+              </Link>
+              {onWeatherClick && (
+                <MenuItem
+                  icon={Cloud}
+                  label="Thời tiết"
+                  onClick={() => {
+                    onWeatherClick()
+                    setIsExpanded(false)
+                  }}
+                />
+              )}
+              {onStormClick && (
+                <MenuItem
+                  icon={Wind}
+                  label="Bão số 15"
+                  onClick={() => {
+                    onStormClick()
+                    setIsExpanded(false)
+                  }}
+                  rightElement={
+                    isLoadingStorm ? <Loader2 className="w-4 h-4 animate-spin text-neutral-400" /> : undefined
+                  }
+                />
+              )}
             </div>
 
             <Divider />

@@ -18,7 +18,7 @@ import {
   getStormSummaryCacheAge
 } from '@/lib/aiSearchCache'
 import { getCachedResponse, setCachedResponse } from '@/lib/apiCache'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, FileText } from 'lucide-react'
 import { STORAGE_KEYS } from '@/hooks/usePersistedState'
 
 // Phase 1: Lazy load heavy components for faster initial render
@@ -645,49 +645,25 @@ export default function MapPage() {
         </div>
       </header>
 
-      {/* Mobile: Action buttons - Top right - Design System 2025 */}
-      {/* Note: Back button, Theme toggle, and Map controls are now in MobileMapControls component */}
-      {/* Order: Cứu trợ → Tuyến đường → Thời tiết → Bão số 15 → Tin tức */}
-      {/* z-50: Lower than popups (z-[100]/z-[110]) so popups can cover these buttons */}
-      <div className="sm:hidden fixed top-3 right-3 z-50 flex flex-col gap-2">
-        {/* 1. Help Connection Button - Cứu trợ (Orange) */}
-        <Link
-          href="/help"
-          className="min-w-[90px] h-[36px] px-4 py-2 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-orange-500 text-body-2"
-        >
-          {t('buttons.rescue')}
-        </Link>
-
-        {/* 2. Routes Button - Tuyến đường (Blue) */}
-        <Link
-          href="/routes"
-          className="min-w-[90px] h-[36px] px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-blue-500 text-body-2"
-        >
-          {t('buttons.routes')}
-        </Link>
-
-        {/* 3. Weather Button - Thời tiết (Green) */}
-        <button
-          onClick={() => setWindyModalOpen(true)}
-          className="min-w-[90px] h-[36px] px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-emerald-500 text-body-2"
-        >
-          {t('buttons.weather')}
-        </button>
-
-        {/* 4. Storm Button - Bão số 15 (Purple) */}
-        <StormButton onClick={handleStormClick} className="min-w-[90px] h-[36px] px-4 py-2 text-body-2" />
-
-        {/* 5. News Toggle Button - Tin tức (Gray) */}
-        <button
-          onClick={() => setSheetOpen(!sheetOpen)}
-          className="min-w-[90px] h-[36px] px-4 py-2 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white rounded-pill font-semibold flex items-center justify-center shadow-elevation-1 transition-all duration-ui ease-smooth backdrop-blur-md border border-neutral-500 text-body-2"
-        >
-          <span>{t('buttons.news')}</span>
-          {filteredReports.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-pill text-label">{filteredReports.length}</span>
-          )}
-        </button>
-      </div>
+      {/* Mobile: Action buttons - most moved to MobileMapControls hamburger menu */}
+      {/* Cứu trợ, Tuyến đường, Thời tiết, Bão số 15 are in hamburger dropdown */}
+      {/* Tin tức button stays visible as main news access point */}
+      <button
+        onClick={() => setSheetOpen(!sheetOpen)}
+        className="sm:hidden fixed top-4 right-4 z-50 w-11 h-11 flex items-center justify-center rounded-full
+                   bg-blue-500 hover:bg-blue-600 text-white
+                   backdrop-blur-xl border border-blue-400/50
+                   shadow-[0_4px_16px_rgba(59,130,246,0.3),0_1px_4px_rgba(0,0,0,0.1)]
+                   transition-all duration-200 hover:scale-105 active:scale-95"
+        aria-label="Tin tức"
+      >
+        <FileText className="w-5 h-5" />
+        {reports.length > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center font-medium">
+            {reports.length > 99 ? '99+' : reports.length}
+          </span>
+        )}
+      </button>
 
       {/* Mobile Pin Popup - Rendered at page level for proper z-index stacking
           This popup is OUTSIDE the Map stacking context, so z-index works correctly
@@ -968,6 +944,10 @@ export default function MapPage() {
           legendActive={isLegendOpen}
           onMobilePinSelect={setMobilePopupReport}
           selectedMobileReport={mobilePopupReport}
+          // Mobile hamburger menu action callbacks
+          onWeatherClick={() => setWindyModalOpen(true)}
+          onStormClick={handleStormClick}
+          isLoadingStorm={isLoadingStorm}
         />
       </main>
 
