@@ -63,11 +63,11 @@ def upgrade() -> None:
         ON help_requests(status, created_at DESC);
     ''')
 
-    # Index for pending help requests (most frequently queried)
+    # Index for active help requests (most frequently queried)
     op.execute('''
-        CREATE INDEX IF NOT EXISTS idx_help_requests_pending
+        CREATE INDEX IF NOT EXISTS idx_help_requests_active
         ON help_requests(created_at DESC)
-        WHERE status = 'pending';
+        WHERE status = 'active';
     ''')
 
     # ==========================================
@@ -114,7 +114,7 @@ def downgrade() -> None:
     op.execute('DROP INDEX IF EXISTS idx_emergency_distress_status;')
     op.execute('DROP INDEX IF EXISTS idx_help_offers_active;')
     op.execute('DROP INDEX IF EXISTS idx_help_offers_status_created;')
-    op.execute('DROP INDEX IF EXISTS idx_help_requests_pending;')
+    op.execute('DROP INDEX IF EXISTS idx_help_requests_active;')
     op.execute('DROP INDEX IF EXISTS idx_help_requests_status_created;')
     op.execute('DROP INDEX IF EXISTS idx_reports_coords;')
     op.execute('DROP INDEX IF EXISTS idx_help_requests_location_gist;')
